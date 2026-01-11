@@ -1,6 +1,6 @@
 
 // Client-side Blockchain Simulation for Immutable Ledger
-class Block {
+export class Block {
   index: number;
   timestamp: number;
   data: any;
@@ -21,7 +21,8 @@ class Block {
     const dataString = this.index + this.previousHash + this.timestamp + JSON.stringify(this.data) + this.nonce;
     const encoder = new TextEncoder();
     const data = encoder.encode(dataString);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const cryptoObj = window.crypto;
+    const hashBuffer = await cryptoObj.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
@@ -35,7 +36,7 @@ class Block {
   }
 }
 
-class Blockchain {
+export class Blockchain {
   chain: Block[];
   difficulty: number;
 
@@ -49,7 +50,13 @@ class Blockchain {
     if (savedChain) {
       try {
         const parsed = JSON.parse(savedChain);
-        this.chain = parsed;
+        // Re-instantiate blocks to ensure methods exist
+        this.chain = parsed.map((b: any) => {
+          const block = new Block(b.index, b.timestamp, b.data, b.previousHash);
+          block.nonce = b.nonce;
+          block.hash = b.hash;
+          return block;
+        });
         if (this.chain.length === 0) await this.createGenesis();
       } catch (e) {
         await this.createGenesis();
@@ -98,7 +105,14 @@ class Blockchain {
 
     this.chain.forEach(block => {
       if (block.data.type === 'complaint') {
-        complaintsMap.set(block.data.id, { ...block.data, blockIndex: block.index, timestamp: block.timestamp, hash: block.hash });
+        complaintsMap.set(block.data.id, { 
+          ...block.data, 
+          blockIndex: block.index, 
+          timestamp: block.timestamp, 
+          hash: block.hash,
+          status: block.data.status || 'pending',
+          authorityNotes: block.data.authorityNotes || ''
+        });
       } else if (block.data.type === 'status_update') {
         statusUpdates.push(block.data);
       }
@@ -113,7 +127,7 @@ class Blockchain {
       }
     });
 
-    return Array.from(complaintsMap.values());
+    return Array.from(complaintsMap.values()).sort((a, b) => b.timestamp - a.timestamp);
   }
 }
 

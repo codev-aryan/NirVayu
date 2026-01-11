@@ -512,13 +512,29 @@ function SafeLifePlanner({ wardId }: { wardId: number }) {
 
 function PollutionReporter({ wardId }: { wardId: number }) {
   const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
     pollutionType: "Industrial Emissions",
+    subcategory: "",
     description: "",
     severity: "Medium",
     evidence: null as string | null,
   });
   const [isMining, setIsMining] = useState(false);
   const { toast } = useToast();
+
+  const subcategories: Record<string, string[]> = {
+    "Industrial Emissions": ["Factory / Industrial smoke", "Power plant emissions", "Brick kilns", "Diesel generator (DG) set emissions", "Chemical / toxic gas release", "Burning in industrial premises"],
+    "Vehicular Pollution": ["Excessive vehicle smoke", "Old / unfit vehicles", "Traffic congestion causing pollution", "Idling commercial vehicles", "Construction vehicle dust"],
+    "Construction & Road Dust": ["Construction dust (no green net / water sprinkling)", "Demolition dust", "Uncovered construction material", "Road dust / damaged roads", "Soil excavation pollution"],
+    "Open Burning": ["Garbage burning", "Plastic burning", "Leaf / biomass burning", "Crop residue / stubble burning", "Scrap / tyre burning"],
+    "Waste & Landfill Issues": ["Overflowing garbage dumps", "Landfill gas / odor", "Open waste dumping", "Poor waste segregation causing air pollution"],
+    "Odour & Gas Leakage": ["Sewage smell", "Chemical odor", "Landfill smell", "Industrial odor", "Gas leakage (non-emergency)"],
+    "Residential & Commercial Smoke": ["Domestic fuel burning (coal/wood)", "Restaurant / dhaba smoke", "Tandoor smoke", "Community bonfire", "Firecrackers"],
+    "Hazardous Pollution": ["Asbestos dust", "Medical waste burning", "E-waste burning", "Unknown hazardous fumes", "Air pollution affecting schools / hospitals"],
+    "Other": ["Other - Please specify in description"]
+  };
 
   const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -530,8 +546,8 @@ function PollutionReporter({ wardId }: { wardId: number }) {
   };
 
   const handleSubmit = async () => {
-    if (!formData.description) {
-      toast({ title: "Error", description: "Please provide a description", variant: "destructive" });
+    if (!formData.description || !formData.name || !formData.email) {
+      toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
       return;
     }
 
@@ -548,7 +564,7 @@ function PollutionReporter({ wardId }: { wardId: number }) {
       };
       await pollutionBlockchain.addBlock(complaintData);
       toast({ title: "Success", description: "Report secured on blockchain!" });
-      setFormData({ pollutionType: "Industrial Emissions", description: "", severity: "Medium", evidence: null });
+      setFormData({ name: "", email: "", phone: "", pollutionType: "Industrial Emissions", subcategory: "", description: "", severity: "Medium", evidence: null });
     } catch (e) {
       toast({ title: "Error", description: "Failed to secure report", variant: "destructive" });
     } finally {
@@ -564,20 +580,48 @@ function PollutionReporter({ wardId }: { wardId: number }) {
         </CardTitle>
         <CardDescription>File immutable pollution reports secured by cryptographic proof.</CardDescription>
       </CardHeader>
-      <CardContent className="p-6 space-y-6">
-        <div className="grid grid-cols-2 gap-4">
+      <CardContent className="p-6 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label>Pollution Source</Label>
-            <Select value={formData.pollutionType} onValueChange={(v) => setFormData(p => ({ ...p, pollutionType: v }))}>
+            <Label>Full Name</Label>
+            <Input value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))} placeholder="John Doe" />
+          </div>
+          <div className="space-y-2">
+            <Label>Email</Label>
+            <Input type="email" value={formData.email} onChange={e => setFormData(p => ({...p, email: e.target.value}))} placeholder="john@example.com" />
+          </div>
+          <div className="space-y-2">
+            <Label>Phone (Optional)</Label>
+            <Input value={formData.phone} onChange={e => setFormData(p => ({...p, phone: e.target.value}))} placeholder="+91..." />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Pollution Category</Label>
+            <Select value={formData.pollutionType} onValueChange={(v) => setFormData(p => ({ ...p, pollutionType: v, subcategory: "" }))}>
               <SelectTrigger className="bg-background/50"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Industrial Emissions">Industrial Emissions</SelectItem>
-                <SelectItem value="Waste Burning">Waste Burning</SelectItem>
-                <SelectItem value="Construction Dust">Construction Dust</SelectItem>
-                <SelectItem value="Traffic Congestion">Traffic Congestion</SelectItem>
+                {Object.keys(subcategories).map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-2">
+            <Label>Subcategory</Label>
+            <Select value={formData.subcategory} onValueChange={(v) => setFormData(p => ({ ...p, subcategory: v }))}>
+              <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select type..." /></SelectTrigger>
+              <SelectContent>
+                {subcategories[formData.pollutionType]?.map(sub => (
+                  <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Observed Severity</Label>
             <Select value={formData.severity} onValueChange={(v) => setFormData(p => ({ ...p, severity: v }))}>
@@ -588,6 +632,12 @@ function PollutionReporter({ wardId }: { wardId: number }) {
                 <SelectItem value="High">High (Health Hazard)</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Location</Label>
+            <div className="flex items-center gap-2 p-2 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium border border-blue-100 h-10">
+              <MapPin className="w-4 h-4" /> 28.61, 77.20 (Auto)
+            </div>
           </div>
         </div>
 
@@ -602,11 +652,11 @@ function PollutionReporter({ wardId }: { wardId: number }) {
         </div>
 
         <div className="space-y-2">
-          <Label>Media Evidence (Photo/Video)</Label>
+          <Label>Evidence (Optional)</Label>
           <div 
             onClick={() => document.getElementById('media-upload')?.click()}
             className={cn(
-              "border-2 border-dashed rounded-xl h-48 flex flex-col items-center justify-center cursor-pointer transition-all",
+              "border-2 border-dashed rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer transition-all",
               formData.evidence ? "border-primary bg-primary/5" : "border-muted-foreground/20 hover:border-primary/50 bg-muted/20"
             )}
           >
@@ -614,38 +664,16 @@ function PollutionReporter({ wardId }: { wardId: number }) {
               <img src={formData.evidence} className="h-full w-full object-cover rounded-lg" alt="Preview" />
             ) : (
               <>
-                <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                <p className="text-sm font-medium">Click to upload evidence</p>
-                <p className="text-xs text-muted-foreground">JPG, PNG, or MP4 accepted</p>
+                <Upload className="w-6 h-6 text-muted-foreground mb-1" />
+                <p className="text-xs font-medium">Click to upload photo</p>
               </>
             )}
-            <input 
-              type="file" 
-              id="media-upload" 
-              className="hidden" 
-              accept="image/*,video/*"
-              onChange={handleMediaUpload} 
-            />
+            <input type="file" id="media-upload" className="hidden" accept="image/*" onChange={handleMediaUpload} />
           </div>
         </div>
 
-        <div className="flex items-center gap-2 p-3 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium border border-blue-100">
-          <MapPin className="w-4 h-4" /> Location auto-detected: 28.61, 77.20
-        </div>
-
-        <Button 
-          onClick={handleSubmit} 
-          disabled={isMining} 
-          className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20"
-        >
-          {isMining ? (
-            <>
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              Securing on Blockchain...
-            </>
-          ) : (
-            "Securely Report on Blockchain"
-          )}
+        <Button onClick={handleSubmit} disabled={isMining} className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20">
+          {isMining ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Securing...</> : "File Blockchain Report"}
         </Button>
       </CardContent>
     </Card>

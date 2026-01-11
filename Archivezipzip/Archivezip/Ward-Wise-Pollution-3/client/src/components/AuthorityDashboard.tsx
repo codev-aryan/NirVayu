@@ -507,7 +507,9 @@ function IntelligencePanel({ wardId }: { wardId: number }) {
 }
 
 function ReportsPanel({ wardId }: { wardId: number }) {
-  const [reports, setReports] = useState<any[]>([]);
+  const [allReports, setAllReports] = useState<any[]>([]);
+  const [filterMode, setFilterMode] = useState<"ward" | "global">("ward");
+  const [showPendingOnly, setShowPendingOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isMining, setIsMining] = useState(false);
   const [statusNotes, setStatusNotes] = useState<Record<string, string>>({});
@@ -515,13 +517,19 @@ function ReportsPanel({ wardId }: { wardId: number }) {
   useEffect(() => {
     const loadData = async () => {
       await pollutionBlockchain.initialize();
-      setReports(pollutionBlockchain.getComplaints().filter((c: any) => c.wardId === wardId));
+      setAllReports(pollutionBlockchain.getComplaints());
       setIsLoading(false);
     };
     loadData();
     const interval = setInterval(loadData, 3000);
     return () => clearInterval(interval);
-  }, [wardId]);
+  }, []);
+
+  const reports = allReports.filter((c: any) => {
+    const wardMatch = filterMode === "global" || c.wardId === wardId;
+    const statusMatch = !showPendingOnly || c.status === "pending";
+    return wardMatch && statusMatch;
+  });
 
   const updateStatus = async (complaintId: string, newStatus: string) => {
     setIsMining(true);
@@ -533,7 +541,7 @@ function ReportsPanel({ wardId }: { wardId: number }) {
         notes: statusNotes[complaintId] || '',
         updatedAt: new Date().toISOString()
       });
-      setReports(pollutionBlockchain.getComplaints().filter((c: any) => c.wardId === wardId));
+      setAllReports(pollutionBlockchain.getComplaints());
     } finally {
       setIsMining(false);
     }
@@ -541,29 +549,43 @@ function ReportsPanel({ wardId }: { wardId: number }) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 text-primary" /> Immutable Citizen Reports
-        </CardTitle>
-        <CardDescription>Tamper-proof pollution evidence secured on blockchain.</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-primary" /> Immutable Citizen Reports
+          </CardTitle>
+          <CardDescription>Tamper-proof pollution evidence secured on blockchain.</CardDescription>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-muted p-1 rounded-lg">
+            <Button size="sm" variant={filterMode === "ward" ? "default" : "ghost"} onClick={() => setFilterMode("ward")} className="text-[10px] h-7 px-2">Local Ward</Button>
+            <Button size="sm" variant={filterMode === "global" ? "default" : "ghost"} onClick={() => setFilterMode("global")} className="text-[10px] h-7 px-2">Global Feed</Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Pending Only</Label>
+            <Switch checked={showPendingOnly} onCheckedChange={setShowPendingOnly} />
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="flex justify-center py-8"><Loader2 className="animate-spin" /></div>
         ) : reports.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">No reports filed for this ward yet.</div>
+          <div className="text-center py-12 text-muted-foreground">No matching reports found.</div>
         ) : (
           <div className="space-y-4">
             {reports.map((report) => (
-              <Card key={report.id} className="p-4 border-l-4 border-l-primary">
+              <Card key={report.id} className="p-4 border-l-4 border-l-primary bg-card/50">
                 <div className="flex justify-between items-start gap-4">
                   <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{report.pollutionType}</Badge>
+                    <div className="flex items-center flex-wrap gap-2">
+                      <Badge variant="outline">{report.pollutionType} - {report.subcategory}</Badge>
                       <Badge className={cn(
                         report.severity === 'High' ? "bg-red-500" : report.severity === 'Medium' ? "bg-orange-500" : "bg-yellow-500"
                       )}>{report.severity}</Badge>
+                      <Badge variant="secondary" className="text-[9px]">Ward ID: {report.wardId}</Badge>
                     </div>
+                    <div className="text-[10px] text-muted-foreground font-bold">REPORTER: {report.name} ({report.email})</div>
                     <p className="text-sm font-medium">{report.description}</p>
                     <div className="flex items-center gap-4 text-[10px] text-muted-foreground font-mono">
                       <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(report.submittedAt).toLocaleString()}</span>
@@ -585,7 +607,7 @@ function ReportsPanel({ wardId }: { wardId: number }) {
                           disabled={isMining}
                           onClick={() => updateStatus(report.id, 'in-progress')}
                         >
-                          Mark In-Progress
+                          Acknowledge
                         </Button>
                         <Button 
                           size="sm" 
@@ -599,18 +621,18 @@ function ReportsPanel({ wardId }: { wardId: number }) {
                     )}
                   </div>
                   {report.evidence && (
-                    <img src={report.evidence} className="w-24 h-24 object-cover rounded border" alt="evidence" />
+                    <img src={report.evidence} className="w-24 h-24 object-cover rounded border shadow-sm" alt="evidence" />
                   )}
                 </div>
                 {report.authorityNotes && (
                   <div className="mt-3 p-2 bg-muted rounded text-xs italic border-l-2 border-primary">
-                    Authority: {report.authorityNotes}
+                    Action Taken: {report.authorityNotes}
                   </div>
                 )}
                 <div className="mt-2 flex justify-between items-center border-t pt-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-muted-foreground">STATUS:</span>
-                    <Badge variant={report.status === 'resolved' ? 'default' : 'secondary'} className="uppercase text-[9px]">
+                    <span className="text-[10px] text-muted-foreground">CURRENT STATUS:</span>
+                    <Badge variant={report.status === 'resolved' ? 'default' : report.status === 'in-progress' ? 'secondary' : 'outline'} className="uppercase text-[9px]">
                       {report.status}
                     </Badge>
                   </div>

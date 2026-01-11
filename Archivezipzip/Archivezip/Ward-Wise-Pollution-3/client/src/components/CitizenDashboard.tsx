@@ -511,123 +511,142 @@ function SafeLifePlanner({ wardId }: { wardId: number }) {
 }
 
 function PollutionReporter({ wardId }: { wardId: number }) {
-  const [pollutionType, setPollutionType] = useState("garbage burning");
-  const [media, setMedia] = useState<string | null>(null);
-  const [isCapturing, setIsCapturing] = useState(false);
-  const { mutate, data: result, isPending } = useSubmitReport();
+  const [formData, setFormData] = useState({
+    pollutionType: "Industrial Emissions",
+    description: "",
+    severity: "Medium",
+    evidence: null as string | null,
+  });
+  const [isMining, setIsMining] = useState(false);
   const { toast } = useToast();
 
   const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => setMedia(reader.result as string);
+      reader.onloadend = () => setFormData(p => ({ ...p, evidence: reader.result as string }));
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = () => {
-    if (!media) return toast({ title: "Error", description: "Please upload media", variant: "destructive" });
-    
-    // Simulate location for demo
-    mutate({
-      wardId,
-      pollutionType,
-      latitude: 28.61 + (Math.random() * 0.1),
-      longitude: 77.20 + (Math.random() * 0.1),
-      mediaBase64: media
-    });
+  const handleSubmit = async () => {
+    if (!formData.description) {
+      toast({ title: "Error", description: "Please provide a description", variant: "destructive" });
+      return;
+    }
+
+    setIsMining(true);
+    try {
+      await pollutionBlockchain.initialize();
+      const complaintData = {
+        id: `CPL-${Date.now()}`,
+        type: 'complaint',
+        wardId,
+        ...formData,
+        status: 'pending',
+        submittedAt: new Date().toISOString()
+      };
+      await pollutionBlockchain.addBlock(complaintData);
+      toast({ title: "Success", description: "Report secured on blockchain!" });
+      setFormData({ pollutionType: "Industrial Emissions", description: "", severity: "Medium", evidence: null });
+    } catch (e) {
+      toast({ title: "Error", description: "Failed to secure report", variant: "destructive" });
+    } finally {
+      setIsMining(false);
+    }
   };
 
   return (
-    <Card className="border-primary/20 shadow-xl overflow-hidden">
-      <CardHeader className="bg-primary/5">
-        <CardTitle className="flex items-center gap-2">
-          <Camera className="w-5 h-5 text-primary" /> Report Pollution Instance
+    <Card className="border-primary/20 shadow-xl overflow-hidden bg-gradient-to-br from-card to-primary/5">
+      <CardHeader className="bg-primary/5 pb-6 border-b border-primary/10">
+        <CardTitle className="flex items-center gap-2 text-primary">
+          <ShieldAlert className="w-6 h-6" /> Blockchain Evidence Portal
         </CardTitle>
-        <CardDescription>Directly recorded on blockchain for maximum transparency</CardDescription>
+        <CardDescription>File immutable pollution reports secured by cryptographic proof.</CardDescription>
       </CardHeader>
       <CardContent className="p-6 space-y-6">
-        {result ? (
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="text-center space-y-4 py-8"
-          >
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-10 h-10 text-green-600" />
-            </div>
-            <h3 className="text-2xl font-bold text-green-700">Report Permanently Stored</h3>
-            <p className="text-muted-foreground">Your report is now a permanent record on the blockchain.</p>
-            <div className="p-4 bg-muted rounded-lg text-left font-mono text-xs break-all space-y-2">
-              <div className="flex justify-between font-bold text-[10px] text-muted-foreground uppercase">
-                <span>Transaction Hash</span>
-                <span className="text-green-600">Verified</span>
-              </div>
-              <div>{result.txHash}</div>
-              <div className="pt-2 flex justify-between font-bold text-[10px] text-muted-foreground uppercase border-t border-border mt-2">
-                <span>Report Hash (SHA-256)</span>
-              </div>
-              <div>{result.hash}</div>
-            </div>
-            <Button onClick={() => window.location.reload()} className="w-full">File Another Report</Button>
-          </motion.div>
-        ) : (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Pollution Type</Label>
-              <Select value={pollutionType} onValueChange={setPollutionType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="garbage burning">Garbage Burning</SelectItem>
-                  <SelectItem value="industrial smoke">Industrial Smoke</SelectItem>
-                  <SelectItem value="construction dust">Construction Dust</SelectItem>
-                  <SelectItem value="vehicle emission">Vehicle Emission</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Visual Evidence (Photo/Video)</Label>
-              <div 
-                onClick={() => document.getElementById('media-upload')?.click()}
-                className={cn(
-                  "border-2 border-dashed rounded-xl h-48 flex flex-col items-center justify-center cursor-pointer transition-all",
-                  media ? "border-primary bg-primary/5" : "border-muted-foreground/20 hover:border-primary/50 bg-muted/20"
-                )}
-              >
-                {media ? (
-                  <img src={media} className="h-full w-full object-cover rounded-lg" alt="Preview" />
-                ) : (
-                  <>
-                    <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                    <p className="text-sm font-medium">Click to upload evidence</p>
-                    <p className="text-xs text-muted-foreground">JPG, PNG, or MP4 accepted</p>
-                  </>
-                )}
-                <input 
-                  type="file" 
-                  id="media-upload" 
-                  className="hidden" 
-                  accept="image/*,video/*"
-                  onChange={handleMediaUpload} 
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 p-3 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium border border-blue-100">
-              <MapPin className="w-4 h-4" /> Location auto-detected: 28.61, 77.20
-            </div>
-
-            <Button 
-              onClick={handleSubmit} 
-              disabled={isPending} 
-              className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20"
-            >
-              {isPending ? "Securing on Blockchain..." : "Securely Report on Blockchain"}
-            </Button>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Pollution Source</Label>
+            <Select value={formData.pollutionType} onValueChange={(v) => setFormData(p => ({ ...p, pollutionType: v }))}>
+              <SelectTrigger className="bg-background/50"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Industrial Emissions">Industrial Emissions</SelectItem>
+                <SelectItem value="Waste Burning">Waste Burning</SelectItem>
+                <SelectItem value="Construction Dust">Construction Dust</SelectItem>
+                <SelectItem value="Traffic Congestion">Traffic Congestion</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        )}
+          <div className="space-y-2">
+            <Label>Observed Severity</Label>
+            <Select value={formData.severity} onValueChange={(v) => setFormData(p => ({ ...p, severity: v }))}>
+              <SelectTrigger className="bg-background/50"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Low">Low (Visible)</SelectItem>
+                <SelectItem value="Medium">Medium (Discomfort)</SelectItem>
+                <SelectItem value="High">High (Health Hazard)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Detailed Description</Label>
+          <Input 
+            placeholder="Describe the pollution event, exact location, and time..." 
+            value={formData.description}
+            onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
+            className="bg-background/50 h-20"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Media Evidence (Photo/Video)</Label>
+          <div 
+            onClick={() => document.getElementById('media-upload')?.click()}
+            className={cn(
+              "border-2 border-dashed rounded-xl h-48 flex flex-col items-center justify-center cursor-pointer transition-all",
+              formData.evidence ? "border-primary bg-primary/5" : "border-muted-foreground/20 hover:border-primary/50 bg-muted/20"
+            )}
+          >
+            {formData.evidence ? (
+              <img src={formData.evidence} className="h-full w-full object-cover rounded-lg" alt="Preview" />
+            ) : (
+              <>
+                <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                <p className="text-sm font-medium">Click to upload evidence</p>
+                <p className="text-xs text-muted-foreground">JPG, PNG, or MP4 accepted</p>
+              </>
+            )}
+            <input 
+              type="file" 
+              id="media-upload" 
+              className="hidden" 
+              accept="image/*,video/*"
+              onChange={handleMediaUpload} 
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 p-3 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium border border-blue-100">
+          <MapPin className="w-4 h-4" /> Location auto-detected: 28.61, 77.20
+        </div>
+
+        <Button 
+          onClick={handleSubmit} 
+          disabled={isMining} 
+          className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20"
+        >
+          {isMining ? (
+            <>
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              Securing on Blockchain...
+            </>
+          ) : (
+            "Securely Report on Blockchain"
+          )}
+        </Button>
       </CardContent>
     </Card>
   );

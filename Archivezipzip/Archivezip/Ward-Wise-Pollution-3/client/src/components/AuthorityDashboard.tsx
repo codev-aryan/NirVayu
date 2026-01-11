@@ -507,8 +507,37 @@ function IntelligencePanel({ wardId }: { wardId: number }) {
 }
 
 function ReportsPanel({ wardId }: { wardId: number }) {
-  const { data: reports, isLoading } = useReports(wardId);
-  const verifyMutation = useVerifyReport();
+  const [reports, setReports] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isMining, setIsMining] = useState(false);
+  const [statusNotes, setStatusNotes] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const loadData = async () => {
+      await pollutionBlockchain.initialize();
+      setReports(pollutionBlockchain.getComplaints().filter(c => c.wardId === wardId));
+      setIsLoading(false);
+    };
+    loadData();
+    const interval = setInterval(loadData, 3000);
+    return () => clearInterval(interval);
+  }, [wardId]);
+
+  const updateStatus = async (complaintId: string, newStatus: string) => {
+    setIsMining(true);
+    try {
+      await pollutionBlockchain.addBlock({
+        type: 'status_update',
+        complaintId,
+        newStatus,
+        notes: statusNotes[complaintId] || '',
+        updatedAt: new Date().toISOString()
+      });
+      setReports(pollutionBlockchain.getComplaints().filter(c => c.wardId === wardId));
+    } finally {
+      setIsMining(false);
+    }
+  };
 
   return (
     <Card>
@@ -521,52 +550,79 @@ function ReportsPanel({ wardId }: { wardId: number }) {
       <CardContent>
         {isLoading ? (
           <div className="flex justify-center py-8"><Loader2 className="animate-spin" /></div>
-        ) : !reports || reports.length === 0 ? (
+        ) : reports.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">No reports filed for this ward yet.</div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Evidence Hash</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Verification</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reports.map((report) => (
-                <TableRow key={report.id}>
-                  <TableCell className="font-bold">{report.pollutionType}</TableCell>
-                  <TableCell className="font-mono text-[10px] max-w-[150px] truncate">{report.mediaHash}</TableCell>
-                  <TableCell>
-                    {report.txHash ? (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1 w-fit">
-                        <ShieldCheck className="w-3 h-3" /> Blockchain Secured
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">Local Only</Badge>
+          <div className="space-y-4">
+            {reports.map((report) => (
+              <Card key={report.id} className="p-4 border-l-4 border-l-primary">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{report.pollutionType}</Badge>
+                      <Badge className={cn(
+                        report.severity === 'High' ? "bg-red-500" : report.severity === 'Medium' ? "bg-orange-500" : "bg-yellow-500"
+                      )}>{report.severity}</Badge>
+                    </div>
+                    <p className="text-sm font-medium">{report.description}</p>
+                    <div className="flex items-center gap-4 text-[10px] text-muted-foreground font-mono">
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(report.submittedAt).toLocaleString()}</span>
+                      <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Hash: {report.hash.slice(0, 16)}...</span>
+                    </div>
+                    
+                    {report.status !== 'resolved' && (
+                      <div className="flex gap-2 pt-2">
+                        <Input 
+                          placeholder="Resolution notes..." 
+                          className="h-8 text-xs" 
+                          value={statusNotes[report.id] || ''}
+                          onChange={(e) => setStatusNotes(p => ({ ...p, [report.id]: e.target.value }))}
+                        />
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-8 text-xs"
+                          disabled={isMining}
+                          onClick={() => updateStatus(report.id, 'in-progress')}
+                        >
+                          Mark In-Progress
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          className="h-8 text-xs"
+                          disabled={isMining}
+                          onClick={() => updateStatus(report.id, 'resolved')}
+                        >
+                          Resolve
+                        </Button>
+                      </div>
                     )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => verifyMutation.mutate(report.id)}
-                      disabled={verifyMutation.isPending || report.verified}
-                      className={cn(report.verified && "bg-green-500 text-white border-green-500")}
-                    >
-                      {report.verified ? (
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                      ) : (
-                        <ExternalLink className="w-4 h-4 mr-1" />
-                      )}
-                      {report.verified ? "Verified" : "Verify Chain"}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </div>
+                  {report.evidence && (
+                    <img src={report.evidence} className="w-24 h-24 object-cover rounded border" alt="evidence" />
+                  )}
+                </div>
+                {report.authorityNotes && (
+                  <div className="mt-3 p-2 bg-muted rounded text-xs italic border-l-2 border-primary">
+                    Authority: {report.authorityNotes}
+                  </div>
+                )}
+                <div className="mt-2 flex justify-between items-center border-t pt-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-muted-foreground">STATUS:</span>
+                    <Badge variant={report.status === 'resolved' ? 'default' : 'secondary'} className="uppercase text-[9px]">
+                      {report.status}
+                    </Badge>
+                  </div>
+                  {report.resolvedAt && (
+                    <span className="text-[9px] text-green-600 font-bold uppercase">
+                      Resolved on {new Date(report.resolvedAt).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>

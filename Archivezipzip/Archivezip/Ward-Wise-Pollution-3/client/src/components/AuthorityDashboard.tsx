@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { useWards, useToggleEmergency, useUpdateControls, useSimulatePolicy, useReports, useVerifyReport, useWardIntelligence } from "@/hooks/use-wards";
-import { Loader2, Activity, Trophy, Medal, AlertTriangle, AlertOctagon, ShieldAlert, ShieldCheck, Truck, Hammer, Wind, TrendingDown, BarChart3, CheckCircle, ExternalLink, BrainCircuit, Info } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useWards, useToggleEmergency, useUpdateControls, useSimulatePolicy, useWardIntelligence } from "@/hooks/use-wards";
+import { Loader2, Activity, Trophy, Medal, AlertTriangle, AlertOctagon, ShieldAlert, ShieldCheck, Truck, Hammer, Wind, TrendingDown, BarChart3, CheckCircle, ExternalLink, BrainCircuit, Info, Clock } from "lucide-react";
+import { pollutionBlockchain } from "@/lib/blockchain";
 import { motion } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";

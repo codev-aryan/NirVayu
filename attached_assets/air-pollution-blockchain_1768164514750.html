@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Pollution Complaint Blockchain System</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // Simple Icon Components
+        const AlertCircle = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
+        const CheckCircle = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+        const Clock = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+        const FileText = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>;
+        const Shield = ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
+        const Users = ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+
+
+// Blockchain Implementation
+class Block {
+  constructor(index, timestamp, data, previousHash = '') {
+    this.index = index;
+    this.timestamp = timestamp;
+    this.data = data;
+    this.previousHash = previousHash;
+    this.nonce = 0;
+    this.hash = '';
+  }
+
+  async calculateHash() {
+    const crypto = window.crypto || window.msCrypto;
+    const dataString = this.index + this.previousHash + this.timestamp + JSON.stringify(this.data) + this.nonce;
+    const encoder = new TextEncoder();
+    const data = encoder.encode(dataString);
+    
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  async mineBlock(difficulty) {
+    this.hash = await this.calculateHash();
+    while (this.hash.substring(0, difficulty) !== Array(difficulty + 1).join("0")) {
+      this.nonce++;
+      this.hash = await this.calculateHash();
+    }
+  }
+}
+
+class Blockchain {
+  constructor() {
+    this.chain = [];
+    this.difficulty = 2;
+    this.pendingComplaint = null;
+    this.initializeChain();
+  }
+
+  async initializeChain() {
+    const genesisBlock = await this.createGenesisBlock();
+    this.chain.push(genesisBlock);
+  }
+
+  async createGenesisBlock() {
+    const block = new Block(0, Date.now(), { type: "genesis" }, "0");
+    await block.mineBlock(this.difficulty);
+    return block;
+  }
+
+  getLatestBlock() {
+    return this.chain[this.chain.length - 1];
+  }
+
+  async addBlock(newBlock) {
+    newBlock.previousHash = this.getLatestBlock().hash;
+    await newBlock.mineBlock(this.difficulty);
+    this.chain.push(newBlock);
+  }
+
+  async addComplaint(complaint) {
+    const newBlock = new Block(
+      this.chain.length,
+      Date.now(),
+      complaint,
+      this.getLatestBlock().hash
+    );
+    await this.addBlock(newBlock);
+  }
+
+  isChainValid() {
+    for (let i = 1; i < this.chain.length; i++) {
+      const currentBlock = this.chain[i];
+      const previousBlock = this.chain[i - 1];
+
+      if (currentBlock.previousHash !== previousBlock.hash) {
+        return false;
+      }
+    }
+    return true;
+  }
+}
+function ComplaintBlockchainSystem() {
+  const [blockchain, setBlockchain] = useState(null);
+  const [view, setView] = useState('citizen');
+  const [complaints, setComplaints] = useState([]);
+  const [mining, setMining] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
+  // Complaint Form State
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    category: 'industrial-emissions',
+    subcategory: '',
+    title: '',
+    description: '',
+    location: '',
+    severity: 'medium',
+    timeOfOccurrence: '',
+    recurring: false,
+    image: null,
+    imagePreview: null
+  });
+
+  const categoryOptions = {
+    'industrial-emissions': {
+      label: '🏭 Industrial Emissions',
+      subcategories: [
+        'Factory / Industrial smoke',
+        'Power plant emissions',
+        'Brick kilns',
+        'Diesel generator (DG) set emissions',
+        'Chemical / toxic gas release',
+        'Burning in industrial premises'
+      ]
+    },
+    'vehicular-pollution': {
+      label: 'Vehicular Pollution',
+      subcategories: [
+        'Excessive vehicle smoke',
+        'Old / unfit vehicles',
+        'Traffic congestion causing pollution',
+        'Idling commercial vehicles',
+        'Construction vehicle dust'
+      ]
+    },
+    'construction-dust': {
+      label: ' Construction & Road Dust',
+      subcategories: [
+        'Construction dust (no green net / water sprinkling)',
+        'Demolition dust',
+        'Uncovered construction material',
+        'Road dust / damaged roads',
+        'Soil excavation pollution'
+      ]
+    },
+    'open-burning': {
+      label: ' Open Burning',
+      subcategories: [
+        'Garbage burning',
+        'Plastic burning',
+        'Leaf / biomass burning',
+        'Crop residue / stubble burning',
+        'Scrap / tyre burning'
+      ]
+    },
+    'waste-landfill': {
+      label: ' Waste & Landfill Issues',
+      subcategories: [
+        'Overflowing garbage dumps',
+        'Landfill gas / odor',
+        'Open waste dumping',
+        'Poor waste segregation causing air pollution'
+      ]
+    },
+    'odour-gas': {
+      label: ' Odour & Gas Leakage',
+      subcategories: [
+        'Sewage smell',
+        'Chemical odor',
+        'Landfill smell',
+        'Industrial odor',
+        'Gas leakage (non-emergency)'
+      ]
+    },
+    'residential-commercial': {
+      label: ' Residential & Commercial Smoke',
+      subcategories: [
+        'Domestic fuel burning (coal/wood)',
+        'Restaurant / dhaba smoke',
+        'Tandoor smoke',
+        'Community bonfire',
+        'Firecrackers'
+      ]
+    },
+    'hazardous-pollution': {
+      label: ' Hazardous Pollution',
+      subcategories: [
+        'Asbestos dust',
+        'Medical waste burning',
+        'E-waste burning',
+        'Unknown hazardous fumes',
+        'Air pollution affecting schools / hospitals'
+      ]
+    },
+    'other': {
+      label: ' Other / Unknown',
+      subcategories: ['Other - Please specify in description']
+    }
+  };
+
+  useEffect(() => {
+    const initBlockchain = async () => {
+      const bc = new Blockchain();
+      
+      // Try to load existing blockchain from localStorage
+      const savedChain = localStorage.getItem('blockchainData');
+      if (savedChain) {
+        try {
+          const parsedChain = JSON.parse(savedChain);
+          bc.chain = parsedChain;
+          console.log('Loaded blockchain from storage:', bc.chain.length, 'blocks');
+        } catch (error) {
+          console.error('Error loading blockchain:', error);
+          await bc.initializeChain();
+        }
+      } else {
+        await bc.initializeChain();
+      }
+      
+      setBlockchain(bc);
+      setLoading(false);
+    };
+    initBlockchain();
+  }, []);
+
+  useEffect(() => {
+    if (blockchain && blockchain.chain.length > 0) {
+      loadComplaints();
+    }
+  }, [blockchain]);
+
+  const loadComplaints = () => {
+    if (!blockchain || blockchain.chain.length === 0) return;
+    
+    // Build a map of complaint IDs to their latest status
+    const statusUpdates = {};
+    
+    blockchain.chain.forEach(block => {
+      if (block.data.type === 'status_update') {
+        statusUpdates[block.data.complaintId] = {
+          status: block.data.newStatus,
+          authorityNotes: block.data.notes,
+          resolvedAt: block.data.newStatus === 'resolved' ? block.data.updatedAt : null
+        };
+      }
+    });
+    
+    // Get all complaints and apply status updates
+    const complaintBlocks = blockchain.chain
+      .slice(1)
+      .filter(block => block.data.type !== 'status_update')
+      .map(block => {
+        const complaint = {
+          ...block.data,
+          blockIndex: block.index,
+          timestamp: block.timestamp,
+          hash: block.hash
+        };
+        
+        // Apply any status updates
+        if (statusUpdates[complaint.id]) {
+          return {
+            ...complaint,
+            ...statusUpdates[complaint.id]
+          };
+        }
+        
+        return complaint;
+      });
+    
+    setComplaints(complaintBlocks);
+    
+    // Save blockchain to localStorage whenever complaints are loaded
+    try {
+      localStorage.setItem('blockchainData', JSON.stringify(blockchain.chain));
+    } catch (error) {
+      console.error('Error saving blockchain:', error);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    if (type === 'checkbox') {
+      setFormData(prev => ({ ...prev, [name]: checked }));
+    } else if (name === 'category') {
+      setFormData(prev => ({ ...prev, [name]: value, subcategory: '' }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({
+          ...prev,
+          image: reader.result,
+          imagePreview: reader.result
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!blockchain) {
+      alert('Blockchain is still initializing. Please wait...');
+      return;
+    }
+
+    if (!formData.name || !formData.email || !formData.phone || !formData.title || !formData.description || !formData.subcategory) {
+      alert('Please fill in all required fields including subcategory');
+      return;
+    }
+
+    setMining(true);
+
+    const complaint = {
+      id: `CPL-${Date.now()}`,
+      ...formData,
+      status: 'pending',
+      submittedAt: new Date().toISOString(),
+      resolvedAt: null,
+      authorityNotes: '',
+      priorityLevel: formData.severity === 'high' ? 'urgent' : formData.severity === 'medium' ? 'normal' : 'low'
+    };
+
+    try {
+      await blockchain.addComplaint(complaint);
+      loadComplaints();
+      
+      // Reset form
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        category: 'industrial-emissions',
+        subcategory: '',
+        title: '',
+        description: '',
+        location: '',
+        severity: 'medium',
+        timeOfOccurrence: '',
+        recurring: false,
+        image: null,
+        imagePreview: null
+      });
+      
+      alert('Complaint lodged successfully and added to blockchain!');
+    } catch (error) {
+      console.error('Error adding complaint:', error);
+      alert('Error lodging complaint');
+    } finally {
+      setMining(false);
+    }
+  };
+
+  const updateComplaintStatus = async (complaintId, newStatus, notes = '') => {
+    // In a TRUE blockchain, we NEVER modify existing blocks
+    // Instead, we add a NEW block that represents the status change
+    const statusUpdate = {
+      type: 'status_update',
+      complaintId,
+      newStatus,
+      notes,
+      updatedBy: 'authority',
+      updatedAt: new Date().toISOString()
+    };
+
+    setMining(true);
+    try {
+      await blockchain.addComplaint(statusUpdate);
+      loadComplaints();
+      alert(`Complaint status updated to: ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Error updating status');
+    } finally {
+      setMining(false);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'in-progress': return 'bg-blue-100 text-blue-800';
+      case 'resolved': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'pending': return <Clock className="w-4 h-4" />;
+      case 'in-progress': return <AlertCircle className="w-4 h-4" />;
+      case 'resolved': return <CheckCircle className="w-4 h-4" />;
+      default: return <FileText className="w-4 h-4" />;
+    }
+  };
+
+  const getSeverityColor = (severity) => {
+    switch (severity) {
+      case 'high': return 'bg-red-100 text-red-800';
+      case 'medium': return 'bg-orange-100 text-orange-800';
+      case 'low': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const citizenComplaints = complaints.filter(c => c.type !== 'status_update');
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <Shield className="w-16 h-16 text-indigo-600 mx-auto mb-4 animate-pulse" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Initializing Blockchain...</h2>
+          <p className="text-gray-600">Mining genesis block</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header */}
+      <header className="bg-white shadow-md">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Shield className="w-8 h-8 text-indigo-600" />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Blockchain Complaint System</h1>
+                <p className="text-sm text-gray-600">Transparent & Immutable Record Keeping</p>
+              </div>
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setView('citizen')}
+                className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                  view === 'citizen' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span>Citizen Portal</span>
+              </button>
+              <button
+                onClick={() => setView('authority')}
+                className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                  view === 'authority' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'
+                }`}
+              >
+                <Shield className="w-4 h-4" />
+                <span>Authority Dashboard</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Blockchain Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white p-4 rounded-lg shadow">
+            <p className="text-sm text-gray-600">Total Blocks</p>
+            <p className="text-2xl font-bold text-indigo-600">{blockchain?.chain.length || 0}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <p className="text-sm text-gray-600">Total Complaints</p>
+            <p className="text-2xl font-bold text-indigo-600">{citizenComplaints.length}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <p className="text-sm text-gray-600">Pending</p>
+            <p className="text-2xl font-bold text-yellow-600">
+              {citizenComplaints.filter(c => c.status === 'pending').length}
+            </p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <p className="text-sm text-gray-600">Resolved</p>
+            <p className="text-2xl font-bold text-green-600">
+              {citizenComplaints.filter(c => c.status === 'resolved').length}
+            </p>
+          </div>
+        </div>
+
+        {/* Citizen View */}
+        {view === 'citizen' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Complaint Form */}
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Lodge a Complaint</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Pollution Category *</label>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    {Object.keys(categoryOptions).map(key => (
+                      <option key={key} value={key}>
+                        {categoryOptions[key].label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Specific Issue *</label>
+                  <select
+                    name="subcategory"
+                    value={formData.subcategory}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value="">-- Select specific issue --</option>
+                    {categoryOptions[formData.category].subcategories.map((sub, idx) => (
+                      <option key={idx} value={sub}>{sub}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location / Address *</label>
+                  <input
+                    type="text"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Sector 15, Near XYZ Mall"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Severity Level *</label>
+                  <select
+                    name="severity"
+                    value={formData.severity}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value="low">Low - Minor discomfort</option>
+                    <option value="medium">Medium - Noticeable impact</option>
+                    <option value="high">High - Severe health impact</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Time of Occurrence</label>
+                  <input
+                    type="datetime-local"
+                    name="timeOfOccurrence"
+                    value={formData.timeOfOccurrence}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    name="recurring"
+                    checked={formData.recurring}
+                    onChange={handleInputChange}
+                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <label className="text-sm font-medium text-gray-700">This is a recurring issue</label>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Complaint Title</label>
+                  <input
+                    type="text"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    rows="4"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Upload Image (Optional)</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                  {formData.imagePreview && (
+                    <img src={formData.imagePreview} alt="Preview" className="mt-2 w-full h-48 object-cover rounded-lg" />
+                  )}
+                </div>
+
+                <button
+                  onClick={handleSubmit}
+                  disabled={mining}
+                  className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 font-medium transition-colors"
+                >
+                  {mining ? 'Mining Block...' : 'Submit Complaint'}
+                </button>
+              </div>
+            </div>
+
+            {/* My Complaints */}
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Complaints</h2>
+              <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                {citizenComplaints.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No complaints yet</p>
+                ) : (
+                  citizenComplaints.slice().reverse().map((complaint) => (
+                    <div key={complaint.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900">{complaint.title}</h3>
+                          <p className="text-xs text-gray-500">{categoryOptions[complaint.category]?.label || complaint.category}</p>
+                          {complaint.subcategory && (
+                            <p className="text-xs text-indigo-600 mt-1">→ {complaint.subcategory}</p>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end space-y-1">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getStatusColor(complaint.status)}`}>
+                            {getStatusIcon(complaint.status)}
+                            <span>{complaint.status}</span>
+                          </span>
+                          {complaint.severity && (
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(complaint.severity)}`}>
+                              {complaint.severity}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">{complaint.description}</p>
+                      {complaint.location && (
+                        <p className="text-xs text-gray-500 mb-1">📍 {complaint.location}</p>
+                      )}
+                      {complaint.recurring && (
+                        <span className="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded mb-2">🔁 Recurring Issue</span>
+                      )}
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>ID: {complaint.id}</span>
+                        <span>{new Date(complaint.submittedAt).toLocaleString()}</span>
+                      </div>
+                      {complaint.image && (
+                        <img src={complaint.image} alt="Complaint" className="mt-2 w-full h-32 object-cover rounded" />
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Authority View */}
+        {view === 'authority' && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Authority Dashboard - All Complaints</h2>
+            <div className="space-y-4">
+              {citizenComplaints.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No complaints to review</p>
+              ) : (
+                citizenComplaints.slice().reverse().map((complaint) => (
+                  <div key={complaint.id} className="border border-gray-200 rounded-lg p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">{complaint.title}</h3>
+                            <p className="text-sm text-indigo-600 font-medium">{categoryOptions[complaint.category]?.label || complaint.category}</p>
+                            {complaint.subcategory && (
+                              <p className="text-sm text-gray-600 mt-1">→ {complaint.subcategory}</p>
+                            )}
+                          </div>
+                          <div className="flex flex-col space-y-2">
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-1 ${getStatusColor(complaint.status)}`}>
+                              {getStatusIcon(complaint.status)}
+                              <span>{complaint.status}</span>
+                            </span>
+                            {complaint.severity && (
+                              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getSeverityColor(complaint.severity)}`}>
+                                {complaint.severity} severity
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 text-sm">
+                          <p><strong>Name:</strong> {complaint.name}</p>
+                          <p><strong>Email:</strong> {complaint.email}</p>
+                          <p><strong>Phone:</strong> {complaint.phone}</p>
+                          {complaint.location && <p><strong>Location:</strong> {complaint.location}</p>}
+                          <p><strong>Description:</strong> {complaint.description}</p>
+                          {complaint.timeOfOccurrence && (
+                            <p><strong>Time of Occurrence:</strong> {new Date(complaint.timeOfOccurrence).toLocaleString()}</p>
+                          )}
+                          {complaint.recurring && (
+                            <p className="text-purple-700"><strong>⚠️ Recurring Issue:</strong> Yes</p>
+                          )}
+                          <p><strong>Submitted:</strong> {new Date(complaint.submittedAt).toLocaleString()}</p>
+                          <p><strong>Complaint ID:</strong> {complaint.id}</p>
+                          <p><strong>Block Index:</strong> {complaint.blockIndex}</p>
+                          <p className="text-xs text-gray-400 break-all"><strong>Hash:</strong> {complaint.hash?.substring(0, 20)}...</p>
+                        </div>
+
+                        {complaint.image && (
+                          <div className="mt-4">
+                            <p className="text-sm font-medium mb-2">Attached Image:</p>
+                            <img src={complaint.image} alt="Complaint evidence" className="w-full h-48 object-cover rounded-lg" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h4 className="font-semibold text-gray-900 mb-3">Update Status</h4>
+                          <div className="space-y-3">
+                            <button
+                              onClick={() => updateComplaintStatus(complaint.id, 'in-progress')}
+                              disabled={complaint.status === 'in-progress' || complaint.status === 'resolved'}
+                              className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            >
+                              Mark In Progress
+                            </button>
+                            <button
+                              onClick={() => {
+                                const notes = prompt('Enter resolution notes:');
+                                if (notes) updateComplaintStatus(complaint.id, 'resolved', notes);
+                              }}
+                              disabled={complaint.status === 'resolved'}
+                              className="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            >
+                              Mark Resolved
+                            </button>
+                          </div>
+
+                          {complaint.authorityNotes && (
+                            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
+                              <p className="text-sm font-medium text-green-900">Resolution Notes:</p>
+                              <p className="text-sm text-green-700 mt-1">{complaint.authorityNotes}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+        // Then render
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ComplaintBlockchainSystem />);
+    </script>
+</body>
+</html>

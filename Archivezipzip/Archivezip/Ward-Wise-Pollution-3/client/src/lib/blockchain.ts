@@ -1,7 +1,14 @@
 
 // Client-side Blockchain Simulation for Immutable Ledger
 class Block {
-  constructor(index, timestamp, data, previousHash = '') {
+  index: number;
+  timestamp: number;
+  data: any;
+  previousHash: string;
+  nonce: number;
+  hash: string;
+
+  constructor(index: number, timestamp: number, data: any, previousHash: string = '') {
     this.index = index;
     this.timestamp = timestamp;
     this.data = data;
@@ -10,7 +17,7 @@ class Block {
     this.hash = '';
   }
 
-  async calculateHash() {
+  async calculateHash(): Promise<string> {
     const dataString = this.index + this.previousHash + this.timestamp + JSON.stringify(this.data) + this.nonce;
     const encoder = new TextEncoder();
     const data = encoder.encode(dataString);
@@ -19,7 +26,7 @@ class Block {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-  async mineBlock(difficulty) {
+  async mineBlock(difficulty: number): Promise<void> {
     this.hash = await this.calculateHash();
     while (this.hash.substring(0, difficulty) !== Array(difficulty + 1).join("0")) {
       this.nonce++;
@@ -29,12 +36,15 @@ class Block {
 }
 
 class Blockchain {
+  chain: Block[];
+  difficulty: number;
+
   constructor() {
     this.chain = [];
     this.difficulty = 2;
   }
 
-  async initialize() {
+  async initialize(): Promise<void> {
     const savedChain = localStorage.getItem('pollution_blockchain');
     if (savedChain) {
       try {
@@ -49,18 +59,18 @@ class Blockchain {
     }
   }
 
-  async createGenesis() {
+  async createGenesis(): Promise<void> {
     const block = new Block(0, Date.now(), { type: "genesis" }, "0");
     await block.mineBlock(this.difficulty);
     this.chain = [block];
     this.save();
   }
 
-  getLatestBlock() {
+  getLatestBlock(): Block {
     return this.chain[this.chain.length - 1];
   }
 
-  async addBlock(data) {
+  async addBlock(data: any): Promise<Block> {
     const prevBlock = this.getLatestBlock();
     const newBlock = new Block(this.chain.length, Date.now(), data, prevBlock.hash);
     await newBlock.mineBlock(this.difficulty);
@@ -69,11 +79,11 @@ class Blockchain {
     return newBlock;
   }
 
-  save() {
+  save(): void {
     localStorage.setItem('pollution_blockchain', JSON.stringify(this.chain));
   }
 
-  isValid() {
+  isValid(): boolean {
     for (let i = 1; i < this.chain.length; i++) {
       const current = this.chain[i];
       const prev = this.chain[i-1];
@@ -82,9 +92,9 @@ class Blockchain {
     return true;
   }
 
-  getComplaints() {
+  getComplaints(): any[] {
     const complaintsMap = new Map();
-    const statusUpdates = [];
+    const statusUpdates: any[] = [];
 
     this.chain.forEach(block => {
       if (block.data.type === 'complaint') {

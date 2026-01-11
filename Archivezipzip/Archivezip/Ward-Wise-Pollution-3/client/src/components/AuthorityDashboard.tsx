@@ -515,7 +515,7 @@ function ReportsPanel({ wardId }: { wardId: number }) {
   useEffect(() => {
     const loadData = async () => {
       await pollutionBlockchain.initialize();
-      setReports(pollutionBlockchain.getComplaints().filter(c => c.wardId === wardId));
+      setReports(pollutionBlockchain.getComplaints().filter((c: any) => c.wardId === wardId));
       setIsLoading(false);
     };
     loadData();
@@ -533,7 +533,7 @@ function ReportsPanel({ wardId }: { wardId: number }) {
         notes: statusNotes[complaintId] || '',
         updatedAt: new Date().toISOString()
       });
-      setReports(pollutionBlockchain.getComplaints().filter(c => c.wardId === wardId));
+      setReports(pollutionBlockchain.getComplaints().filter((c: any) => c.wardId === wardId));
     } finally {
       setIsMining(false);
     }

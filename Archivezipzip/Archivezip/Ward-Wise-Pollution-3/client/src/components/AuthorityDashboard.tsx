@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
@@ -532,8 +532,8 @@ function ReportsPanel({ wardId }: { wardId: number }) {
     return wardMatch && statusMatch;
   });
 
-  const getWardName = (id: number) => {
-    return wardsData?.wards.find(w => w.id === Number(id))?.name || `Ward ${id}`;
+  const getWardName = (id: any) => {
+    return wardsData?.wards.find(w => Number(w.id) === Number(id))?.name || `Ward ${id}`;
   };
 
   const updateStatus = async (complaintId: string, newStatus: string) => {

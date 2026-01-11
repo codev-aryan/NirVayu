@@ -518,12 +518,19 @@ function ReportsPanel({ wardId }: { wardId: number }) {
   const [isMining, setIsMining] = useState(false);
   const [statusNotes, setStatusNotes] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    const loadData = async () => {
+  const loadData = async () => {
+    try {
       await pollutionBlockchain.initialize();
-      setAllReports(pollutionBlockchain.getComplaints());
+      const complaints = pollutionBlockchain.getComplaints();
+      setAllReports(complaints);
+    } catch (error) {
+      console.error("Error loading blockchain data:", error);
+    } finally {
       setIsLoading(false);
-    };
+    }
+  };
+
+  useEffect(() => {
     loadData();
     const interval = setInterval(loadData, 3000);
     return () => clearInterval(interval);
@@ -536,7 +543,9 @@ function ReportsPanel({ wardId }: { wardId: number }) {
   });
 
   const getWardName = (id: any) => {
-    return wardsData?.wards.find(w => Number(w.id) === Number(id))?.name || `Ward ${id}`;
+    if (!wardsData?.wards) return `Ward ${id}`;
+    const ward = wardsData.wards.find(w => Number(w.id) === Number(id));
+    return ward ? ward.name : `Ward ${id}`;
   };
 
   const updateStatus = async (complaintId: string, newStatus: string) => {
@@ -549,7 +558,9 @@ function ReportsPanel({ wardId }: { wardId: number }) {
         notes: statusNotes[complaintId] || '',
         updatedAt: new Date().toISOString()
       });
-      setAllReports(pollutionBlockchain.getComplaints());
+      await loadData();
+    } catch (error) {
+      console.error("Error updating status:", error);
     } finally {
       setIsMining(false);
     }

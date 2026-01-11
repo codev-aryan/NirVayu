@@ -584,11 +584,11 @@ function PollutionReporter({ wardId }: { wardId: number }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label>Full Name</Label>
-            <Input value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))} placeholder="John Doe" />
+            <Input value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))} placeholder="" />
           </div>
           <div className="space-y-2">
             <Label>Email</Label>
-            <Input type="email" value={formData.email} onChange={e => setFormData(p => ({...p, email: e.target.value}))} placeholder="john@example.com" />
+            <Input type="email" value={formData.email} onChange={e => setFormData(p => ({...p, email: e.target.value}))} placeholder="" />
           </div>
           <div className="space-y-2">
             <Label>Phone (Optional)</Label>

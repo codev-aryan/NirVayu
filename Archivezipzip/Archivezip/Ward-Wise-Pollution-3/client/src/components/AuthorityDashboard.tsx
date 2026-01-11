@@ -4,18 +4,20 @@ import { Loader2, Activity, Trophy, Medal, AlertTriangle, AlertOctagon, ShieldAl
 import { pollutionBlockchain } from "@/lib/blockchain";
 import { motion } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, Cell } from "recharts";
 import { cn } from "@/lib/utils";
 import { WardMap } from "./WardMap";
 import { StatusBadge } from "./StatusBadge";
+
 import { ControlType, SimulationRequest } from "@shared/schema";
 
 export function AuthorityDashboard() {

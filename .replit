@@ -30,13 +30,13 @@ args = "Main Server"
 name = "Main Server"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd Archivezipzip/Archivezip/Ward-Wise-Pollution-3 && npm install && npm run dev"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd Archivezipzip/Archivezip/Ward-Wise-Pollution-3 && npm install --legacy-peer-deps axios lucide-react clsx tailwind-merge @google/generative-ai && npm run db:push && npm run dev"
+waitForPort = 5000
 
 [[ports]]
 localPort = 5000

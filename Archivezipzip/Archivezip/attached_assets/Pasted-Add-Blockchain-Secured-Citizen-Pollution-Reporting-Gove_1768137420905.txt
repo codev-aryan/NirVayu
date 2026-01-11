@@ -1,0 +1,93 @@
+Add Blockchain-Secured Citizen Pollution Reporting (Government-Grade Feature)
+I have an existing Node.js + Express backend with a ward-wise AQI system and frontend dashboard.
+I want you to ADD (not rebuild) a new feature:
+Blockchain-secured citizen pollution reporting so that no complaint can be edited, deleted, or ignored.
+🎯 GOAL
+Enable citizens to report pollution (photo/video + location + type), and store a cryptographic proof on blockchain to guarantee:
+Tamper-proof complaints
+Transparency for government
+Public verification
+🏗️ TECH CONSTRAINTS
+Keep existing AQI + ward logic unchanged
+Use local blockchain (Hardhat) or Polygon testnet
+Store ONLY HASH on blockchain, not media
+Backend must handle blockchain interaction
+🔐 BLOCKCHAIN DESIGN
+Smart Contract (PollutionReports.sol)
+Implement:
+struct Report {
+  bytes32 hash;
+  uint256 wardId;
+  uint256 timestamp;
+  address reporter;
+}
+
+function reportPollution(bytes32 hash, uint256 wardId) public;
+function getReportsByWard(uint256 wardId) public view returns (Report[] memory);
+function verifyReport(bytes32 hash) public view returns (bool);
+Reports must be immutable
+Emit event ReportSubmitted
+🧠 BACKEND CHANGES (IMPORTANT)
+1️⃣ Add new API route
+POST /api/reports
+Request:
+{
+  "wardId": 12,
+  "pollutionType": "garbage burning",
+  "latitude": 28.61,
+  "longitude": 77.20,
+  "mediaBase64": "..."
+}
+Backend should:
+Generate SHA-256 hash of:
+media
+wardId
+pollutionType
+timestamp
+Store media locally or in memory
+Push hash to blockchain using ethers.js
+Return transaction hash
+Response:
+{
+  "status": "BLOCKCHAIN_VERIFIED",
+  "txHash": "0xabc...",
+  "hash": "0x123..."
+}
+2️⃣ Add blockchain service
+Create blockchain.ts
+Use ethers.js
+Load contract ABI + address
+Handle retries & errors
+🖥️ FRONTEND ADDITIONS
+Citizen View
+Upload image/video
+Auto-fetch location
+Select pollution type
+Submit report
+After submit show:
+✅ Report Permanently Stored on Blockchain
+🔗 Transaction ID: 0xabc123
+Government Dashboard
+View reports ward-wise
+See:
+Timestamp
+Pollution type
+Blockchain Tx ID
+Button: Verify on Blockchain
+🏛️ WHY THIS IS GOVERNMENT-GRADE
+No admin can delete reports
+Citizens get proof
+Auditable trail for RTI / courts
+Ready for civic deployment
+🧪 DEMO REQUIREMENTS
+Hardhat local blockchain included
+Pre-deploy contract on startup
+Sample reports auto-generated for demo
+🏆 FINAL OUTPUT
+Smart contract
+Backend integration
+Working API
+UI changes
+Clear console logs showing blockchain writes
+Implement this completely into my existing project. Do not leave placeholders.
+This is for a hackathon demo, so reliability and clarity matter more than optimization.

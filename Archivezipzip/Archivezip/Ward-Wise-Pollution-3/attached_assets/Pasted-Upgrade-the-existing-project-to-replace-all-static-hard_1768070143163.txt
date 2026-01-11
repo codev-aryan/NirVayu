@@ -1,0 +1,67 @@
+Upgrade the existing project to replace all static/hard-coded data with dynamic, real-time data fetched from an external API. The updates should happen automatically without page reload, and the UI should remain unchanged. Implement loading, error handling, and a “last updated” timestamp. Ensure the project runs on Replit with process.env.PORT.
+
+Instructions:
+
+Identify static data
+
+Go through all project files and list all hard-coded/static data currently displayed in the UI.
+
+Replace these with dynamic values fetched from an API.
+
+Choose an external API
+
+Use a free API relevant to the data (e.g., weather, cryptocurrency, news, stock prices, etc.).
+
+Make API calls using fetch and async/await.
+
+Update the UI dynamically
+
+Replace static content with dynamic content in the DOM.
+
+Use JavaScript DOM manipulation (innerText, innerHTML, etc.).
+
+Do not reload the page. Keep the existing layout and CSS intact.
+
+Implement real-time updates
+
+Fetch new data at regular intervals (e.g., every 3 seconds) using setInterval.
+
+Update the UI automatically without user action.
+
+Loading and error handling
+
+Show a loading message/spinner while fetching data.
+
+Display an error message if the API request fails.
+
+Last updated timestamp
+
+Show a live timestamp indicating the last time data was fetched successfully.
+
+Update it with every new fetch.
+
+Server setup for Replit
+
+Ensure the Node.js server listens on process.env.PORT for Replit compatibility.
+
+Keep all routes and existing server logic intact.
+
+Preserve existing UI
+
+Do not redesign. Only modify the parts necessary to dynamically update data.
+
+Deliverables
+
+Updated index.html (if needed for placeholders like ids).
+
+Updated script.js (or main JS file) with fetch, async/await, DOM updates, and interval refresh.
+
+Updated server.js (or main server file) to use process.env.PORT.
+
+Additional requirements:
+
+Use vanilla JavaScript only (no frameworks).
+
+Comment the code where you implement API calls, DOM updates, loading, and error handling.
+
+Ensure everything works immediately on Replit.

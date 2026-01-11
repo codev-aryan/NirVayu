@@ -1,0 +1,43 @@
+modules = ["nodejs-20", "python-3.11"]
+[nix]
+channel = "stable-25_05"
+packages = ["unzip"]
+
+[agent]
+expertMode = true
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Frontend Server (Corrected)"
+
+[[workflows.workflow]]
+name = "Frontend Server (Corrected)"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd Archivezip/Ward-Wise-Pollution-3 && npm run dev -- --host 0.0.0.0 --port 5000"
+waitForPort = 5000
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+AQICN_API_KEY = "1287001d798b5096952f4d012f7414b0c7104497"
+"Gemini API key" = "AIzaSyCb3kRn9_v6aXGVM6fPQbuLpIluZ8UwZPI"
+"NASA FIRMS API key" = "07fde8ac57fbbda5f4988d63ffb844e8"
+AQI_PREDICTOR_API = "579b464db66ec23bdd000001610085fc3a4e455a52991cfd42bb68bb"

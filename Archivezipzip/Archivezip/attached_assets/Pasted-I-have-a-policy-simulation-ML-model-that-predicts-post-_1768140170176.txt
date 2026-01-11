@@ -1,0 +1,72 @@
+I have a policy simulation ML model that predicts post-policy PM2.5 / AQI
+based on controllable government actions.
+
+Model details:
+- Inputs:
+  - Current PM2.5 / AQI
+  - Dust reduction percentage (D)
+  - Traffic reduction percentage (T)
+  - Construction control percentage (C)
+- Model logic:
+  PM25_after = PM25 * (1
+    - w_dust * (D / 100)
+    - w_traffic * (T / 100)
+    - w_construction * (C / 100)
+  )
+
+The weights (w_dust, w_traffic, w_construction) are learned/defined
+and already available in the backend.
+
+Your task:
+INTEGRATE this as a GOVERNMENT POLICY SIMULATOR.
+
+Requirements:
+
+1. Backend Integration
+- Implement the policy simulator entirely in the backend
+- Accept inputs via API:
+  - ward_id
+  - dust_reduction (%)
+  - traffic_reduction (%)
+  - construction_control (%)
+- Fetch the current ward AQI / PM2.5 from storage
+- Apply the policy equation dynamically
+- Return:
+  - current AQI
+  - projected AQI after policy
+  - absolute improvement
+  - percentage improvement
+
+2. Safety & Constraints
+- Clamp all percentages between 0–100
+- Ensure AQI never drops below 0
+- Reject invalid inputs
+- No hard-coded outputs or mock values
+
+3. Dashboard Binding
+- Connect the simulator to the existing UI controls
+- Do NOT change UI layout or styling
+- Update results dynamically without page reload
+- Show “Projected AQI after policy” clearly
+
+4. Explainability (Important for Government Demo)
+- Return a breakdown:
+  - contribution of dust control
+  - contribution of traffic control
+  - contribution of construction control
+- Add a short textual summary explaining how the policy helped
+
+5. Architecture Rules
+- Use JavaScript / TypeScript
+- Keep model logic isolated (policySimulator.ts or similar)
+- Replit compatible
+- No frontend ML computation
+
+Goal:
+This should behave like a government decision-support tool
+that answers:
+“What happens to AQI if we enforce X% traffic control,
+Y% dust suppression, and Z% construction regulation?”
+
+Do NOT rebuild existing features.
+Only integrate and wire the policy simulator cleanly.

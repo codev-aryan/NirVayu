@@ -1,0 +1,340 @@
+PROJECT OVERVIEW (READ FIRST)
+
+Build a Ward-Wise Pollution Action Dashboard where each administrative ward is the smallest operational unit for pollution monitoring, decision-making, and action.
+
+The system must have two strictly separated roles:
+
+Citizen Interface
+Used by residents to view ward-level pollution, receive health advisories, follow prevention measures, plan daily activities using pollution data, and contribute through collective ward-level actions.
+
+Government Authority Interface
+Used by officials to monitor pollution across wards, assign responsibility scores, apply ward-specific control techniques, simulate policies, and manage pollution emergencies.
+
+All features must be explicitly ward-wise.
+City-level views are allowed only as aggregated summaries of wards.
+
+Features must appear only in their respective role dashboards, as specified below.
+
+MODE OF OPERATION
+
+You are an autonomous full-stack engineering agent.
+
+Do not ask questions
+
+Do not reduce scope
+
+Do not skip features
+
+Do not stop early
+
+Do not leave placeholders
+
+Build, run, debug, and finish the full system.
+
+TECH STACK (FIXED)
+
+Frontend: React + Vite, Tailwind CSS, Chart.js, Leaflet.js
+
+Backend: Node.js + Express
+
+Data: Mock JSON with simulated real-time updates
+
+REQUIRED STRUCTURE (MUST MATCH)
+/server
+ ├── index.js
+ └── data/wards.json
+
+/client
+ ├── src/components
+ │   ├── WardMap.jsx
+ │   ├── ClimateClock.jsx
+ │   ├── ResponsibilityScore.jsx
+ │   ├── PolicySimulator.jsx
+ │   ├── ControlTechniques.jsx
+ │   ├── SafeLifePlanner.jsx
+ │   ├── PollutionCreditSystem.jsx
+ │   ├── PreventionMeasures.jsx
+ │   ├── EmergencyPanel.jsx
+ ├── src/pages
+ │   ├── CitizenDashboard.jsx
+ │   ├── AuthorityDashboard.jsx
+ │   ├── WardDetail.jsx
+ └── src/App.jsx
+
+
+Missing or unused files = FAIL.
+
+CORE RULE
+
+WARD is the smallest unit.
+Every metric, score, alert, recommendation, and control must be calculated per ward.
+
+FEATURES BY ROLE (MANDATORY IMPLEMENTATION)
+🔁 SHARED FEATURES (VISIBLE TO BOTH ROLES)
+1️⃣ Ward Pollution Engine
+
+Per ward:
+
+AQI, PM2.5, PM10, NO₂
+
+AQI category logic
+
+Auto-update every 30–60 seconds
+
+2️⃣ Interactive Ward Map
+
+Leaflet + GeoJSON wards
+
+Color-coded by AQI
+
+On ward click show:
+
+AQI + category
+
+Dominant pollutant
+
+Dominant pollution source
+
+Ward Pollution Responsibility Score
+
+3️⃣ Climate Clock + Ward Carbon Budget
+
+Live climate countdown (years → seconds)
+
+CO₂ tons/year per ward
+
+% share of city emissions
+
+Insight:
+“If all wards polluted like Ward X → Y years left”
+
+🧍‍♂️ CITIZEN INTERFACE FEATURES
+4️⃣ Ward Health Advisory (Citizen Only)
+
+Per ward:
+
+Outdoor activity guidance
+
+Mask recommendation
+
+Alerts for children, elderly, asthma patients
+
+Best time windows for outdoor activity
+
+5️⃣ Prevention Measures (Citizen Only)
+
+Per ward:
+
+Personal prevention (mask, ventilation)
+
+Lifestyle actions (transport, idling)
+
+Community actions (dust control, plantation)
+
+Daily checklist:
+
+What to do
+
+What to avoid
+
+Safe hours outside
+
+6️⃣ Safe Life Planner (Citizen Only – UNIQUE)
+
+Inputs:
+
+Age group
+
+Health condition
+
+Daily routine
+
+Outdoor hours
+
+Output:
+“Today’s Safe Life Plan for Ward X”
+
+Best time to go outside
+
+Time to avoid
+
+Required mask level
+
+Indoor vs outdoor advice
+
+Automatically updates when AQI changes.
+
+7️⃣ Ward Pollution Credit System (Citizen Only – UNIQUE)
+
+Citizen actions (mock):
+
+Public transport
+
+Carpooling
+
+Plantation
+
+No waste burning
+
+Rules:
+
+Credits aggregated per ward
+
+No individual scoring
+
+Credits positively affect ward mitigation effort and WPRS
+
+8️⃣ Citizen Emergency Mode
+
+Trigger:
+
+AQI ≥ 300
+
+Sudden AQI spike
+
+Behavior:
+
+UI switches to emergency layout
+
+Show emergency helplines
+
+Show nearby hospitals
+
+Show immediate safety instructions
+
+🏛 GOVERNMENT AUTHORITY INTERFACE FEATURES
+9️⃣ Authority Dashboard
+
+View all wards simultaneously
+
+Highlight critical wards
+
+View pollution trends
+
+🔟 Ward Pollution Responsibility Score (WPRS) – Authority Control
+
+Formula (mandatory):
+
+WPRS = Pollution Load
+     – Mitigation Effort
+     + Improvement Trend
+
+
+Rules:
+
+Score range: 0–100
+
+Updates when pollution, controls, or citizen credits change
+
+Used for ward ranking and accountability
+
+1️⃣1️⃣ Policy Impact Simulator (Authority Only)
+
+Per ward simulation:
+
+Traffic reduction %
+
+Construction halt
+
+Dust suppression level
+
+Outputs:
+
+Projected AQI
+
+% improvement
+
+Impact summary text
+
+1️⃣2️⃣ Ward-Specific Control Techniques (Authority Only)
+
+Each ward must support independent controls:
+
+Traffic
+
+Odd–Even
+
+Peak-hour bans
+
+Heavy vehicle ban
+
+Construction
+
+Halt
+
+Water sprinkling
+
+Dust barriers
+
+Industry
+
+Reduced hours
+
+Temporary shutdown
+
+Fuel switching (mock)
+
+Waste Burning
+
+Surveillance
+
+Citizen reporting integration
+
+Meteorology
+
+Low wind → automatically intensify controls
+
+Rules:
+
+Controls affect AQI differently
+
+Multiple controls stack with diminishing returns
+
+Applied only to selected ward
+
+1️⃣3️⃣ Emergency Control Panel (Authority Only)
+
+Declare pollution emergency per ward
+
+Enforce mandatory controls
+
+Visual emergency indicators on map and dashboard
+
+ACCEPTANCE CRITERIA (HARD)
+
+Project is DONE only if:
+
+App runs without errors
+
+Citizen and Authority dashboards are separate
+
+Every feature listed above exists in UI
+
+Ward selection updates all data
+
+Controls affect AQI and WPRS
+
+Climate clock runs live
+
+Emergency modes trigger correctly
+
+No TODOs or placeholder logic
+
+Missing anything = FAIL.
+
+STOP RULE
+
+Stop execution only when:
+
+Application runs successfully
+
+All features are implemented
+
+Manual interaction confirms functionality
+
+FINAL IDENTITY
+
+Ward-wise pollution platform with role-based citizen safety, collective prevention, authority governance, emergency response, and climate urgency.
+
+START BUILDING
+IMPLEMENT EVERYTHING

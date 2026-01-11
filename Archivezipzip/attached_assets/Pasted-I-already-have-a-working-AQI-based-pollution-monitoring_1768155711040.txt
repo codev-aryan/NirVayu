@@ -1,0 +1,84 @@
+I already have a working AQI-based pollution monitoring system. 
+Your task is ONLY to integrate a policy simulation ML model to make the CO2 budget dynamic.
+DO NOT break or refactor existing working code.
+
+========================
+STRICT NON-NEGOTIABLE RULES
+========================
+1. DO NOT change:
+   - Existing AQI API logic
+   - Existing API keys or Replit Secrets
+   - Blockchain / smart contract code
+   - Existing routes, ports, or frontend behavior
+
+2. DO NOT:
+   - Hardcode API keys
+   - Rename environment variables
+   - Replace AQI data sources
+   - Refactor unrelated files
+
+3. If ML model fails:
+   - Fallback silently to existing static logic
+   - Log error safely
+   - Application must continue running
+
+========================
+EXISTING FUNCTION (DO NOT MODIFY SIGNATURE)
+========================
+The following function exists and is currently static:
+
+def co2_budget_from_aqi(aqi, e_max=10000):
+    aqi = min(max(aqi, 0), 500)
+    pollution_factor = aqi / 500
+    co2_budget = e_max * (1 - pollution_factor)
+    return round(co2_budget, 2)
+
+You MUST keep the function name and return type unchanged.
+
+========================
+WHAT TO IMPLEMENT
+========================
+1. Load the existing policy / ML model safely at server startup
+2. Move ML logic into a NEW, SEPARATE module:
+   - policySimulator.py OR policySimulator.ts
+3. Use policy inputs:
+   - dust_reduction (%)
+   - traffic_reduction (%)
+   - construction_control (%)
+4. Use the ML model to compute:
+   - Adjusted PM2.5
+   - Dynamic CO2 budget
+   - Policy impact %
+
+5. Inside co2_budget_from_aqi():
+   - Call the policy simulator
+   - If ML output is valid → use it
+   - If ML fails → use old static formula
+
+========================
+SECURITY & SAFETY
+========================
+- Use process.env for any API key
+- Do not log secrets
+- Do not expose secrets to frontend
+- Do not rename existing env variables
+
+========================
+ARCHITECTURE REQUIREMENTS
+========================
+- No breaking changes
+- No database schema changes
+- No smart contract edits
+- ML logic must be additive only
+
+========================
+FINAL VALIDATION
+========================
+- App must start without crash
+- AQI values must still load correctly
+- Wards must not show random or zero data
+- Blockchain flow must remain untouched
+- System must work even if ML model is unavailable
+
+Proceed conservatively. This is a government hackathon demo.
+Stability > new features.

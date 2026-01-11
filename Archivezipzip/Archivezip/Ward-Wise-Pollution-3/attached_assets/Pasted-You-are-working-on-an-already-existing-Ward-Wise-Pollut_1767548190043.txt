@@ -1,0 +1,212 @@
+You are working on an already existing Ward-Wise Pollution Action Dashboard with:
+
+Ward-wise AQI & pollutant data
+
+Citizen and Government Authority roles
+
+Backend + frontend already running
+
+Your task is to ADD and INTEGRATE the features below into the existing project, without breaking existing functionality.
+
+❌ Do NOT rebuild the project
+❌ Do NOT remove existing features
+❌ Do NOT change architecture unless required
+✅ Extend the system cleanly
+
+FEATURES TO ADD (ALL REQUIRED)
+1️⃣ ADD WARD-WISE HEALTH ADVISORIES
+
+Role: Citizen Interface ONLY
+
+What to Add
+
+A Health Advisory section that appears when a ward is selected.
+
+Data Used
+
+Existing ward AQI
+
+Existing AQI category
+
+Display (Per Ward)
+
+Outdoor activity guidance
+
+Mask recommendation (None / Cloth / N95)
+
+Alerts for children, elderly, asthma patients
+
+Best outdoor time windows (if applicable)
+
+Rules
+
+Advisory must update automatically when ward AQI updates
+
+Must be visible on:
+
+Citizen Dashboard
+
+Ward Detail Page
+
+Static or city-level advisories = FAIL
+
+2️⃣ ADD PREVENTIVE MEASURES MODULE
+
+Role: Citizen Interface ONLY
+
+What to Add
+
+A Preventive Measures section that gives daily ward-specific actions.
+
+Categories (ALL REQUIRED)
+
+Personal prevention (mask, ventilation)
+
+Lifestyle actions (transport, idling)
+
+Community actions (dust control, plantation)
+
+Output
+
+A Daily Prevention Checklist:
+
+✔ What to do today
+
+❌ What to avoid today
+
+⏰ Safe outdoor hours
+
+Rules
+
+Checklist must change with AQI severity
+
+Must be tied to selected ward
+
+Static content = FAIL
+
+3️⃣ ADD WPRS LEADERBOARD
+
+Role: Government Authority Interface ONLY
+
+What to Add
+
+A Ward Pollution Responsibility Score (WPRS) Leaderboard.
+
+Data Used
+
+Existing WPRS values per ward
+
+Display
+
+Rank all wards from best to worst
+
+Highlight:
+
+🏆 Best Performing Ward
+
+⚠ Most Critical Ward
+
+Show:
+
+Ward name
+
+WPRS score
+
+AQI category indicator
+
+Rules
+
+Leaderboard must update when:
+
+Pollution data changes
+
+Controls are applied
+
+Credits change
+
+No live update = FAIL
+
+4️⃣ ADD WARD POLLUTION CREDIT POINT SYSTEM
+
+Role: Citizen Input + Authority Visibility
+
+What to Add
+
+A collective ward-level pollution credit system.
+
+Citizen Actions (Mock Inputs)
+
+Public transport usage
+
+Carpooling
+
+Plantation participation
+
+No waste burning pledge
+
+Logic
+
+Each action generates pollution reduction credits
+
+Credits are aggregated per ward
+
+No individual user scores allowed
+
+Citizen View
+
+“Your Ward’s Pollution Credits”
+
+Progress indicator (Low / Medium / High)
+
+Positive reinforcement message
+
+Authority View
+
+Ward-wise credit totals
+
+Identify low-participation wards
+
+Show correlation with WPRS improvement
+
+Integration Rule (CRITICAL)
+
+Credits must increase Mitigation Effort Index
+
+Credits must positively affect WPRS
+
+Credits not influencing WPRS = FAIL
+
+INTEGRATION CONSTRAINTS
+
+Use existing ward data structures where possible
+
+Extend wards.json only if required
+
+Do not duplicate data sources
+
+Ensure features appear only in correct role dashboards
+
+ACCEPTANCE CRITERIA (HARD)
+
+Task is DONE ONLY IF:
+
+Existing app still runs without errors
+
+Health advisories update with AQI
+
+Preventive checklist is ward-specific and dynamic
+
+WPRS leaderboard ranks wards correctly
+
+Credit system aggregates ward-wise
+
+Credits affect WPRS scores
+
+Features appear in correct role dashboards
+
+No placeholders or TODO logic
+
+Missing anything = FAIL
+
+START IMPLEMENTING
+EXTEND THE EXISTING PROJECT

@@ -10,3 +10,5 @@ artifacts/
 cache/
 scratch/
 uploads/
+.vercel
+.env*

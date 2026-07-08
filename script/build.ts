@@ -68,8 +68,8 @@ async function buildAll() {
       entryPoints: ["api/index.ts"],
       platform: "node",
       bundle: true,
-      format: "esm",
-      outfile: "api/index.js",
+      format: "cjs",
+      outfile: "api/index.cjs",
       define: {
         "process.env.NODE_ENV": '"production"',
       },
@@ -78,7 +78,7 @@ async function buildAll() {
       logLevel: "info",
     });
   } else {
-    console.log("skipping vercel serverless function build (pre-compiled api/index.js will be used)");
+    console.log("skipping vercel serverless function build (pre-compiled api/index.cjs will be used)");
   }
 }
 

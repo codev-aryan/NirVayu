@@ -34,9 +34,26 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // Hardcoded authority accounts — work on serverless (no DB needed)
+  const AUTHORITY_ACCOUNTS: Record<string, { id: string; username: string; password: string; role: string }> = {
+    admin: { id: "authority-admin", username: "admin", password: "password123", role: "authority" },
+    authority_delhi: { id: "authority-delhi", username: "authority_delhi", password: "delhi_secure_2024", role: "authority" },
+  };
+
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        // Check hardcoded authority accounts first (works on serverless)
+        const hardcoded = AUTHORITY_ACCOUNTS[username];
+        if (hardcoded) {
+          if (hardcoded.password === password) {
+            return done(null, hardcoded as any);
+          } else {
+            return done(null, false, { message: "Invalid username or password" });
+          }
+        }
+
+        // Fall back to in-memory storage for regular users
         const user = await storage.getUserByUsername(username);
         if (!user || user.password !== password) {
           return done(null, false, { message: "Invalid username or password" });
@@ -49,11 +66,18 @@ export function setupAuth(app: Express) {
   );
 
   passport.serializeUser((user, done) => {
-    done(null, user.id);
+    done(null, (user as any).id);
   });
 
   passport.deserializeUser(async (id: string, done) => {
     try {
+      // Check hardcoded authority accounts first
+      const hardcodedValues = Object.values(AUTHORITY_ACCOUNTS);
+      const hardcoded = hardcodedValues.find(u => u.id === id);
+      if (hardcoded) {
+        return done(null, hardcoded as any);
+      }
+      // Fall back to in-memory storage
       const user = await storage.getUser(id);
       done(null, user);
     } catch (err) {

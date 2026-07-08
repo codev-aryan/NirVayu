@@ -12,5 +12,4 @@ scratch/
 uploads/
 .vercel
 .env*
-api/index.ts
 

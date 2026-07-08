@@ -34,10 +34,9 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Hardcoded authority accounts — work on serverless (no DB needed)
+  // Hardcoded authority account — works on serverless (no DB needed)
   const AUTHORITY_ACCOUNTS: Record<string, { id: string; username: string; password: string; role: string }> = {
     admin: { id: "authority-admin", username: "admin", password: "password123", role: "authority" },
-    authority_delhi: { id: "authority-delhi", username: "authority_delhi", password: "delhi_secure_2024", role: "authority" },
   };
 
   passport.use(

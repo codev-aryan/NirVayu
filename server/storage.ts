@@ -104,15 +104,10 @@ export class MemStorage implements IStorage {
     // Refresh from API every 3 minutes (rate-limit safe)
     setInterval(() => this.updatePollutionData(), 3 * 60 * 1000);
 
-    // Seed Authority Accounts
+    // Seed Authority Account
     this.createUser({
       username: "admin",
       password: "password123",
-      role: "authority"
-    });
-    this.createUser({
-      username: "authority_delhi",
-      password: "delhi_secure_2024",
       role: "authority"
     });
   }

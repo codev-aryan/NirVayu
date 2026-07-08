@@ -60,26 +60,6 @@ async function buildAll() {
     logLevel: "info",
   });
 
-  // Only compile the Vercel function if the source TS file is present (local builds)
-  const fs = await import("fs");
-  if (fs.existsSync("server/vercel.ts")) {
-    console.log("building vercel serverless function...");
-    await esbuild({
-      entryPoints: ["server/vercel.ts"],
-      platform: "node",
-      bundle: true,
-      format: "cjs",
-      outfile: "api/index.cjs",
-      define: {
-        "process.env.NODE_ENV": '"production"',
-      },
-      minify: true,
-      external: externals,
-      logLevel: "info",
-    });
-  } else {
-    console.log("skipping vercel serverless function build (pre-compiled api/index.cjs will be used)");
-  }
 }
 
 buildAll().catch((err) => {

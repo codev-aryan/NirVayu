@@ -1,0 +1,137 @@
+import { useAuth } from "@/hooks/use-auth";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { insertUserSchema, InsertUser } from "@shared/schema";
+import { useLocation, Redirect } from "wouter";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl,FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, ShieldCheck, User } from "lucide-react";
+import { useState } from "react";
+
+export default function AuthPage() {
+  const { user, loginMutation } = useAuth();
+  const [, setLocation] = useLocation();
+
+  if (user) {
+    return <Redirect to={user.role === "authority" ? "/authority" : "/citizen"} />;
+  }
+
+  return (
+    <div className="min-h-screen flex bg-gradient-to-br from-background to-muted/50">
+      <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 lg:px-8 py-12">
+        <div className="mx-auto w-full max-w-md">
+          <div className="flex items-center gap-2 mb-8 justify-center">
+            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-primary-foreground">
+              <ShieldCheck className="w-8 h-8" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight">NirVayu</h1>
+          </div>
+
+          <div className="space-y-6">
+            <AuthorityAuth loginMutation={loginMutation} />
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or access public data</span>
+              </div>
+            </div>
+
+            <Button 
+              variant="outline" 
+              className="w-full h-12 text-lg font-semibold gap-2 border-2 hover:bg-primary hover:text-primary-foreground transition-all"
+              onClick={() => setLocation("/citizen")}
+            >
+              <User className="w-5 h-5" /> Enter Citizen Portal
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="hidden lg:flex flex-1 bg-primary items-center justify-center p-12 text-primary-foreground relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1611273426858-450d8e3c9fce?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-20" />
+        <div className="relative z-10 max-w-xl">
+          <h2 className="text-4xl font-bold mb-6 italic">Empowering Clean Air for Every Ward</h2>
+          <p className="text-xl opacity-90 leading-relaxed mb-8">
+            NirVayu is Delhi's next-gen environmental command center. Access real-time pollution insights, contribute to ward-level mitigation, and help build a sustainable future.
+          </p>
+          <div className="grid grid-cols-2 gap-6">
+            <div className="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/20">
+              <div className="text-3xl font-bold mb-1">272+</div>
+              <div className="text-sm opacity-80 uppercase tracking-wider">Wards Monitored</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/20">
+              <div className="text-3xl font-bold mb-1">Real-time</div>
+              <div className="text-sm opacity-80 uppercase tracking-wider">AI Predictions</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AuthorityAuth({ loginMutation }: { loginMutation: any }) {
+  const loginForm = useForm({
+    defaultValues: { username: "", password: "" },
+  });
+
+  return (
+    <Card className="border-2 border-primary/20 shadow-xl overflow-hidden">
+      <CardHeader className="bg-primary/5 pb-8 pt-6">
+        <div className="flex justify-between items-center mb-2">
+          <CardTitle className="text-2xl">Authority Access</CardTitle>
+          <ShieldCheck className="w-6 h-6 text-primary" />
+        </div>
+        <CardDescription className="text-base">
+          Restricted access for authorized personnel only. Please enter your credentials.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-8">
+        <Form {...loginForm}>
+          <form onSubmit={loginForm.handleSubmit((data) => loginMutation.mutate(data))} className="space-y-5">
+            <FormField
+              control={loginForm.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Authority ID</FormLabel>
+                  <FormControl>
+                    <Input className="h-11 border-2 focus-visible:ring-primary" placeholder="Enter ID" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={loginForm.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Access Code</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="••••••••" className="h-11 border-2 focus-visible:ring-primary" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full h-11 text-base font-bold shadow-lg shadow-primary/20" disabled={loginMutation.isPending}>
+              {loginMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Authorize Access
+            </Button>
+            <p className="text-xs text-center text-muted-foreground mt-4 italic">
+              All access is monitored and logged for security compliance.
+            </p>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
+

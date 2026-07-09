@@ -113,13 +113,24 @@ export class MemStorage implements IStorage {
   }
 
   private loadGeoJSON() {
-    const geojsonPath = path.resolve(
-      process.cwd(),
-      "attached_assets/Delhi_Wards_1768070860005.geojson",
-    );
+    const pathsToTry = [
+      path.resolve(process.cwd(), "attached_assets/Delhi_Wards_1768070860005.geojson"),
+      path.resolve(process.cwd(), "dist/attached_assets/Delhi_Wards_1768070860005.geojson"),
+      path.resolve(__dirname, "../attached_assets/Delhi_Wards_1768070860005.geojson"),
+      path.resolve(__dirname, "../../attached_assets/Delhi_Wards_1768070860005.geojson"),
+      path.resolve(__dirname, "attached_assets/Delhi_Wards_1768070860005.geojson"),
+    ];
 
-    if (!fs.existsSync(geojsonPath)) {
-      console.error("GeoJSON file not found at:", geojsonPath);
+    let geojsonPath = "";
+    for (const p of pathsToTry) {
+      if (fs.existsSync(p)) {
+        geojsonPath = p;
+        break;
+      }
+    }
+
+    if (!geojsonPath) {
+      console.error("GeoJSON file not found at any tried paths:", pathsToTry);
       return;
     }
 

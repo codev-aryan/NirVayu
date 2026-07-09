@@ -110,8 +110,12 @@ Return ONLY a JSON object (no markdown, no extra text):
         ) {
           return { classification: "other", confidence: 70, explanation: `${reason} Description suggests active outdoor burning, fire, smoke, or industrial fumes.` };
         }
-        // Everything else — not clearly about air pollution, reject
-        return { classification: "irrelevant", confidence: 0, explanation: `${reason} Description does not clearly indicate visible airborne pollution (smoke, dust, fumes, or haze). Only images showing active air pollution are accepted.` };
+        // Default fallback: accept under "other" to prevent blocking users when AI key is invalid/unavailable
+        return { 
+          classification: "other", 
+          confidence: 60, 
+          explanation: `${reason} Accepted under general category (AI verification fallback).` 
+        };
       };
 
       if (process.env.GEMINI_API_KEY) {

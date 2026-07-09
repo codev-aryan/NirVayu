@@ -18,7 +18,10 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  const uploadsDir = path.join(process.cwd(), "uploads");
+  // Use /tmp in production (Vercel serverless /var/task is read-only, only /tmp is writable)
+  const uploadsDir = process.env.NODE_ENV === "production"
+    ? "/tmp/uploads"
+    : path.join(process.cwd(), "uploads");
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }

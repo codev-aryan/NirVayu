@@ -17,24 +17,11 @@ app.use(
 
 app.use(express.urlencoded({ limit: "50mb", extended: false }));
 
-// DEBUG: log every incoming request URL to diagnose Vercel routing
-app.use((req: Request, _res: Response, next: NextFunction) => {
-  console.log(`[Vercel] ${req.method} ${req.url} (originalUrl: ${req.originalUrl})`);
-  next();
-});
-
-
 setupAuth(app);
 
-// Track initialization promise so we can await it on each request (cold start safety)
-const initPromise = registerRoutes(httpServer, app).catch((err: Error) => {
+// Register all API routes synchronously (registerRoutes calls app.get/post etc. immediately)
+registerRoutes(httpServer, app).catch((err: Error) => {
   console.error("Failed to register routes:", err);
-});
-
-// Middleware that waits for routes to finish registering before handling any request
-app.use(async (_req: Request, _res: Response, next: NextFunction) => {
-  await initPromise;
-  next();
 });
 
 // Global error handler
@@ -45,5 +32,5 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   res.status(status).json({ message });
 });
 
-// CJS export for Vercel serverless
+// CJS export — compiled by esbuild to dist/vercel.cjs
 export = app;

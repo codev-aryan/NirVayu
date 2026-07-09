@@ -701,6 +701,60 @@ Return ONLY a JSON object (no markdown, no extra text):
     }
   });
 
+  // === AQI Predictions ===
+  app.get("/api/predictions", async (req, res) => {
+    try {
+      const wards = await storage.getWards();
+      const predictions = wards.map(ward => {
+        // Generate 24-hour AQI forecast based on current AQI + time-of-day patterns
+        const hours = Array.from({ length: 24 }, (_, i) => {
+          const hour = (new Date().getHours() + i) % 24;
+          // Morning rush (7-10am) and evening rush (5-8pm) increase AQI
+          const rushFactor = (hour >= 7 && hour <= 10) || (hour >= 17 && hour <= 20) ? 1.15 : 1.0;
+          // Night-time reduction
+          const nightFactor = (hour >= 22 || hour <= 5) ? 0.85 : 1.0;
+          const randomVariation = 0.95 + Math.random() * 0.1;
+          return {
+            hour: `${hour.toString().padStart(2, '0')}:00`,
+            aqi: Math.round(ward.aqi * rushFactor * nightFactor * randomVariation),
+          };
+        });
+        return {
+          wardId: ward.id,
+          wardName: ward.name,
+          currentAqi: ward.aqi,
+          forecast: hours,
+          trend: ward.aqi > 200 ? "worsening" : ward.aqi > 100 ? "stable" : "improving",
+        };
+      });
+      res.json({ predictions, generatedAt: new Date().toISOString() });
+    } catch (e) {
+      res.status(500).json({ message: "Failed to generate predictions" });
+    }
+  });
+
+  // === Active Alerts ===
+  app.get("/api/alerts", async (req, res) => {
+    try {
+      const wards = await storage.getWards();
+      const alerts = wards
+        .filter(ward => ward.emergency_mode || ward.aqi > 300)
+        .map(ward => ({
+          wardId: ward.id,
+          wardName: ward.name,
+          aqi: ward.aqi,
+          type: ward.emergency_mode ? "EMERGENCY" : "CRITICAL",
+          message: ward.emergency_mode
+            ? `Emergency protocol active in ${ward.name}`
+            : `Critical AQI level (${ward.aqi}) in ${ward.name}`,
+          timestamp: new Date().toISOString(),
+        }));
+      res.json({ alerts, count: alerts.length });
+    } catch (e) {
+      res.status(500).json({ message: "Failed to fetch alerts" });
+    }
+  });
+
   // Create mock data file structure if it doesn't exist (as per requirements)
   // In a real app we might write to disk, here we just keep in memory but ensure the path concept exists
 

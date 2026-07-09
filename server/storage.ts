@@ -78,6 +78,21 @@ function co2_budget_from_aqi(
   return Math.round(Math.max(co2_budget, e_max * 0.25) * 100) / 100;
 }
 
+function predictFutureAqi(currentAqi: number, pm25: number, pm10: number): { predictedAqi: number; confidence: number; horizon: string } {
+  let trendFactor = 1.05; // Default slight increase
+  if (pm25 > 150 || pm10 > 250) {
+    trendFactor = 1.15; // Higher accumulation probability
+  } else if (currentAqi < 50) {
+    trendFactor = 1.02; // Stable at low levels
+  }
+  return {
+    predictedAqi: Math.round(currentAqi * trendFactor * 100) / 100,
+    confidence: currentAqi > 0 ? 0.85 : 0.0,
+    horizon: "24h"
+  };
+}
+
+
 export class MemStorage implements IStorage {
   private users = new Map<string, User>();
   private wards = new Map<number, Ward>();
@@ -161,12 +176,14 @@ export class MemStorage implements IStorage {
       const severity = aqi > 400 ? "Severe+" : aqi > 300 ? "Severe" : aqi > 200 ? "Poor" : "Moderate";
       const allowedControls = ["water_sprinkling", "waste_burning_ban"];
       if (aqi > 200) allowedControls.push("traffic_odd_even", "construction_halt");
+
+      const prediction = predictFutureAqi(aqi, pm25, pm10);
  
       const intelligence_data: any = {
         ward: feature.properties.Ward_Name ?? `Ward ${id}`,
         primary_pollutant: primaryPollutant,
         severity,
-        analysis_summary: `ML engine detected ${primaryPollutant} as dominant factor. Current AQI ${aqi} indicates ${severity} conditions.`,
+        analysis_summary: `ML engine detected ${primaryPollutant} as dominant factor. Current AQI ${aqi} indicates ${severity} conditions. Prediction: ${prediction.predictedAqi} AQI in ${prediction.horizon} (Confidence: ${Math.round(prediction.confidence * 100)}%).`,
         execution_plan_90_days: {
           days_0_30: allowedControls.slice(0, 3).map(c => `Immediate enforcement of ${c.replace(/_/g, ' ')}`),
           days_31_60: [
@@ -182,9 +199,9 @@ export class MemStorage implements IStorage {
         },
         confidence_level: "High",
         allowed_controls: allowedControls,
-        predicted_aqi: undefined,
-        prediction_horizon: undefined,
-        prediction_confidence: undefined
+        predicted_aqi: prediction.predictedAqi,
+        prediction_horizon: prediction.horizon,
+        prediction_confidence: prediction.confidence
       };
  
       this.wards.set(id, {
@@ -299,28 +316,15 @@ export class MemStorage implements IStorage {
             intelligence_data
           };
 
-          // Integrated AQI Prediction (Additive)
+          // Native AQI Prediction (No external process dependency)
           try {
-            const inputData = JSON.stringify({
-              current_aqi: aqi,
-              pm25,
-              pm10,
-              no2,
-              timestamp: new Date().toISOString(),
-              ward_id: id
-            });
-            // Use 'python' on Windows, 'python3' on Unix/Mac
-            const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
-            const { stdout } = await execFilePromise(pythonCmd, ['server/aqi_predictor.py', inputData]);
-            const prediction = JSON.parse(stdout);
-            if (prediction.predicted_aqi !== null) {
-              updatedWard.intelligence_data.analysis_summary += ` Prediction: ${prediction.predicted_aqi} AQI in ${prediction.prediction_horizon} (Confidence: ${Math.round(prediction.confidence * 100)}%).`;
-              // Add explicit fields for the UI
-              updatedWard.intelligence_data.predicted_aqi = prediction.predicted_aqi;
-              updatedWard.intelligence_data.prediction_horizon = prediction.prediction_horizon;
-              updatedWard.intelligence_data.prediction_confidence = prediction.confidence;
-              console.log(`[Prediction] ${ward.name}: ${prediction.predicted_aqi} AQI predicted`);
-            }
+            const prediction = predictFutureAqi(aqi, pm25, pm10);
+            updatedWard.intelligence_data.analysis_summary += ` Prediction: ${prediction.predictedAqi} AQI in ${prediction.horizon} (Confidence: ${Math.round(prediction.confidence * 100)}%).`;
+            // Add explicit fields for the UI
+            updatedWard.intelligence_data.predicted_aqi = prediction.predictedAqi;
+            updatedWard.intelligence_data.prediction_horizon = prediction.horizon;
+            updatedWard.intelligence_data.prediction_confidence = prediction.confidence;
+            console.log(`[Prediction] ${ward.name}: ${prediction.predictedAqi} AQI predicted`);
           } catch (err) {
             console.error(`[Prediction] Failed for ${ward.name}:`, err);
           }

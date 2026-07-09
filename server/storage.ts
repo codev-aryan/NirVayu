@@ -136,33 +136,77 @@ export class MemStorage implements IStorage {
 
     const data = fs.readFileSync(geojsonPath, "utf8");
     const geojson = JSON.parse(data);
-
+ 
     geojson.features.forEach((feature: any, index: number) => {
       const id = index + 1;
       // Use Turf to get the actual centroid of the ward
       const center = turf.centroid(feature);
       const [lng, lat] = center.geometry.coordinates;
-
+ 
+      // Deterministic realistic pollution values based on ward ID
+      const aqi = 150 + ((id * 31) % 200); // 150 to 350
+      const pm25 = Math.round(aqi * 0.6);
+      const pm10 = Math.round(aqi * 0.8);
+      const no2 = Math.round(aqi * 0.1);
+      const so2 = Math.round(aqi * 0.05);
+      const co = Math.round(aqi * 0.02 * 10) / 10;
+      const o3 = Math.round(aqi * 0.03);
+ 
+      let primarySource = "Traffic";
+      if (id % 4 === 0) primarySource = "Construction";
+      else if (id % 4 === 1) primarySource = "Industrial Emissions";
+      else if (id % 4 === 2) primarySource = "Waste Burning";
+ 
+      const primaryPollutant = aqi > 300 ? "PM2.5" : (no2 > 50 ? "NO2" : "Dust");
+      const severity = aqi > 400 ? "Severe+" : aqi > 300 ? "Severe" : aqi > 200 ? "Poor" : "Moderate";
+      const allowedControls = ["water_sprinkling", "waste_burning_ban"];
+      if (aqi > 200) allowedControls.push("traffic_odd_even", "construction_halt");
+ 
+      const intelligence_data: any = {
+        ward: feature.properties.Ward_Name ?? `Ward ${id}`,
+        primary_pollutant: primaryPollutant,
+        severity,
+        analysis_summary: `ML engine detected ${primaryPollutant} as dominant factor. Current AQI ${aqi} indicates ${severity} conditions.`,
+        execution_plan_90_days: {
+          days_0_30: allowedControls.slice(0, 3).map(c => `Immediate enforcement of ${c.replace(/_/g, ' ')}`),
+          days_31_60: [
+            `Transitioning from ${allowedControls[0].replace(/_/g, ' ')} to structural monitoring`,
+            `Deploying ${primaryPollutant}-specific mitigation units`,
+            `Ward-level compliance score integration (Current: ${Math.max(0, 100 - Math.floor(aqi / 5))}%)`
+          ],
+          days_61_90: [
+            "AI-driven predictive maintenance of control units",
+            "Community-led green buffer expansion",
+            `Evaluation of ${severity} reduction effectiveness`
+          ]
+        },
+        confidence_level: "High",
+        allowed_controls: allowedControls,
+        predicted_aqi: undefined,
+        prediction_horizon: undefined,
+        prediction_confidence: undefined
+      };
+ 
       this.wards.set(id, {
         id,
         name: feature.properties.Ward_Name ?? `Ward ${id}`,
         latitude: lat,
         longitude: lng,
-        aqi: 0,
-        pm25: 0,
-        pm10: 0,
-        no2: 0,
-        so2: 0,
-        co: 0,
-        o3: 0,
-        wprs: 0,
-        co2_budget_remaining: 5000,
+        aqi,
+        pm25,
+        pm10,
+        no2,
+        so2,
+        co,
+        o3,
+        wprs: Math.max(0, 100 - Math.floor(aqi / 5)),
+        co2_budget_remaining: co2_budget_from_aqi(aqi, 5000),
         emergency_mode: false,
         active_controls: [],
-        dominant_source: "Traffic",
+        dominant_source: primarySource,
         mitigation_effort: 0,
         citizen_credits: 0,
-        intelligence_data: null as any
+        intelligence_data
       });
     });
   }

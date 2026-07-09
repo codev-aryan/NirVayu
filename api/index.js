@@ -3,4 +3,6 @@
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const app = require("../dist/vercel.cjs");
+
+// Vercel serverless: export the Express app as the default handler
 export default app;

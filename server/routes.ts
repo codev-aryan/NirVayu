@@ -60,22 +60,22 @@ export async function registerRoutes(
       const prompt = `
 You are an expert AIR QUALITY monitoring AI. Your job is to detect images that show VISIBLE AIR POLLUTION only.
 
-Accepted categories (all must involve visible airborne pollutants — smoke, dust, exhaust, fumes, haze):
+Accepted categories (all must involve visible airborne pollutants — smoke, dust, exhaust, fumes, haze, or active fires/combustion producing emissions):
 - "traffic": Vehicles emitting visible exhaust, heavy traffic congestion with smog/haze, diesel smoke from trucks or buses.
 - "construction": Active construction sites with visible dust clouds, cement dust in air, demolition dust, machinery kicking up particulate matter.
 - "stubble burning": Agricultural fires, crop/stubble burning with visible smoke rising, farm field fires.
-- "other": Any other AIR pollution source with VISIBLE airborne emissions — e.g. factory/industrial chimney smoke, power plant emissions, brick kiln fumes, open garbage/waste burning with smoke, generator exhaust clouds, chemical plant fumes, thick smog or haze layer visibly degrading air quality.
+- "other": Any other AIR pollution source with VISIBLE airborne emissions — e.g. factory/industrial chimney smoke, power plant emissions, brick kiln fumes, open garbage/waste burning (even small trash fires or burning piles with flames/smoke), bonfire/wood burning, generator exhaust clouds, chemical plant fumes, thick smog or haze layer visibly degrading air quality. Any visible active outdoor fire producing smoke or emissions should be accepted.
 
 Rejected category:
-- "irrelevant": ANYTHING that does not show visible airborne pollution. This includes: water/river/lake pollution, sewage or drain overflow, garbage pile NOT on fire, chemical spill on ground, litter, clean outdoor scenes, selfies, food, indoor spaces, documents, animals, clear skies, or any scene where no smoke/dust/fumes/haze is visible in the air.
+- "irrelevant": ANYTHING that does not show visible airborne pollution or active outdoor fires. This includes: water/river/lake pollution, sewage or drain overflow, garbage pile NOT on fire, chemical spill on ground, litter, clean outdoor scenes, selfies, food, indoor spaces, documents, animals, clear skies, or any scene where no smoke/dust/fumes/haze/fire is visible.
 
-DECISION RULE: Ask yourself — "Can I see smoke, dust, exhaust fumes, or haze in this image that is actively in the air?" If NO → "irrelevant". If YES → pick the matching category.
+DECISION RULE: Ask yourself — "Can I see smoke, dust, exhaust fumes, haze, or an active outdoor fire/burning pile in this image?" If NO → "irrelevant". If YES → pick the matching category.
 
 Return ONLY a JSON object (no markdown, no extra text):
 {
   "classification": "traffic" | "construction" | "stubble burning" | "other" | "irrelevant",
   "confidence": number (integer 0 to 100),
-  "explanation": "State what is visibly in the air in this image, identify the source, and explain your classification decision."
+  "explanation": "State what is visibly in the air or burning in this image, identify the source, and explain your classification decision."
 }
 `;
 
@@ -84,32 +84,39 @@ Return ONLY a JSON object (no markdown, no extra text):
       let explanation = "Gemini API key is not set or request failed.";
       let aiAnalysisStatus: "ai" | "fallback" = "fallback";
 
-      // Helper: keyword fallback — ONLY accepts descriptions indicating visible AIRBORNE pollution
+      // Helper: keyword fallback — ONLY accepts descriptions indicating visible AIRBORNE pollution or fires
       const fallbackClassify = (desc: string, reason: string) => {
         const d = desc.toLowerCase();
+        
         // Traffic/vehicle exhaust in air
         if (d.includes("traffic") || d.includes("exhaust") || d.includes("diesel smoke") || d.includes("vehicle smoke") || d.includes("smog") || d.includes("haze")) {
-          return { classification: "traffic", confidence: 60, explanation: `${reason} Description suggests vehicle exhaust or traffic-related air pollution.` };
+          return { classification: "traffic", confidence: 75, explanation: `${reason} Description suggests vehicle exhaust or traffic-related air pollution.` };
         }
         // Construction dust in air
-        if (d.includes("construction dust") || d.includes("cement dust") || d.includes("dust cloud") || d.includes("demolition dust") || d.includes("dust rising")) {
-          return { classification: "construction", confidence: 58, explanation: `${reason} Description suggests construction dust in the air.` };
+        if (d.includes("construction dust") || d.includes("cement dust") || d.includes("dust cloud") || d.includes("demolition dust") || d.includes("dust rising") || d.includes("construction site")) {
+          return { classification: "construction", confidence: 75, explanation: `${reason} Description suggests construction dust in the air.` };
         }
-        // Burning with smoke
-        if (d.includes("stubble") || d.includes("crop burn") || d.includes("field burn") || d.includes("farm fire") || d.includes("field fire")) {
-          return { classification: "stubble burning", confidence: 60, explanation: `${reason} Description suggests agricultural burning with smoke.` };
+        // Burning with smoke (agricultural)
+        if (d.includes("stubble") || d.includes("crop burn") || d.includes("field burn") || d.includes("farm fire") || d.includes("field fire") || d.includes("crop residue")) {
+          return { classification: "stubble burning", confidence: 80, explanation: `${reason} Description suggests agricultural burning with smoke.` };
         }
-        // Other air pollution — smoke/fumes from industrial or burning sources
-        if (d.includes("smoke") || d.includes("fume") || d.includes("chimney") || d.includes("factory smoke") || d.includes("industrial smoke") || d.includes("kiln") || d.includes("generator smoke") || d.includes("burning garbage") || d.includes("waste burning") || d.includes("open burning")) {
-          return { classification: "other", confidence: 55, explanation: `${reason} Description suggests airborne smoke or industrial fumes.` };
+        // Other air pollution — smoke/fumes/fires from industrial or burning sources
+        if (
+          d.includes("smoke") || d.includes("fume") || d.includes("chimney") || d.includes("factory") || 
+          d.includes("industrial") || d.includes("kiln") || d.includes("generator") || d.includes("burning") || 
+          d.includes("waste") || d.includes("garbage") || d.includes("fire") || d.includes("flame") || 
+          d.includes("bonfire") || d.includes("trash") || d.includes("refuse") || d.includes("rubbish") || 
+          d.includes("combustion")
+        ) {
+          return { classification: "other", confidence: 70, explanation: `${reason} Description suggests active outdoor burning, fire, smoke, or industrial fumes.` };
         }
         // Everything else — not clearly about air pollution, reject
         return { classification: "irrelevant", confidence: 0, explanation: `${reason} Description does not clearly indicate visible airborne pollution (smoke, dust, fumes, or haze). Only images showing active air pollution are accepted.` };
       };
 
       if (process.env.GEMINI_API_KEY) {
-        // Try models in order — newer/available ones first
-        const modelsToTry = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-flash-latest"];
+        // Try models in order — newer/available ones first (include standard gemini-1.5-flash)
+        const modelsToTry = ["gemini-1.5-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-flash-latest"];
         let geminiSuccess = false;
         let lastGeminiError = "";
 

@@ -788,5 +788,66 @@ Return ONLY a JSON object:
   // Create mock data file structure if it doesn't exist (as per requirements)
   // In a real app we might write to disk, here we just keep in memory but ensure the path concept exists
 
+  // Chat endpoint for Citizen AI Chatbot
+  app.post("/api/chat", async (req, res) => {
+    try {
+      const { message, history } = req.body as {
+        message: string;
+        history?: { role: "user" | "model"; text: string }[];
+      };
+
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ error: "Message is required." });
+      }
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "AI service is currently unavailable." });
+      }
+
+      const systemContext = `You are NirVayu AI, a helpful air quality assistant for Delhi citizens on the NirVayu pollution monitoring platform.
+
+Your expertise covers:
+- Air Quality Index (AQI) levels, what they mean, and health implications
+- Types of pollution in Delhi: traffic exhaust, construction dust, stubble/crop burning, industrial emissions, waste burning
+- Health tips and precautions based on AQI levels
+- How to file a pollution report on NirVayu (upload a photo, the AI auto-detects the ward and classifies the source)
+- Delhi-specific pollution patterns (seasonal smog, Diwali firecrackers, winter inversion, monsoon effects)
+- NirVayu platform features: ward-wise AQI maps, citizen reports, authority dashboards, green credits for reporting
+- General advice on reducing personal exposure (masks, air purifiers, peak pollution hours)
+
+AQI Scale reference:
+- 0–50: Good (green) — Safe for all
+- 51–100: Satisfactory (light green) — Minor breathing discomfort for sensitive people
+- 101–200: Moderate (yellow) — Breathing discomfort for people with lung/heart disease
+- 201–300: Poor (orange) — Breathing discomfort for most on prolonged exposure
+- 301–400: Very Poor (red) — Respiratory illness on prolonged exposure
+- 401–500: Severe (dark red) — Affects healthy people; seriously impacts those with existing diseases
+
+Keep responses concise (2–4 sentences), friendly, and actionable. If asked something outside air quality or NirVayu, politely redirect to your area of expertise.`;
+
+      const chatHistory = (history || []).map((h) => ({
+        role: h.role,
+        parts: [{ text: h.text }],
+      }));
+
+      const { GoogleGenerativeAI } = await import("@google/generative-ai");
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model: "gemini-3.6-flash",
+        systemInstruction: systemContext,
+      });
+
+      const chat = model.startChat({ history: chatHistory });
+      const result = await chat.sendMessage(message);
+      const reply = result.response.text();
+
+      return res.json({ reply });
+    } catch (err: any) {
+      console.error("Chat error:", err.message);
+      return res.status(500).json({ error: "Failed to get AI response. Please try again." });
+    }
+  });
+
   return httpServer;
 }

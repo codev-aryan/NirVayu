@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Wind, Home, LogOut, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { AirQualityChatbot } from "@/components/AirQualityChatbot";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -67,6 +68,9 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
       <main className="flex-1 container mx-auto px-4 py-6 flex flex-col">
         {children}
       </main>
+
+      {/* AI Chatbot — Citizen Portal only */}
+      {role === "citizen" && <AirQualityChatbot />}
     </div>
   );
 }

@@ -424,39 +424,36 @@ export class MemStorage implements IStorage {
   }
 
   public async updatePollutionData() {
-    console.log(`[AQI] Starting live air quality update for ${this.wards.size} wards...`);
+    const token = process.env.AQICN_API_KEY || process.env.AQI_TOKEN || "fa58f8fc388da7bbe02c590c5e79337b69cc2abb";
+    console.log(`[AQI] Starting AQICN station update for ${this.wards.size} wards...`);
 
-    // ── 1. Fetch live Open-Meteo real-time air quality feeds for Delhi zones ──
-    const zoneCoords = [
-      { zone: "Central", lat: 28.6139, lng: 77.2090 },
-      { zone: "North",   lat: 28.7300, lng: 77.1200 },
-      { zone: "South",   lat: 28.5200, lng: 77.2100 },
-      { zone: "East",    lat: 28.6400, lng: 77.3100 },
-      { zone: "West",    lat: 28.5900, lng: 77.0500 }
-    ];
+    const stationMap = loadStationMap();
+    const wardStationMap = new Map<number, number>();
+    for (const [id, ward] of Array.from(this.wards.entries())) {
+      const uid = stationMap[ward.name];
+      if (uid) wardStationMap.set(id, uid);
+    }
 
-    const zoneData = new Map<string, any>();
+    const uniqueUids = Array.from(new Set(wardStationMap.values()));
+    console.log(`[AQI] Fetching ${uniqueUids.length} unique WAQI stations...`);
+
+    const stationData = new Map<number, any>();
     await Promise.all(
-      zoneCoords.map(async (zc) => {
+      uniqueUids.map(async (uid) => {
         try {
-          const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${zc.lat}&longitude=${zc.lng}&current=us_aqi,pm2_5,pm10,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide,ozone`;
+          const url = `https://api.waqi.info/feed/@${uid}/?token=${token}`;
           const res = await fetch(url);
-          if (res.ok) {
-            const json = await res.json();
-            if (json?.current) {
-              zoneData.set(zc.zone, json.current);
-              console.log(`[AQI] Open-Meteo ${zc.zone} Delhi → US AQI ${json.current.us_aqi}, PM2.5 ${json.current.pm2_5}`);
-            }
+          const json = await res.json();
+          if (json.status === "ok" && json.data?.aqi && json.data.aqi !== "-") {
+            stationData.set(uid, json.data);
+            console.log(`[AQI] AQICN Station @${uid} (${json.data.city?.name ?? "?"}) → AQI ${json.data.aqi}`);
           }
-        } catch (e: any) {
-          console.error(`[AQI] Open-Meteo fetch error for ${zc.zone}:`, e.message);
+        } catch (err) {
+          console.error(`[AQI] Failed to fetch station @${uid}:`, err);
         }
       })
     );
 
-    const defaultData = zoneData.get("Central") || { us_aqi: 152, pm2_5: 45, pm10: 52, nitrogen_dioxide: 35, sulphur_dioxide: 24, carbon_monoxide: 1297, ozone: 77 };
-
-    // ── 2. Helper: build updated ward from pollutants ──
     const buildUpdatedWard = (ward: Ward, aqi: number, iaqi: any): Ward => {
       const pm25 = Math.round(iaqi.pm25?.v ?? (aqi * 0.6));
       const pm10 = Math.round(iaqi.pm10?.v ?? (aqi * 0.8));
@@ -515,34 +512,19 @@ export class MemStorage implements IStorage {
       };
     };
 
-    // ── 3. Map real-time zone data to each ward with micro-spatial variation ──
     for (const [id, ward] of Array.from(this.wards.entries())) {
-      let zone = "Central";
-      if (ward.latitude > 28.70) zone = "North";
-      else if (ward.latitude < 28.55) zone = "South";
-      else if (ward.longitude > 77.25) zone = "East";
-      else if (ward.longitude < 77.10) zone = "West";
-
-      const zd = zoneData.get(zone) || defaultData;
-      // Realistic ward-level offset based on localized coordinates and ward ID
-      const wardOffset = ((id * 11) % 41) - 20; // -20 to +20 AQI variation across neighborhoods
-      const aqi = Math.max(30, Math.round((zd.us_aqi || 152) + wardOffset));
-
-      const iaqi = {
-        pm25: { v: zd.pm2_5 ? zd.pm2_5 * (1 + wardOffset / 250) : aqi * 0.6 },
-        pm10: { v: zd.pm10 ? zd.pm10 * (1 + wardOffset / 250) : aqi * 0.8 },
-        no2:  { v: zd.nitrogen_dioxide ?? (aqi * 0.1) },
-        so2:  { v: zd.sulphur_dioxide ?? (aqi * 0.05) },
-        co:   { v: zd.carbon_monoxide ? zd.carbon_monoxide / 100 : (aqi * 0.02) },
-        o3:   { v: zd.ozone ?? (aqi * 0.03) }
-      };
-
-      const updated = buildUpdatedWard(ward, aqi, iaqi);
-      this.wards.set(id, updated);
+      const uid = wardStationMap.get(id);
+      if (uid && stationData.has(uid)) {
+        const data = stationData.get(uid);
+        const aqi = Number(data.aqi);
+        const iaqi = data.iaqi || {};
+        const updated = buildUpdatedWard(ward, aqi, iaqi);
+        this.wards.set(id, updated);
+      }
     }
 
     this.lastUpdated = new Date();
-    console.log(`[AQI] Successfully updated ${this.wards.size} wards with live Open-Meteo real-time air quality data!`);
+    console.log(`[AQI] Successfully updated wards with AQICN data.`);
   }
 
   async getLastUpdated() {

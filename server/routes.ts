@@ -1133,8 +1133,8 @@ Keep responses concise (2–4 sentences), friendly, and actionable.${langInstruc
         return res.json({ reply });
       }
 
-      // Comprehensive Smart Question-Aware Fallback Engine
-      const msg = message.toLowerCase();
+      // Comprehensive Universal Intent & Knowledge Engine
+      const msg = message.toLowerCase().trim();
       const aqiCategory =
         avgAqi <= 50 ? (isHindi ? "अच्छा (Good)" : "Good") :
         avgAqi <= 100 ? (isHindi ? "संतोषजनक (Satisfactory)" : "Satisfactory") :
@@ -1142,34 +1142,80 @@ Keep responses concise (2–4 sentences), friendly, and actionable.${langInstruc
         avgAqi <= 300 ? (isHindi ? "खराब (Poor)" : "Poor") :
         avgAqi <= 400 ? (isHindi ? "बहुत खराब (Very Poor)" : "Very Poor") : (isHindi ? "गंभीर (Severe)" : "Severe");
 
-      if (msg.includes("humidity") || msg.includes("humid") || msg.includes("moisture") || msg.includes("नमी") || msg.includes("आर्द्रता") || msg.includes("प्रतिशत")) {
+      // 1. Greetings / Intro
+      if (
+        msg === "hi" || msg === "hello" || msg === "hey" || msg === "नमस्ते" || msg === "प्रणाम" || 
+        msg.includes("who are you") || msg.includes("कोण हो") || msg.includes("नाम क्या है") || msg.includes("hello ai")
+      ) {
         reply = isHindi
-          ? `वर्तमान में दिल्ली में हवा में नमी (Humidity) का स्तर लगभग ${humidity}% है और तापमान ${temp}°C है। हवा की गति ${windSpeed} km/h दर्ज की गई है।`
-          : `The current relative humidity in Delhi is ${humidity}% with a temperature of ${temp}°C and wind speed of ${windSpeed} km/h.`;
-      } else if (msg.includes("temp") || msg.includes("weather") || msg.includes("तापमान") || msg.includes("मौसम") || msg.includes("गर्मी") || msg.includes("ठंड")) {
+          ? `नमस्ते! मैं निर्वायु AI हूँ 🌿 मैं हवा की गुणवत्ता (AQI ${avgAqi}), मौसम (नमी ${humidity}%), स्वास्थ्य सावधानियों और प्रदूषण की शिकायत दर्ज करने में आपकी मदद कर सकता हूँ। आप क्या जानना चाहते हैं?`
+          : `Hello! I am NirVayu AI 🌿 I can help you with air quality (AQI ${avgAqi}), weather (Humidity ${humidity}%), health guidance, and reporting pollution in Delhi. How can I assist you?`;
+      }
+      // 2. Humidity / Moisture / नमी / आर्द्रता
+      else if (msg.includes("humidity") || msg.includes("humid") || msg.includes("moisture") || msg.includes("नमी") || msg.includes("आर्द्रता") || msg.includes("प्रतिशत")) {
+        if (msg.includes("what is") || msg.includes("क्या होती") || msg.includes("मतलब") || msg.includes("अर्थ")) {
+          reply = isHindi
+            ? `नमी (Humidity) हवा में मौजूद जलवाष्प (पानी की भाप) की मात्रा को दर्शाती है। वर्तमान में दिल्ली में हवा की नमी ${humidity}% है। उच्च नमी होने पर हवा में धुंध और प्रदूषण के कण ज़मीन के पास अधिक समय तक जमे रहते हैं।`
+            : `Humidity measures the amount of water vapor in the air. Delhi's relative humidity right now is ${humidity}%. Higher humidity can trap particulate matter and smog closer to ground level.`;
+        } else {
+          reply = isHindi
+            ? `वर्तमान में दिल्ली में हवा में नमी (Humidity) का स्तर लगभग ${humidity}% है। तापमान ${temp}°C और हवा की गति ${windSpeed} km/h दर्ज की गई है।`
+            : `The current relative humidity in Delhi is ${humidity}% with a temperature of ${temp}°C and wind speed of ${windSpeed} km/h.`;
+        }
+      }
+      // 3. Temperature / Weather / मौसम / तापमान
+      else if (msg.includes("temp") || msg.includes("weather") || msg.includes("तापमान") || msg.includes("मौसम") || msg.includes("गर्मी") || msg.includes("ठंड") || msg.includes("बारिश")) {
         reply = isHindi
-          ? `दिल्ली में वर्तमान मौसम: तापमान ${temp}°C है, सापेक्ष नमी ${humidity}% और हवा की गति ${windSpeed} km/h है।`
-          : `Delhi current weather update: Temperature is ${temp}°C, humidity is ${humidity}%, and wind speed is ${windSpeed} km/h.`;
-      } else if (msg.includes("precaution") || msg.includes("protect") || msg.includes("mask") || msg.includes("प्रिवेंशन") || msg.includes("सावधानी") || msg.includes("मास्क") || msg.includes("बचाव")) {
+          ? `दिल्ली में वर्तमान मौसम हाल:\n• तापमान: ${temp}°C\n• नमी (Humidity): ${humidity}%\n• हवा की गति: ${windSpeed} km/h`
+          : `Delhi live weather update:\n• Temperature: ${temp}°C\n• Relative Humidity: ${humidity}%\n• Wind Speed: ${windSpeed} km/h`;
+      }
+      // 4. Health Precautions / Masks / प्रिवेंशन / सावधानी / सुरक्षा / मास्क
+      else if (msg.includes("precaution") || msg.includes("protect") || msg.includes("mask") || msg.includes("प्रिवेंशन") || msg.includes("सावधानी") || msg.includes("मास्क") || msg.includes("बचाव") || msg.includes("सुरक्षा")) {
         reply = isHindi
-          ? `वर्तमान AQI (${avgAqi}) के अनुसार जरूरी सावधानियां:\n1. बाहर निकलते समय N95 या FFP2 मास्क अवश्य पहनें।\n2. सुबह और देर शाम के समय बाहर भारी शारीरिक व्यायाम से बचें।\n3. घरों की खिड़कियां बंद रखें और स्नेक प्लांट या एयर प्यूरीफायर का उपयोग करें।`
-          : `Recommended health precautions for AQI ${avgAqi}:\n1. Wear an N95 mask when stepping outdoors.\n2. Avoid heavy outdoor exercise during morning/evening smog hours.\n3. Keep windows closed and use indoor air purifiers or plants.`;
-      } else if (msg.includes("report") || msg.includes("file") || msg.includes("complaint") || msg.includes("शिकायत") || msg.includes("रिपोर्ट") || msg.includes("फोटो")) {
+          ? `वर्तमान AQI (${avgAqi}) के अनुसार स्वास्थ्य सावधानियां:\n1. बाहर निकलते समय N95 या FFP2 मास्क अवश्य पहनें।\n2. सुबह 6-9 बजे और शाम को बाहर भारी दौड़-भाग या व्यायाम से बचें।\n3. घरों के खिड़की-दरवाजे बंद रखें और इनडोर पौधे जैसे स्नेक प्लांट या एयर प्यूरीफायर का उपयोग करें।`
+          : `Recommended health precautions for AQI ${avgAqi}:\n1. Wear an N95 or FFP2 mask when stepping outdoors.\n2. Avoid strenuous outdoor exercise during early morning and late evening smog hours.\n3. Keep windows closed and use indoor air purifiers or plants.`;
+      }
+      // 5. Report / Complaint / Photo / शिकायत / रिपोर्ट / फोटो
+      else if (msg.includes("report") || msg.includes("file") || msg.includes("complaint") || msg.includes("शिकायत") || msg.includes("रिपोर्ट") || msg.includes("फोटो") || msg.includes("दर्ज")) {
         reply = isHindi
-          ? `प्रदूषण की शिकायत दर्ज करने के लिए नाारिक पोर्टल में 'शिकायत दर्ज करें' टैब पर जाएं। वहाँ प्रदूषण की फोटो अपलोड करें या कैमरे से लाइव फोटो लें। AI खुद वार्ड स्थान और कारण पहचान कर शिकायत दर्ज कर देगा!`
-          : `To file a pollution report, go to the 'Report Pollution' tab on the Citizen Portal. Upload a photo or take a live picture — NirVayu AI automatically detects the ward and logs the report!`;
-      } else if (msg.includes("why") || msg.includes("cause") || msg.includes("stubble") || msg.includes("traffic") || msg.includes("कारण") || msg.includes("धुआं") || msg.includes("पराली") || msg.includes("धूल")) {
+          ? `प्रदूषण की शिकायत दर्ज करने का तरीका:\n1. नागरिक पोर्टल पर 'शिकायत दर्ज करें' टैब चुनें।\n2. खुले में कचरा जलाने, निर्माण धूल या धुएं की फोटो अपलोड करें।\n3. निर्वायु AI आपके वार्ड लोकेशन का पता लगाकर रिपोर्ट दर्ज कर देगा!`
+          : `How to file a pollution report:\n1. Go to the 'Report Pollution' tab on the Citizen Portal.\n2. Upload a photo or take a live picture of pollution.\n3. NirVayu AI automatically detects your ward coordinates and logs the report!`;
+      }
+      // 6. Causes / Stubble / Traffic / Factory / कारण / पराली / गाड़ियां / धुआं / कचरा
+      else if (msg.includes("why") || msg.includes("cause") || msg.includes("stubble") || msg.includes("traffic") || msg.includes(" कारण") || msg.includes("धुआं") || msg.includes("पराली") || msg.includes("धूल") || msg.includes("फैक्ट्री")) {
         reply = isHindi
-          ? `दिल्ली में प्रदूषण के मुख्य कारण: वाहनों का अत्यधिक धुआं (35-40%), कन्स्ट्रक्शन की धूल (25%), फैक्ट्रियों का उत्सर्जन और कचरा जलाना। सर्दियों में धीमी हवा और पराली के धुएं से प्रदूषण बढ़ जाता है।`
-          : `Key causes of pollution in Delhi: Vehicular exhaust (35-40%), construction dust (25%), industrial emissions, and open waste burning. Stubble burning and low wind speeds exacerbate winter smog.`;
-      } else if (msg.includes("safe") || msg.includes("outside") || msg.includes("outdoor") || msg.includes("बाहर") || msg.includes("समय") || msg.includes("टाइम")) {
+          ? `दिल्ली में प्रदूषण के मुख्य 4 कारण:\n1. वाहनों का अत्यधिक धुआं (35-40%)\n2. निर्माण स्थलों की उड़ती धूल (25%)\n3. फैक्ट्रियों का उत्सर्जन और खुले में कचरा जलाना\n4. सर्दियों में धीमी हवा और पराली जलाने का धुआं।`
+          : `Top causes of Delhi air pollution:\n1. Vehicular exhaust emissions (35-40%)\n2. Construction and road dust (25%)\n3. Industrial emissions and waste burning\n4. Winter thermal inversion and stubble burning.`;
+      }
+      // 7. Safe Outdoor Timings / बाहर जाने का समय / टाइम
+      else if (msg.includes("safe") || msg.includes("outside") || msg.includes("outdoor") || msg.includes("बाहर") || msg.includes("समय") || msg.includes("टाइम")) {
         reply = isHindi
-          ? `आज दिल्ली का औसत AQI ${avgAqi} (${aqiCategory}) है। बाहर जाने के लिए दोपहर 12 बजे से शाम 4 बजे का समय सबसे अच्छा होता है जब धूप के कारण धुंध कम होती है।`
-          : `With live AQI at ${avgAqi} (${aqiCategory}), the safest time for outdoor activity is midday between 12 PM and 4 PM when sunlight disperses smog.`;
-      } else {
+          ? `आज पूरी दिल्ली का औसत AQI ${avgAqi} (${aqiCategory}) है। बाहर जाने के लिए दोपहर 12 बजे से शाम 4 बजे का समय सबसे अच्छा होता है जब धूप के कारण ज़मीनी धुंध कम होती है।`
+          : `With live AQI at ${avgAqi} (${aqiCategory}), the safest outdoor window is midday between 12 PM and 4 PM when sunlight helps disperse smog.`;
+      }
+      // 8. Odd-Even / GRAP / Rules / ऑड-इवन / ग्रैप / नियम
+      else if (msg.includes("odd") || msg.includes("even") || msg.includes("grap") || msg.includes("ऑड") || msg.includes("इवन") || msg.includes("ग्रैप") || msg.includes("नियम")) {
         reply = isHindi
-          ? `आज पूरी दिल्ली का औसत AQI ${avgAqi} (${aqiCategory}) है, PM2.5 स्तर ${avgPm25} µg/m³ और नमी ${humidity}% है। आप हवा की स्थिति, मौसम, या प्रदूषण की शिकायत दर्ज करने के बारे में पूछ सकते हैं!`
-          : `Delhi's overall average AQI right now is ${avgAqi} (${aqiCategory}) with average PM2.5 at ${avgPm25} µg/m³ and humidity at ${humidity}%. Feel free to ask about weather, health precautions, or reporting pollution!`;
+          ? `ऑड-इवन नियम GRAP (Graded Response Action Plan) के तहत लागू किया जाता है। इसमें सम (Even) तारीखों पर सम नंबर की गाड़ियां और विषम (Odd) तारीखों पर विषम नंबर की गाड़ियां चलती हैं, जिससे सड़कों पर गाड़ियों का धुआं 30-40% घट जाता है।`
+          : `The Odd-Even vehicle rationing system is enforced under GRAP rules. Vehicles with odd and even registration numbers run on alternate dates to curb vehicular emissions by up to 35%.`;
+      }
+      // 9. Credits / Points / Rewards / क्रेडिट / पॉइंट्स
+      else if (msg.includes("credit") || msg.includes("point") || msg.includes("reward") || msg.includes("क्रेडिट") || msg.includes("पॉइंट") || msg.includes("पुरस्कार")) {
+        reply = isHindi
+          ? `नागरिक पोर्टल में पर्यावरण के अनुकूल कदम उठाने (जैसे मेट्रो से सफर, कचरा जलाने की रिपोर्ट करने या पौधे लगाने) पर आपको 10 ग्रीन क्रेडिट्स मिलते हैं जो आपके वार्ड के कुल स्कोर में जुड़ते हैं!`
+          : `You earn 10 Green Credits for taking eco-friendly steps (like riding the metro, reporting waste burning, or keeping indoor plants). Credits contribute to your ward's overall score!`;
+      }
+      // 10. AQI / PM2.5 / PM10 / air quality query
+      else if (msg.includes("aqi") || msg.includes("pm2") || msg.includes("pm10") || msg.includes("air") || msg.includes("हवा") || msg.includes("गुणवत्ता")) {
+        reply = isHindi
+          ? `आज पूरी दिल्ली का औसत AQI ${avgAqi} (${aqiCategory}) है। PM2.5 का स्तर ${avgPm25} µg/m³ और PM10 का स्तर ${avgPm10} µg/m³ है।\n• 0-50: अच्छा | 51-100: संतोषजनक | 101-200: मध्यम | 201-300: खराब | 301-400: बहुत खराब | 401+: गंभीर`
+          : `Delhi's current live average AQI is ${avgAqi} (${aqiCategory}). PM2.5 is ${avgPm25} µg/m³ and PM10 is ${avgPm10} µg/m³.\n• 0-50: Good | 51-100: Satisfactory | 101-200: Moderate | 201-300: Poor | 301-400: Very Poor | 401+: Severe`;
+      }
+      // 11. Universal Fallback for any other question
+      else {
+        reply = isHindi
+          ? `निर्वायु AI दिल्ली वायु गुणवत्ता और पर्यावरण सहायक है। वर्तमान में दिल्ली का औसत AQI ${avgAqi} (${aqiCategory}), तापमान ${temp}°C और नमी ${humidity}% है। आप हवा की स्थिति, स्वास्थ्य सावधानियों, या प्रदूषण रिपोर्टिंग के बारे में कोई भी प्रश्न पूछ सकते हैं!`
+          : `NirVayu AI is Delhi's smart air quality & weather assistant. Currently, Delhi AQI is ${avgAqi} (${aqiCategory}), temperature is ${temp}°C, and humidity is ${humidity}%. Feel free to ask any question about air quality, weather, health advice, or pollution reporting!`;
       }
 
       return res.json({ reply });
@@ -1177,8 +1223,8 @@ Keep responses concise (2–4 sentences), friendly, and actionable.${langInstruc
       console.error("Chat error:", err.message);
       return res.json({
         reply: isHindi
-          ? `आज दिल्ली का औसत AQI ${avgAqi} है और नमी 83% है। स्वास्थ्य संबंधी सलाह और स्थानीय वार्ड का हाल जानने के लिए डैशबोर्ड देखें।`
-          : `Delhi's average AQI is currently ${avgAqi} with 83% humidity. Check the dashboard for detailed health guidance.`
+          ? `आज दिल्ली का औसत AQI ${avgAqi} है और नमी ${humidity}% है। स्वास्थ्य संबंधी सलाह और स्थानीय वार्ड का हाल जानने के लिए डैशबोर्ड देखें।`
+          : `Delhi's average AQI is currently ${avgAqi} with ${humidity}% humidity. Check the dashboard for detailed health guidance.`
       });
     }
   });

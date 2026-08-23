@@ -520,6 +520,35 @@ export class MemStorage implements IStorage {
       return updated;
     };
 
+    // ── 6. Apply live station data to wards ──
+    for (const [id, ward] of Array.from(this.wards.entries())) {
+      const uid = wardStationMap.get(id);
+      if (uid && stationData.has(uid)) {
+        const data = stationData.get(uid);
+        const aqi = Number(data.aqi);
+        const iaqi = data.iaqi || {};
+        const updated = buildUpdatedWard(ward, aqi, iaqi);
+        this.wards.set(id, updated);
+        console.log(`[AQI] ${ward.name} → live AQI ${aqi} (station @${uid})`);
+      } else {
+        // Fallback geo-fetch for wards without station mapping
+        try {
+          const geoUrl = `https://api.waqi.info/feed/geo:${ward.latitude};${ward.longitude}/?token=${token}`;
+          const geoRes = await fetch(geoUrl);
+          const geoJson = await geoRes.json();
+          if (geoJson.status === "ok" && geoJson.data?.aqi && geoJson.data.aqi !== "-") {
+            const aqi = Number(geoJson.data.aqi);
+            const iaqi = geoJson.data.iaqi || {};
+            const updated = buildUpdatedWard(ward, aqi, iaqi);
+            this.wards.set(id, updated);
+            console.log(`[AQI] ${ward.name} → live geo AQI ${aqi}`);
+          }
+        } catch (geoErr) {
+          console.error(`[AQI] Geo fetch error for ${ward.name}:`, geoErr);
+        }
+      }
+    }
+
     // Second pass: Estimation for wards that still have 0 or failed
     for (const [id, ward] of Array.from(this.wards.entries())) {
       if (ward.aqi === 0 || ward.aqi === null) {

@@ -47,36 +47,57 @@ export function AirQualityChatbot() {
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }, []);
 
-  // Helper to strictly find a female voice for Hindi/English
+  // Helper to strictly find an Indian accent female voice for English/Hindi
   const getFemaleVoice = (lang: string, voicesList: SpeechSynthesisVoice[]) => {
     const isHi = lang === "hi";
-    const langPrefix = isHi ? "hi" : "en";
     const voices = voicesList.length > 0 ? voicesList : (typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis.getVoices() : []);
 
     const femaleKeywords = [
-      "zira", "hazel", "heera", "swara", "kalpana", "samantha", "victoria", 
-      "karen", "aria", "jenny", "sara", "sonia", "veena", "catherine", 
-      "susan", "lisa", "amy", "emma", "joanna", "female", "woman", "girl",
-      "google us english", "google uk english female", "google हिन्दी", 
-      "microsoft zira", "microsoft hazel", "microsoft heera", "natural"
+      "heera", "neerja", "swara", "kalpana", "veena", "sangeeta", "india", 
+      "zira", "hazel", "samantha", "victoria", "karen", "aria", "jenny", 
+      "sara", "sonia", "catherine", "susan", "lisa", "amy", "emma", "joanna", 
+      "female", "woman", "girl", "google india english", "google हिन्दी", 
+      "microsoft heera", "microsoft neerja", "microsoft zira", "microsoft hazel", "natural"
     ];
 
     const maleKeywords = [
-      "david", "mark", "george", "ravi", "hemant", "guy", "stefan", 
-      "james", "alex", "fred", "daniel", "tom", "oliver", "rishi", "male", "man"
+      "david", "mark", "george", "ravi", "hemant", "madhur", "guy", "stefan", 
+      "james", "alex", "fred", "daniel", "tom", "oliver", "rishi", "prabhat", "male", "man"
     ];
 
+    // Priority 1 for English: Specifically look for Indian English (en-IN) female voices
+    if (!isHi) {
+      const enInVoices = voices.filter(v => 
+        v.lang.toLowerCase().includes("en-in") || 
+        v.lang.toLowerCase().includes("en_in") ||
+        v.name.toLowerCase().includes("india")
+      );
+
+      // Search for Indian English female voice (Microsoft Heera, Microsoft Neerja, Veena, Sangeeta, Google India English)
+      let indianFemale = enInVoices.find(v => 
+        femaleKeywords.some(kw => v.name.toLowerCase().includes(kw))
+      );
+
+      if (!indianFemale) {
+        indianFemale = enInVoices.find(v => 
+          !maleKeywords.some(kw => v.name.toLowerCase().includes(kw))
+        );
+      }
+
+      if (indianFemale) return indianFemale;
+    }
+
+    // Standard language filter (hi or generic en)
+    const langPrefix = isHi ? "hi" : "en";
     const langVoices = voices.filter(v => v.lang.toLowerCase().startsWith(langPrefix));
 
-    // 1. Voice in target language explicitly containing a female keyword
+    // Priority search for female voice
     let found = langVoices.find(v => femaleKeywords.some(kw => v.name.toLowerCase().includes(kw)));
 
-    // 2. Voice in target language that does NOT contain any male keyword
     if (!found) {
       found = langVoices.find(v => !maleKeywords.some(kw => v.name.toLowerCase().includes(kw)));
     }
 
-    // 3. Any global voice across system containing female keyword
     if (!found) {
       found = voices.find(v => femaleKeywords.some(kw => v.name.toLowerCase().includes(kw)));
     }

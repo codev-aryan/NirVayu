@@ -22,17 +22,21 @@ export function AirQualityChatbot() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasNewMessage, setHasNewMessage] = useState(false);
   
-  // Voice states
+  // Detect mobile — mobile browsers block auto-speech without a user gesture
+  const isMobile = typeof window !== "undefined" && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+
+  // Voice states — auto-speech OFF on mobile (requires direct user tap to work)
   const [isListening, setIsListening] = useState(false);
-  const [autoSpeech, setAutoSpeech] = useState(true);
+  const [autoSpeech, setAutoSpeech] = useState(!isMobile);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-  
+  const resumeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Pre-load and listen to speech synthesis voices as Chrome loads them asynchronously
+  // Pre-load voices — with polling retry for mobile where onvoiceschanged never fires
   useEffect(() => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
@@ -40,10 +44,20 @@ export function AirQualityChatbot() {
       const v = window.speechSynthesis.getVoices();
       if (v && v.length > 0) {
         setAvailableVoices(v);
+        return true;
       }
+      return false;
     };
 
-    loadVoices();
+    if (!loadVoices()) {
+      // Mobile fallback: poll every 250ms until voices are available (up to 3s)
+      let attempts = 0;
+      const poll = setInterval(() => {
+        attempts++;
+        if (loadVoices() || attempts > 12) clearInterval(poll);
+      }, 250);
+    }
+
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }, []);
 
@@ -108,11 +122,15 @@ export function AirQualityChatbot() {
     }
   }, [isOpen, messages]);
 
-  // Clean up speech synthesis when component unmounts or window closes
+  // Clean up speech synthesis and intervals when component unmounts
   useEffect(() => {
     return () => {
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.cancel();
+      }
+      if (resumeIntervalRef.current) {
+        clearInterval(resumeIntervalRef.current);
+        resumeIntervalRef.current = null;
       }
     };
   }, []);
@@ -158,35 +176,46 @@ export function AirQualityChatbot() {
     // If already speaking this message, toggle off
     if (speakingMsgId === msgId) {
       window.speechSynthesis.cancel();
+      if (resumeIntervalRef.current) { clearInterval(resumeIntervalRef.current); resumeIntervalRef.current = null; }
       setSpeakingMsgId(null);
       return;
     }
 
     window.speechSynthesis.cancel();
+    if (resumeIntervalRef.current) { clearInterval(resumeIntervalRef.current); resumeIntervalRef.current = null; }
+
     const cleanSpoken = cleanTextForSpeech(text);
     const utterance = new SpeechSynthesisUtterance(cleanSpoken);
-    
+
+    // Fetch voices again at speak-time (important on mobile where voices load late)
+    const freshVoices = window.speechSynthesis.getVoices();
+    const voicesToUse = freshVoices.length > 0 ? freshVoices : availableVoices;
+
     // Standard natural female voice parameters
     utterance.lang = language === "hi" ? "hi-IN" : "en-IN";
     utterance.rate = 1.0;
-    utterance.pitch = 1.0; // Standard natural warm pitch
+    utterance.pitch = 1.0;
 
-    const standardFemaleVoice = getStandardFemaleVoice(language, availableVoices);
+    const standardFemaleVoice = getStandardFemaleVoice(language, voicesToUse);
     if (standardFemaleVoice) {
       utterance.voice = standardFemaleVoice;
     }
 
     utterance.onstart = () => {
       if (msgId) setSpeakingMsgId(msgId);
+      // Android Chrome pauses speechSynthesis after ~14s — keep it alive with periodic resume()
+      resumeIntervalRef.current = setInterval(() => {
+        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+      }, 5000);
     };
 
-    utterance.onend = () => {
+    const cleanup = () => {
       setSpeakingMsgId(null);
+      if (resumeIntervalRef.current) { clearInterval(resumeIntervalRef.current); resumeIntervalRef.current = null; }
     };
 
-    utterance.onerror = () => {
-      setSpeakingMsgId(null);
-    };
+    utterance.onend = cleanup;
+    utterance.onerror = cleanup;
 
     window.speechSynthesis.speak(utterance);
   };
@@ -429,6 +458,14 @@ export function AirQualityChatbot() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto bg-background/95 backdrop-blur-sm px-3 py-3 space-y-3" style={{ maxHeight: "340px" }}>
+              {/* Mobile tip — auto-speech is blocked by browser policy on phones */}
+              {isMobile && (
+                <div className="text-[10px] text-center text-muted-foreground bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-2 py-1.5">
+                  📱 {language === "hi"
+                    ? "फ़ोन पर आवाज सुनने के लिए 🔊 आइकन दबाएं"
+                    : "Tap 🔊 on any message to hear it (auto-voice disabled on mobile)"}
+                </div>
+              )}
               {messages.map((msg) => (
                 <motion.div
                   key={msg.id}

@@ -60,6 +60,41 @@ export function AirQualityChatbot() {
     };
   }, []);
 
+  // Clean text for Text-to-Speech voice synthesis so it doesn't read out "**" asterisks
+  const cleanTextForSpeech = (text: string) => {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/\*(.*?)\*/g, "$1")
+      .replace(/#{1,6}\s+/g, "")
+      .replace(/[*_~`#]/g, "")
+      .replace(/\n+/g, ". ")
+      .trim();
+  };
+
+  // Helper to visually render formatted bold (**text**) and line breaks cleanly in UI
+  const renderFormattedText = (text: string) => {
+    const lines = text.split("\n");
+    return lines.map((line, lineIdx) => {
+      const parts = line.split(/(\*\*.*?\*\*)/g);
+      const formattedLine = parts.map((part, partIdx) => {
+        if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+          return (
+            <strong key={partIdx} className="font-semibold text-emerald-950 dark:text-emerald-100">
+              {part.slice(2, -2)}
+            </strong>
+          );
+        }
+        return part;
+      });
+
+      return (
+        <span key={lineIdx} className="block mb-1.5 last:mb-0">
+          {formattedLine}
+        </span>
+      );
+    });
+  };
+
   const speakText = (text: string, msgId?: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
@@ -71,7 +106,8 @@ export function AirQualityChatbot() {
     }
 
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
+    const cleanSpoken = cleanTextForSpeech(text);
+    const utterance = new SpeechSynthesisUtterance(cleanSpoken);
     utterance.lang = language === "hi" ? "hi-IN" : "en-IN";
     utterance.rate = 1.0;
 
@@ -350,7 +386,7 @@ export function AirQualityChatbot() {
                           : "bg-muted text-foreground rounded-tl-sm"
                       )}
                     >
-                      {msg.text}
+                      {renderFormattedText(msg.text)}
                       
                       {/* TTS Speak Icon for Bot Messages */}
                       {msg.role === "model" && (

@@ -1082,7 +1082,7 @@ AQI Scale reference:
 - 301–400: Very Poor (red) — Respiratory illness on prolonged exposure
 - 401–500: Severe (dark red) — Affects healthy people; seriously impacts those with existing diseases
 
-Keep responses concise (2–4 sentences), friendly, and actionable.${langInstruction}`;
+Keep responses concise (2–4 sentences), friendly, and actionable. Write clean, formatted natural text without using raw markdown asterisks like **bold** or # headers.${langInstruction}`;
 
       let reply = "";
 

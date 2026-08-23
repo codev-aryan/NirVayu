@@ -1128,7 +1128,42 @@ Keep responses concise (2–4 sentences), friendly, and actionable.${langInstruc
         }
       }
 
-      // If Gemini REST API returned a valid response, return it directly!
+      // Universal Open-Ended Generative AI Engine for ANY question on earth!
+      if (!reply) {
+        try {
+          const llmRes = await fetch("https://api.llm7.io/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": "Bearer unused",
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              model: "default",
+              messages: [
+                { role: "system", content: systemContext },
+                ...(history || []).map((h) => ({
+                  role: h.role === "model" ? "assistant" : "user",
+                  content: h.text
+                })),
+                { role: "user", content: message }
+              ]
+            })
+          });
+
+          if (llmRes.ok) {
+            const data = (await llmRes.json()) as any;
+            const generatedText = data?.choices?.[0]?.message?.content;
+            if (generatedText && generatedText.trim()) {
+              reply = generatedText.trim();
+              console.log("[LLM7 AI Engine] Success generating response for query:", message);
+            }
+          }
+        } catch (e: any) {
+          console.warn("[LLM7 AI Engine] Fetch error:", e?.message);
+        }
+      }
+
+      // If Generative AI returned a valid response, return it directly to the user!
       if (reply) {
         return res.json({ reply });
       }

@@ -1066,6 +1066,61 @@ ${langInstruction}`;
       let maxWard: any = null;
       let minWard: any = null;
 
+      const HINDI_WARD_MAP: Record<string, string> = {
+        "आनंद विहार": "ANAND VIHAR",
+        "आनन्द विहार": "ANAND VIHAR",
+        "आईटीओ": "ITO",
+        "आई टी ओ": "ITO",
+        "आई.टी.ओ.": "ITO",
+        "पंजाबी बाग": "PUNJABI BAGH",
+        "आर के पुरम": "R.K. PURAM",
+        "आरके पुरम": "R.K. PURAM",
+        "आर.के. पुरम": "R.K. PURAM",
+        "मंदिर मार्ग": "MANDIR MARG",
+        "मन्दिर मार्ग": "MANDIR MARG",
+        "वजीरपुर": "WAZIRPUR",
+        "वज़ीरपुर": "WAZIRPUR",
+        "जहांगीरपुरी": "JAHANGIRPURI",
+        "जहाँगीरपुरी": "JAHANGIRPURI",
+        "बवाना": "POOTH KHURD, BAWANA",
+        "पूत खुर्द": "POOTH KHURD, BAWANA",
+        "पटपड़गंज": "MOTHER DAIRY PATPARGANJ",
+        "पटपडगंज": "MOTHER DAIRY PATPARGANJ",
+        "पपड़गंज": "MOTHER DAIRY PATPARGANJ",
+        "शाहदरा": "ITI SHAHDARA, JHILMIL",
+        "शाहदरा झिलमिल": "ITI SHAHDARA, JHILMIL",
+        "झिलमिल": "ITI SHAHDARA, JHILMIL",
+        "सोनिया विहार": "SONIA VIHAR",
+        "श्री अरबिंदो मार्ग": "SRI AUROBINDO MARG",
+        "अरबिंदो मार्ग": "SRI AUROBINDO MARG",
+        "ऑरबिंदो मार्ग": "SRI AUROBINDO MARG",
+        "पूसा": "PUSA",
+        "सत्यवती कॉलेज": "SATYAWATI COLLEGE",
+        "सत्यवती": "SATYAWATI COLLEGE",
+        "जवाहरलाल नेहरू स्टेडियम": "JAWAHARLAL NEHRU STADIUM",
+        "जेएनयू": "JAWAHARLAL NEHRU STADIUM",
+        "जेएलएन": "JAWAHARLAL NEHRU STADIUM",
+        "नेहरू स्टेडियम": "JAWAHARLAL NEHRU STADIUM",
+        "मेजर ध्यानचंद": "MAJOR DHYAN CHAND STADIUM",
+        "ध्यानचंद स्टेडियम": "MAJOR DHYAN CHAND STADIUM",
+        "रोहिणी": "ROHINI",
+        "द्वारका": "DWARKA",
+        "करोल बाग": "KAROL BAGH",
+        "नरेला": "NARELA",
+        "नजफगढ़": "NAJAFGARH",
+        "ओखला": "OKHLA",
+        "चांदनी चौक": "CHANDNI CHOWK",
+        "सदर बाजार": "SADAR BAZAR",
+        "लाजपत नगर": "LAJPAT NAGAR",
+        "ग्रेटर कैलाश": "GREATER KAILASH",
+        "मयूर विहार": "MAYUR VIHAR",
+        "लक्ष्मी नगर": "LAXMI NAGAR",
+        "कनॉट प्लेस": "CONNAUGHT PLACE",
+        "सिरी फोर्ट": "SIRI FORT",
+        "लोधी रोड": "LODHI ROAD",
+        "बुराड़ी": "BURARI CROSSING",
+      };
+
       // Fetch live real-time ward data to make chatbot responses match live dashboard numbers 100%
       try {
         const wards = await storage.getWards();
@@ -1077,9 +1132,23 @@ ${langInstruction}`;
           maxWard = wards.reduce((max, w) => (w.aqi > max.aqi ? w : max), wards[0]);
           minWard = wards.reduce((min, w) => (w.aqi < min.aqi ? w : min), wards[0]);
 
+          const msgClean = message.trim();
           const msgLower = message.toLowerCase();
-          // Match specific ward requested by citizen (e.g., "Anand Vihar", "ITO", "Bawana")
+
+          // 1. Check Hindi ward dictionary first
+          let matchedEnName: string | null = null;
+          for (const [hiName, enName] of Object.entries(HINDI_WARD_MAP)) {
+            if (msgClean.includes(hiName)) {
+              matchedEnName = enName;
+              break;
+            }
+          }
+
+          // 2. Match ward by Hindi dictionary target or direct English name
           matchedWard = wards.find((w) => {
+            if (matchedEnName && w.name.toUpperCase().includes(matchedEnName.toUpperCase())) {
+              return true;
+            }
             const wName = w.name.toLowerCase();
             return msgLower.includes(wName) || (wName.length > 3 && msgLower.includes(wName));
           });
@@ -1303,11 +1372,6 @@ Keep responses concise (2–4 sentences), friendly, and actionable. Write clean,
             : `The current live AQI in ${targetWard.name} is ${targetWard.aqi} (${aqiCategory}). PM2.5 level is ${targetWard.pm25} µg/m³ and the primary source is ${targetWard.dominant_source}. Next 24-hour predicted AQI is ${targetPred}.`;
         }
       }
-        avgAqi <= 50 ? (isHindi ? "अच्छा (Good)" : "Good") :
-        avgAqi <= 100 ? (isHindi ? "संतोषजनक (Satisfactory)" : "Satisfactory") :
-        avgAqi <= 200 ? (isHindi ? "मध्यम (Moderate)" : "Moderate") :
-        avgAqi <= 300 ? (isHindi ? "खराब (Poor)" : "Poor") :
-        avgAqi <= 400 ? (isHindi ? "बहुत खराब (Very Poor)" : "Very Poor") : (isHindi ? "गंभीर (Severe)" : "Severe");
 
       // 1. Greetings / Intro
       if (

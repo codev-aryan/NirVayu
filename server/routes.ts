@@ -1074,9 +1074,12 @@ ${langInstruction}`;
         console.warn("Could not fetch wards for chat context", e);
       }
 
-      // Fetch live weather data (humidity, temperature, wind) for Delhi from Open-Meteo
+      // Fetch live weather data with a 2s timeout so we don't hang on Vercel
       try {
-        const wRes = await fetch("https://api.open-meteo.com/v1/forecast?latitude=28.6139&longitude=77.2090&current=temperature_2m,relative_humidity_2m,wind_speed_10m");
+        const wCtrl = new AbortController();
+        const wTimer = setTimeout(() => wCtrl.abort(), 2000);
+        const wRes = await fetch("https://api.open-meteo.com/v1/forecast?latitude=28.6139&longitude=77.2090&current=temperature_2m,relative_humidity_2m,wind_speed_10m", { signal: wCtrl.signal });
+        clearTimeout(wTimer);
         if (wRes.ok) {
           const wJson = (await wRes.json()) as any;
           if (wJson?.current) {
@@ -1088,6 +1091,9 @@ ${langInstruction}`;
       } catch (wErr) {
         console.warn("Weather fetch error for chat context", wErr);
       }
+
+      // Overall 8-second deadline — if AI hasn't replied by then, skip to keyword fallback
+      const chatDeadline = Date.now() + 8000;
 
       const apiKey = process.env.GEMINI_API_KEY;
 
@@ -1138,10 +1144,13 @@ Keep responses concise (2–4 sentences), friendly, and actionable. Write clean,
           { role: "user", parts: [{ text: message }] },
         ];
 
-        const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro"];
+        const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash-exp"];
 
         for (const m of modelsToTry) {
+          if (Date.now() >= chatDeadline) break; // deadline passed, skip to fallback
           try {
+            const gCtrl = new AbortController();
+            const gTimer = setTimeout(() => gCtrl.abort(), 5000); // 5s per model
             const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
             const apiRes = await fetch(endpoint, {
               method: "POST",
@@ -1150,7 +1159,9 @@ Keep responses concise (2–4 sentences), friendly, and actionable. Write clean,
                 system_instruction: { parts: [{ text: systemContext }] },
                 contents: contentsPayload,
               }),
+              signal: gCtrl.signal,
             });
+            clearTimeout(gTimer);
 
             if (apiRes.ok) {
               const resData = (await apiRes.json()) as any;
@@ -1171,8 +1182,10 @@ Keep responses concise (2–4 sentences), friendly, and actionable. Write clean,
       }
 
       // Universal Open-Ended Generative AI Engine for ANY question on earth!
-      if (!reply) {
+      if (!reply && Date.now() < chatDeadline) {
         try {
+          const llmCtrl = new AbortController();
+          const llmTimer = setTimeout(() => llmCtrl.abort(), 5000); // 5s timeout
           const llmRes = await fetch("https://api.llm7.io/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -1189,8 +1202,10 @@ Keep responses concise (2–4 sentences), friendly, and actionable. Write clean,
                 })),
                 { role: "user", content: message }
               ]
-            })
+            }),
+            signal: llmCtrl.signal,
           });
+          clearTimeout(llmTimer);
 
           if (llmRes.ok) {
             const data = (await llmRes.json()) as any;
@@ -1300,13 +1315,16 @@ Keep responses concise (2–4 sentences), friendly, and actionable. Write clean,
           : `Delhi's current live average AQI is ${avgAqi} (${aqiCategory}). PM2.5 is ${avgPm25} µg/m³ and PM10 is ${avgPm10} µg/m³.\n• 0-50: Good | 51-100: Satisfactory | 101-200: Moderate | 201-300: Poor | 301-400: Very Poor | 401+: Severe`;
       }
 
-      // 11. Dynamic Wikipedia Knowledge API Search for ANY general question on earth!
-      if (!reply) {
+      // 11. Dynamic Wikipedia Knowledge API Search — 2s timeout
+      if (!reply && Date.now() < chatDeadline) {
         try {
           const cleanTopic = message.replace(/^(what is|what are|define|tell me about|explain|क्या है|क्या होता है|बताओ)\s+/i, "").replace(/[?.,!]/g, "").trim();
           const wikiLang = isHindi ? "hi" : "en";
           const wikiUrl = `https://${wikiLang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanTopic)}`;
-          const wRes = await fetch(wikiUrl);
+          const wkCtrl = new AbortController();
+          const wkTimer = setTimeout(() => wkCtrl.abort(), 2000);
+          const wRes = await fetch(wikiUrl, { signal: wkCtrl.signal });
+          clearTimeout(wkTimer);
           if (wRes.ok) {
             const wData = (await wRes.json()) as any;
             if (wData.extract && wData.extract.length > 20) {

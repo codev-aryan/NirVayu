@@ -1030,9 +1030,6 @@ Tailor each measure specifically to the ${dominantSource} source and avoid gener
       }
 
       const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({ error: "AI service is currently unavailable." });
-      }
 
       const langInstruction = language === "hi"
         ? "\n\nCRITICAL LANGUAGE INSTRUCTION: You MUST reply entirely in natural, conversational Devanagari Hindi (हिन्दी). Do not reply in English."
@@ -1066,46 +1063,57 @@ AQI Scale reference:
 
 Keep responses concise (2–4 sentences), friendly, and actionable.${langInstruction}`;
 
-      const chatHistory = (history || []).map((h) => ({
-        role: h.role,
-        parts: [{ text: h.text }],
-      }));
-
-      const { GoogleGenerativeAI } = await import("@google/generative-ai");
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro"];
-
       let reply = "";
-      let lastError = "";
 
-      for (const m of modelsToTry) {
-        try {
-          const model = genAI.getGenerativeModel({
-            model: m,
-            systemInstruction: systemContext,
-          });
+      if (apiKey) {
+        // Direct REST API fetch to Google Gemini endpoints — bulletproof on Vercel lambda
+        const contentsPayload = [
+          ...(history || []).map((h) => ({
+            role: h.role === "model" ? "model" : "user",
+            parts: [{ text: h.text }],
+          })),
+          { role: "user", parts: [{ text: message }] },
+        ];
 
-          const chat = model.startChat({ history: chatHistory });
-          const result = await chat.sendMessage(message);
-          reply = result.response.text();
-          if (reply) {
-            console.log(`[Gemini Chat] Success with model: ${m}`);
-            break;
+        const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro"];
+
+        for (const m of modelsToTry) {
+          try {
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
+            const apiRes = await fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                system_instruction: { parts: [{ text: systemContext }] },
+                contents: contentsPayload,
+              }),
+            });
+
+            if (apiRes.ok) {
+              const resData = (await apiRes.json()) as any;
+              const textOutput = resData?.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (textOutput && textOutput.trim()) {
+                reply = textOutput.trim();
+                console.log(`[Gemini REST] Success with model: ${m}`);
+                break;
+              }
+            } else {
+              const errBody = await apiRes.text();
+              console.warn(`[Gemini REST] ${m} responded with status ${apiRes.status}: ${errBody.substring(0, 100)}`);
+            }
+          } catch (e: any) {
+            console.warn(`[Gemini REST] ${m} fetch error: ${e?.message}`);
           }
-        } catch (e: any) {
-          lastError = e?.message || String(e);
-          console.warn(`[Gemini Chat] Model ${m} failed: ${lastError}`);
         }
       }
 
-      if (!reply) {
-        throw new Error(lastError || "All Gemini models failed");
+      // If Gemini REST API returned a valid response, return it directly!
+      if (reply) {
+        return res.json({ reply });
       }
 
-      return res.json({ reply });
-    } catch (err: any) {
-      console.error("Chat error:", err.message);
-      
+      // Smart Question-Aware Fallback Engine if Gemini API key is not active
+      const msg = message.toLowerCase();
       const aqiCategory =
         avgAqi <= 50 ? (isHindi ? "अच्छा (Good)" : "Good") :
         avgAqi <= 100 ? (isHindi ? "संतोषजनक (Satisfactory)" : "Satisfactory") :
@@ -1113,11 +1121,36 @@ Keep responses concise (2–4 sentences), friendly, and actionable.${langInstruc
         avgAqi <= 300 ? (isHindi ? "खराब (Poor)" : "Poor") :
         avgAqi <= 400 ? (isHindi ? "बहुत खराब (Very Poor)" : "Very Poor") : (isHindi ? "गंभीर (Severe)" : "Severe");
 
-      const fallbackReply = isHindi
-        ? `आज पूरी दिल्ली का औसत AQI लगभग ${avgAqi} (${aqiCategory}) है और PM2.5 का स्तर ${avgPm25} µg/m³ है। बाहर जाने से पहले स्थानीय हवा का हाल जाँच लें और मास्क पहनें।`
-        : `Delhi's overall average AQI right now is ${avgAqi} (${aqiCategory} category) with average PM2.5 at ${avgPm25} µg/m³. Consider wearing a mask if stepping outside.`;
+      if (msg.includes("precaution") || msg.includes("protect") || msg.includes("mask") || msg.includes("प्रिवेंशन") || msg.includes("सावधानी") || msg.includes("मास्क") || msg.includes("बचाव")) {
+        reply = isHindi
+          ? `वर्तमान AQI (${avgAqi}) के अनुसार जरूरी सावधानियां:\n1. बाहर निकलते समय N95 या FFP2 मास्क अवश्य पहनें।\n2. सुबह और देर शाम के समय बाहर भारी शारीरिक व्यायाम से बचें।\n3. घरों की खिड़कियां बंद रखें और स्नेक प्लांट या एयर प्यूरीफायर का उपयोग करें।`
+          : `Recommended health precautions for AQI ${avgAqi}:\n1. Wear an N95 mask when stepping outdoors.\n2. Avoid heavy outdoor exercise during morning/evening smog hours.\n3. Keep windows closed and use indoor air purifiers or plants.`;
+      } else if (msg.includes("report") || msg.includes("file") || msg.includes("complaint") || msg.includes("शिकायत") || msg.includes("रिपोर्ट") || msg.includes("फोटो")) {
+        reply = isHindi
+          ? `प्रदूषण की शिकायत दर्ज करने के लिए नाारिक पोर्टल में 'शिकायत दर्ज करें' टैब पर जाएं। वहाँ प्रदूषण की फोटो अपलोड करें या कैमरे से लाइव फोटो लें। AI खुद वार्ड स्थान और कारण पहचान कर शिकायत दर्ज कर देगा!`
+          : `To file a pollution report, go to the 'Report Pollution' tab on the Citizen Portal. Upload a photo or take a live picture — NirVayu AI automatically detects the ward and logs the report!`;
+      } else if (msg.includes("why") || msg.includes("cause") || msg.includes("stubble") || msg.includes("traffic") || msg.includes("कारण") || msg.includes("धुआं") || msg.includes("पराली") || msg.includes("धूल")) {
+        reply = isHindi
+          ? `दिल्ली में प्रदूषण के मुख्य कारण: वाहनों का अत्यधिक धुआं (35-40%), कन्स्ट्रक्शन की धूल (25%), फैक्ट्रियों का उत्सर्जन और कचरा जलाना। सर्दियों में धीमी हवा और पराली के धुएं से प्रदूषण बढ़ जाता है।`
+          : `Key causes of pollution in Delhi: Vehicular exhaust (35-40%), construction dust (25%), industrial emissions, and open waste burning. Stubble burning and low wind speeds exacerbate winter smog.`;
+      } else if (msg.includes("safe") || msg.includes("outside") || msg.includes("outdoor") || msg.includes("बाहर") || msg.includes("समय") || msg.includes("टाइम")) {
+        reply = isHindi
+          ? `आज दिल्ली का औसत AQI ${avgAqi} (${aqiCategory}) है। बाहर जाने के लिए दोपहर 12 बजे से शाम 4 बजे का समय सबसे अच्छा होता है जब धूप के कारण धुंध कम होती है।`
+          : `With live AQI at ${avgAqi} (${aqiCategory}), the safest time for outdoor activity is midday between 12 PM and 4 PM when sunlight disperses smog.`;
+      } else {
+        reply = isHindi
+          ? `आज पूरी दिल्ली का औसत AQI ${avgAqi} (${aqiCategory}) है और PM2.5 स्तर ${avgPm25} µg/m³ है। आप हवा की स्थिति, स्वास्थ्य सावधानियों, या प्रदूषण की शिकायत दर्ज करने के बारे में पूछ सकते हैं!`
+          : `Delhi's overall average AQI right now is ${avgAqi} (${aqiCategory}) with average PM2.5 at ${avgPm25} µg/m³. Feel free to ask about local ward air quality, health precautions, or reporting pollution!`;
+      }
 
-      return res.json({ reply: fallbackReply });
+      return res.json({ reply });
+    } catch (err: any) {
+      console.error("Chat error:", err.message);
+      return res.json({
+        reply: isHindi
+          ? `आज दिल्ली का औसत AQI ${avgAqi} है। स्वास्थ्य संबंधी सलाह और स्थानीय वार्ड का हाल जानने के लिए डैशबोर्ड का नक्शा देखें।`
+          : `Delhi's average AQI is currently ${avgAqi}. Check the ward map on the dashboard for detailed health guidance.`
+      });
     }
   });
 

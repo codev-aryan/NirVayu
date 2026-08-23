@@ -27,29 +27,6 @@ export function AirQualityChatbot() {
   const [autoSpeech, setAutoSpeech] = useState(true);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
-  const [previewVoiceName, setPreviewVoiceName] = useState<string | null>(null);
-  const [voiceTab, setVoiceTab] = useState<"all" | "indian" | "female" | "lang">("indian");
-  const [voicePitch, setVoicePitch] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("nirvayu_voice_pitch");
-      if (saved) return parseFloat(saved);
-    }
-    return 1.2;
-  });
-  const [voiceRate, setVoiceRate] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("nirvayu_voice_rate");
-      if (saved) return parseFloat(saved);
-    }
-    return 1.0;
-  });
-  const [selectedVoiceName, setSelectedVoiceName] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("nirvayu_selected_voice") || "";
-    }
-    return "";
-  });
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -70,112 +47,37 @@ export function AirQualityChatbot() {
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }, []);
 
-  // Helper to strictly find an Indian accent female voice for English/Hindi
-  const getFemaleVoice = (lang: string, voicesList: SpeechSynthesisVoice[]) => {
-    const isHi = lang === "hi";
+  // Helper to strictly find Hindi Female Voice (Google हिन्दी / Microsoft Swara / Kalpana)
+  const getHindiVoice = (voicesList: SpeechSynthesisVoice[]) => {
     const voices = voicesList.length > 0 ? voicesList : (typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis.getVoices() : []);
 
-    // 0. User explicit preference from voice selection menu
-    if (selectedVoiceName) {
-      const userPicked = voices.find(v => v.name === selectedVoiceName);
-      if (userPicked) return userPicked;
+    const hiVoices = voices.filter(v => 
+      v.lang.toLowerCase().includes("hi") || 
+      v.name.toLowerCase().includes("हिन्दी") || 
+      v.name.toLowerCase().includes("hindi")
+    );
+
+    // Priority: Swara / Kalpana / Google हिन्दी female voices
+    let selected = hiVoices.find(v => 
+      v.name.toLowerCase().includes("swara") || 
+      v.name.toLowerCase().includes("kalpana") || 
+      v.name.toLowerCase().includes("google")
+    );
+
+    if (!selected && hiVoices.length > 0) {
+      selected = hiVoices[0];
     }
 
-    const femaleKeywords = [
-      "heera", "neerja", "swara", "kalpana", "veena", "sangeeta", "india", 
-      "zira", "hazel", "samantha", "victoria", "karen", "aria", "jenny", 
-      "sara", "sonia", "catherine", "susan", "lisa", "amy", "emma", "joanna", 
-      "female", "woman", "girl", "google india english", "google हिन्दी", 
-      "microsoft heera", "microsoft neerja", "microsoft zira", "microsoft hazel", "natural"
-    ];
-
-    const maleKeywords = [
-      "david", "mark", "george", "ravi", "hemant", "madhur", "guy", "stefan", 
-      "james", "alex", "fred", "daniel", "tom", "oliver", "rishi", "prabhat", "male", "man"
-    ];
-
-    // Priority 1 for English: Specifically look for Indian English (en-IN) female voices
-    if (!isHi) {
-      const enInVoices = voices.filter(v => 
-        v.lang.toLowerCase().includes("en-in") || 
-        v.lang.toLowerCase().includes("en_in") ||
-        v.name.toLowerCase().includes("india")
+    // Fallback if no explicit hi locale on OS: en-IN female voice
+    if (!selected) {
+      selected = voices.find(v => 
+        (v.lang.toLowerCase().includes("in") || v.name.toLowerCase().includes("india")) &&
+        (v.name.toLowerCase().includes("heera") || v.name.toLowerCase().includes("neerja") || v.name.toLowerCase().includes("veena") || v.name.toLowerCase().includes("swara"))
       );
-
-      // Search for Indian English female voice (Microsoft Heera, Microsoft Neerja, Veena, Sangeeta, Google India English)
-      let indianFemale = enInVoices.find(v => 
-        femaleKeywords.some(kw => v.name.toLowerCase().includes(kw))
-      );
-
-      if (!indianFemale) {
-        indianFemale = enInVoices.find(v => 
-          !maleKeywords.some(kw => v.name.toLowerCase().includes(kw))
-        );
-      }
-
-      if (indianFemale) return indianFemale;
     }
 
-    // Standard language filter (hi or generic en)
-    const langPrefix = isHi ? "hi" : "en";
-    const langVoices = voices.filter(v => v.lang.toLowerCase().startsWith(langPrefix));
-
-    // Priority search for female voice
-    let found = langVoices.find(v => femaleKeywords.some(kw => v.name.toLowerCase().includes(kw)));
-
-    if (!found) {
-      found = langVoices.find(v => !maleKeywords.some(kw => v.name.toLowerCase().includes(kw)));
-    }
-
-    if (!found) {
-      found = voices.find(v => femaleKeywords.some(kw => v.name.toLowerCase().includes(kw)));
-    }
-
-    return found || null;
+    return selected || null;
   };
-
-  const handlePitchChange = (pitch: number) => {
-    setVoicePitch(pitch);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("nirvayu_voice_pitch", pitch.toString());
-    }
-  };
-
-  const handleRateChange = (rate: number) => {
-    setVoiceRate(rate);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("nirvayu_voice_rate", rate.toString());
-    }
-  };
-
-  const handleSelectVoice = (voiceName: string) => {
-    setSelectedVoiceName(voiceName);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("nirvayu_selected_voice", voiceName);
-    }
-  };
-
-  const handlePreviewVoice = (voice: SpeechSynthesisVoice) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-
-    const sampleText = language === "hi"
-      ? "नमस्ते! मैं निर्वायु AI हूँ, आपकी वायु गुणवत्ता सहायक।"
-      : "Hello! I am NirVayu AI, your air quality assistant.";
-
-    const utterance = new SpeechSynthesisUtterance(sampleText);
-    utterance.voice = voice;
-    utterance.lang = voice.lang;
-    utterance.rate = voiceRate;
-    utterance.pitch = voicePitch;
-
-    utterance.onstart = () => setPreviewVoiceName(voice.name);
-    utterance.onend = () => setPreviewVoiceName(null);
-    utterance.onerror = () => setPreviewVoiceName(null);
-
-    window.speechSynthesis.speak(utterance);
-  };
-
   // Initialize welcome message when language or component loads
   useEffect(() => {
     setMessages([
@@ -253,13 +155,13 @@ export function AirQualityChatbot() {
     window.speechSynthesis.cancel();
     const cleanSpoken = cleanTextForSpeech(text);
     const utterance = new SpeechSynthesisUtterance(cleanSpoken);
-    utterance.lang = language === "hi" ? "hi-IN" : "en-IN";
-    utterance.rate = voiceRate;
-    utterance.pitch = voicePitch;
+    utterance.lang = "hi-IN";
+    utterance.rate = 1.0;
+    utterance.pitch = 1.8; // Hindi Voice with Pitch 1.8
 
-    const femaleVoice = getFemaleVoice(language, availableVoices);
-    if (femaleVoice) {
-      utterance.voice = femaleVoice;
+    const hindiVoice = getHindiVoice(availableVoices);
+    if (hindiVoice) {
+      utterance.voice = hindiVoice;
     }
 
     utterance.onstart = () => {
@@ -491,18 +393,6 @@ export function AirQualityChatbot() {
                 <p className="text-emerald-100 text-[11px] truncate">{t("chat.subtitle")}</p>
               </div>
 
-              {/* Voice Selector Settings Button */}
-              <button
-                onClick={() => setShowVoiceSettings(!showVoiceSettings)}
-                className={cn(
-                  "p-1.5 rounded-lg transition-colors text-white",
-                  showVoiceSettings ? "bg-white/30" : "bg-white/10 hover:bg-white/20"
-                )}
-                title={language === "hi" ? "आवाज चुनें व सुनें (Select & Preview Voice)" : "Select & Preview Voice"}
-              >
-                <Sliders className="w-4 h-4 text-white" />
-              </button>
-
               {/* Audio Auto-Readout Toggle */}
               <button
                 onClick={() => {
@@ -524,169 +414,6 @@ export function AirQualityChatbot() {
 
               <Sparkles className="w-4 h-4 text-emerald-200" />
             </div>
-
-            {/* Voice Settings Panel Overlay */}
-            <AnimatePresence>
-              {showVoiceSettings && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="bg-emerald-950/95 text-white p-3 border-b border-emerald-800 space-y-2.5 text-xs backdrop-blur-md"
-                >
-                  <div className="flex items-center justify-between font-semibold border-b border-emerald-800/80 pb-2">
-                    <span className="flex items-center gap-1.5 text-emerald-200">
-                      <Sliders className="w-4 h-4 text-emerald-400" />
-                      {language === "hi" ? "आवाज व स्वर सेटिंग्स (Voice Studio)" : "Voice & Tone Studio"}
-                    </span>
-                    <button
-                      onClick={() => setShowVoiceSettings(false)}
-                      className="p-1 hover:bg-white/10 rounded text-emerald-300 hover:text-white"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Pitch & Speed Tone Controls */}
-                  <div className="grid grid-cols-2 gap-2 bg-emerald-900/40 p-2 rounded-lg border border-emerald-800/60">
-                    <div>
-                      <div className="flex justify-between text-[10px] text-emerald-300 mb-1">
-                        <span>{language === "hi" ? "आवाज का स्वर (Pitch)" : "Pitch Tone"}</span>
-                        <span className="font-mono text-emerald-400">{voicePitch.toFixed(1)}x</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0.6"
-                        max="1.8"
-                        step="0.1"
-                        value={voicePitch}
-                        onChange={(e) => handlePitchChange(parseFloat(e.target.value))}
-                        className="w-full h-1.5 bg-emerald-950 rounded-lg appearance-none cursor-pointer accent-emerald-400"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-[10px] text-emerald-300 mb-1">
-                        <span>{language === "hi" ? "आवाज की गति (Speed)" : "Speed Rate"}</span>
-                        <span className="font-mono text-emerald-400">{voiceRate.toFixed(1)}x</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0.7"
-                        max="1.4"
-                        step="0.1"
-                        value={voiceRate}
-                        onChange={(e) => handleRateChange(parseFloat(e.target.value))}
-                        className="w-full h-1.5 bg-emerald-950 rounded-lg appearance-none cursor-pointer accent-emerald-400"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Filter Tabs */}
-                  <div className="flex items-center gap-1 border-b border-emerald-800/60 pb-1.5 text-[10px]">
-                    <button
-                      onClick={() => setVoiceTab("indian")}
-                      className={cn(
-                        "px-2 py-0.5 rounded-full transition-colors",
-                        voiceTab === "indian" ? "bg-emerald-500 text-black font-bold" : "text-emerald-300 hover:bg-white/10"
-                      )}
-                    >
-                      🇮🇳 {language === "hi" ? "भारतीय आवाजें" : "Indian Accent"}
-                    </button>
-
-                    <button
-                      onClick={() => setVoiceTab("female")}
-                      className={cn(
-                        "px-2 py-0.5 rounded-full transition-colors",
-                        voiceTab === "female" ? "bg-emerald-500 text-black font-bold" : "text-emerald-300 hover:bg-white/10"
-                      )}
-                    >
-                      🌸 {language === "hi" ? "महिला आवाजें" : "Female Voices"}
-                    </button>
-
-                    <button
-                      onClick={() => setVoiceTab("all")}
-                      className={cn(
-                        "px-2 py-0.5 rounded-full transition-colors",
-                        voiceTab === "all" ? "bg-emerald-500 text-black font-bold" : "text-emerald-300 hover:bg-white/10"
-                      )}
-                    >
-                      🌐 {language === "hi" ? "सभी आवाजें" : "All System Voices"}
-                    </button>
-                  </div>
-
-                  {/* Voice List */}
-                  <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
-                    {availableVoices
-                      .filter((v) => {
-                        const vName = v.name.toLowerCase();
-                        const vLang = v.lang.toLowerCase();
-                        if (voiceTab === "indian") {
-                          return vLang.includes("in") || vName.includes("india") || vName.includes("heera") || vName.includes("neerja") || vName.includes("swara") || vName.includes("kalpana") || vName.includes("veena") || vName.includes("sangeeta");
-                        }
-                        if (voiceTab === "female") {
-                          const femaleKW = ["female", "woman", "girl", "zira", "hazel", "heera", "neerja", "swara", "kalpana", "veena", "sangeeta", "samantha", "victoria", "karen", "aria", "jenny", "natural"];
-                          const maleKW = ["david", "mark", "george", "ravi", "hemant", "guy", "stefan", "james", "male"];
-                          return femaleKW.some(kw => vName.includes(kw)) || !maleKW.some(kw => vName.includes(kw));
-                        }
-                        return true; // "all"
-                      })
-                      .map((voice) => {
-                        const isEnIn = voice.lang.toLowerCase().includes("en-in") || voice.lang.toLowerCase().includes("en_in") || voice.name.toLowerCase().includes("india");
-                        const activeVoice = getFemaleVoice(language, availableVoices);
-                        const isSelected = selectedVoiceName ? selectedVoiceName === voice.name : activeVoice?.name === voice.name;
-                        const isPreviewing = previewVoiceName === voice.name;
-
-                        return (
-                          <div
-                            key={voice.name}
-                            className={cn(
-                              "flex items-center justify-between p-2 rounded-lg border transition-all text-xs",
-                              isSelected 
-                                ? "bg-emerald-600/40 border-emerald-400 text-white font-medium" 
-                                : "bg-emerald-900/30 border-emerald-800/60 text-emerald-100 hover:bg-emerald-900/60"
-                            )}
-                          >
-                            <div className="flex-1 min-w-0 pr-2">
-                              <p className="truncate text-[11px] font-semibold flex items-center gap-1">
-                                {voice.name.replace(/(Microsoft|Google|Apple|Natural|Online|\(Natural\))/gi, "").trim()}
-                                {isEnIn && <span className="text-[9px] bg-emerald-700/80 text-emerald-100 px-1 py-0.5 rounded shrink-0">🇮🇳 Indian</span>}
-                              </p>
-                              <p className="text-[10px] text-emerald-300/70 truncate">{voice.lang}</p>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {/* Listen / Preview Button */}
-                              <button
-                                onClick={() => handlePreviewVoice(voice)}
-                                className={cn(
-                                  "p-1.5 rounded-md transition-colors text-xs flex items-center gap-1",
-                                  isPreviewing ? "bg-amber-500 text-black font-bold animate-pulse" : "bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200"
-                                )}
-                                title="Listen to Voice Sample"
-                              >
-                                {isPreviewing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-                              </button>
-
-                              {/* Select Button */}
-                              <button
-                                onClick={() => handleSelectVoice(voice.name)}
-                                className={cn(
-                                  "px-2 py-1 rounded-md text-[11px] font-medium transition-colors flex items-center gap-1",
-                                  isSelected ? "bg-emerald-500 text-black font-bold" : "bg-white/10 hover:bg-white/20 text-emerald-200"
-                                )}
-                              >
-                                {isSelected ? <Check className="w-3.5 h-3.5" /> : null}
-                                {isSelected ? (language === "hi" ? "सक्रिय" : "Active") : (language === "hi" ? "चुनें" : "Select")}
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto bg-background/95 backdrop-blur-sm px-3 py-3 space-y-3" style={{ maxHeight: "340px" }}>

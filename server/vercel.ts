@@ -32,6 +32,5 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   res.status(status).json({ message });
 });
 
+// Export app for serverless entry
 export default app;
-// @ts-ignore
-module.exports = app;

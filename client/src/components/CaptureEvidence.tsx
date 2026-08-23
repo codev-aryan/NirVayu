@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useLanguage } from "@/lib/i18n";
 
 interface CaptureEvidenceProps {
     wardId: number;
@@ -13,6 +14,7 @@ interface CaptureEvidenceProps {
 }
 
 export function CaptureEvidence({ wardId, onCapture, onCancel, actionName }: CaptureEvidenceProps) {
+    const { t, language } = useLanguage();
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isStreamReady, setIsStreamReady] = useState(false);
@@ -21,7 +23,7 @@ export function CaptureEvidence({ wardId, onCapture, onCancel, actionName }: Cap
     const [step, setStep] = useState<'locating' | 'challenge' | 'analyzing' | 'capture' | 'verifying'>('locating');
     const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
     const [geofenceStatus, setGeofenceStatus] = useState<'pending' | 'valid' | 'invalid'>('pending');
-    const [geofenceMessage, setGeofenceMessage] = useState("Acquiring GPS Signal...");
+    const [geofenceMessage, setGeofenceMessage] = useState(language === "hi" ? "जीपीएस सिग्नल खोजा जा रहा है..." : "Acquiring GPS Signal...");
 
     // Active Liveness Challenge
     const [challenge, setChallenge] = useState<string>("");
@@ -45,7 +47,11 @@ export function CaptureEvidence({ wardId, onCapture, onCancel, actionName }: Cap
                 videoRef.current.onloadedmetadata = () => setIsStreamReady(true);
             }
         } catch (err) {
-            toast({ title: "Camera Error", description: "Could not access camera", variant: "destructive" });
+            toast({ 
+                title: language === "hi" ? "कैमरा त्रुटि" : "Camera Error", 
+                description: language === "hi" ? "कैमरा एक्सेस नहीं मिला" : "Could not access camera", 
+                variant: "destructive" 
+            });
         }
     };
 
@@ -59,7 +65,7 @@ export function CaptureEvidence({ wardId, onCapture, onCancel, actionName }: Cap
     const checkLocation = () => {
         if (!navigator.geolocation) {
             setGeofenceStatus('invalid');
-            setGeofenceMessage("Geolocation not supported");
+            setGeofenceMessage(language === "hi" ? "जियोलोकेशन समर्थित नहीं है" : "Geolocation not supported");
             return;
         }
 
@@ -78,7 +84,7 @@ export function CaptureEvidence({ wardId, onCapture, onCancel, actionName }: Cap
 
                     if (data.valid) {
                         setGeofenceStatus('valid');
-                        setGeofenceMessage(`GPS Verified: Inside Ward (${data.distance})`);
+                        setGeofenceMessage(language === "hi" ? `जीपीएस सत्यापित: वार्ड के अंदर (${data.distance})` : `GPS Verified: Inside Ward (${data.distance})`);
                         generateChallenge();
                         setStep('challenge');
                     } else {
@@ -88,19 +94,24 @@ export function CaptureEvidence({ wardId, onCapture, onCancel, actionName }: Cap
                 } catch (e) {
                     console.error("Geofence check failed", e);
                     setGeofenceStatus('invalid');
-                    setGeofenceMessage("Could not verify location with server");
+                    setGeofenceMessage(language === "hi" ? "सर्वर से स्थान सत्यापित नहीं हो सका" : "Could not verify location with server");
                 }
             },
             (err) => {
                 setGeofenceStatus('invalid');
-                setGeofenceMessage("Location permission denied. Required for verified submission.");
+                setGeofenceMessage(language === "hi" ? "स्थान अनुमति अस्वीकृत।" : "Location permission denied. Required for verified submission.");
             },
             { enableHighAccuracy: true, timeout: 10000 }
         );
     };
 
     const generateChallenge = () => {
-        const actions = [
+        const actions = language === "hi" ? [
+            "अपनी आंखें धीरे-धीरे दो बार झपकाएं",
+            "अपना सिर पहले बाएं फिर दाएं घुमाएं",
+            "अपनी उंगली से अपनी नाक को छुएं",
+            "दो उंगलियां ऊपर उठाएं"
+        ] : [
             "Blink your eyes twice slowly",
             "Turn your head left then right",
             "Touch your nose with your finger",
@@ -111,10 +122,12 @@ export function CaptureEvidence({ wardId, onCapture, onCancel, actionName }: Cap
 
     const verifyGesture = () => {
         setStep('analyzing');
-        // Simulate CV Analysis delay
         setTimeout(() => {
             setStep('capture');
-            toast({ title: "Liveness Confirmed", description: "Gesture matched! You may now record evidence." });
+            toast({ 
+                title: language === "hi" ? "सत्यापन सफल" : "Liveness Confirmed", 
+                description: language === "hi" ? "इशारा मेल खा गया! अब आप साक्ष्य रिकॉर्ड कर सकते हैं।" : "Gesture matched! You may now record evidence." 
+            });
         }, 2500);
     };
 
@@ -230,7 +243,7 @@ export function CaptureEvidence({ wardId, onCapture, onCancel, actionName }: Cap
                     {step === 'locating' && (
                         <div className="text-center space-y-3 py-4">
                             <Loader2 className="w-8 h-8 animate-spin mx-auto text-zinc-500" />
-                            <h3 className="text-lg font-medium">Verifying Location</h3>
+                            <h3 className="text-lg font-medium">{language === "hi" ? "स्थान सत्यापित हो रहा है..." : "Verifying Location"}</h3>
                         </div>
                     )}
 
@@ -238,28 +251,28 @@ export function CaptureEvidence({ wardId, onCapture, onCancel, actionName }: Cap
                         <div className="space-y-4 animate-in slide-in-from-bottom-4 fade-in duration-500">
                             <div className="bg-zinc-800/80 p-5 rounded-xl border border-dashed border-zinc-700 relative overflow-hidden">
                                 <div className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-2">
-                                    <ShieldCheck className="w-3 h-3" /> Security Challenge
+                                    <ShieldCheck className="w-3 h-3" /> {language === "hi" ? "सुरक्षा चुनौती" : "Security Challenge"}
                                 </div>
                                 <div className="text-2xl font-bold text-white mb-2">{challenge}</div>
-                                <p className="text-sm text-zinc-400">Perform this action to verify liveness.</p>
+                                <p className="text-sm text-zinc-400">{language === "hi" ? "लाइवनेस सत्यापन के लिए यह क्रिया करें।" : "Perform this action to verify liveness."}</p>
                             </div>
                             <Button className="w-full h-12 text-lg font-bold bg-blue-600 hover:bg-blue-700" onClick={verifyGesture}>
-                                Verify Action
+                                {language === "hi" ? "क्रिया सत्यापित करें" : "Verify Action"}
                             </Button>
                         </div>
                     )}
 
                     {step === 'analyzing' && (
                         <div className="text-center py-4 text-zinc-400">
-                            Analyzing video stream for human verification...
+                            {language === "hi" ? "मानव सत्यापन के लिए वीडियो स्ट्रीम का विश्लेषण हो रहा है..." : "Analyzing video stream for human verification..."}
                         </div>
                     )}
 
                     {step === 'capture' && (
                         <div className="space-y-4 animate-in slide-in-from-bottom-4 fade-in duration-500">
                             <div className="flex items-center justify-between text-sm text-zinc-400 px-1">
-                                <span className="text-green-400 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Liveness Verified</span>
-                                <span className="flex items-center gap-1 text-amber-500"><AlertTriangle className="w-3 h-3" /> No Gallery Uploads</span>
+                                <span className="text-green-400 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {language === "hi" ? "लाइवनेस सत्यापित" : "Liveness Verified"}</span>
+                                <span className="flex items-center gap-1 text-amber-500"><AlertTriangle className="w-3 h-3" /> {language === "hi" ? "केवल लाइव कैमरा" : "No Gallery Uploads"}</span>
                             </div>
                             <Button
                                 onClick={handleCapture}
@@ -267,7 +280,7 @@ export function CaptureEvidence({ wardId, onCapture, onCancel, actionName }: Cap
                                 className="w-full h-14 text-xl font-bold bg-green-600 hover:bg-green-700 shadow-lg shadow-green-900/20"
                             >
                                 <Camera className="mr-3 w-6 h-6" />
-                                {countdown ? "Capturing..." : "Capture Integrity Proof"}
+                                {countdown ? (language === "hi" ? "फोटो खींची जा रही है..." : "Capturing...") : (language === "hi" ? "साक्ष्य फोटो खींचें" : "Capture Integrity Proof")}
                             </Button>
                         </div>
                     )}
@@ -276,7 +289,7 @@ export function CaptureEvidence({ wardId, onCapture, onCancel, actionName }: Cap
                         <div className="text-center space-y-4 py-2">
                             <div className="flex items-center justify-center gap-2 text-green-400 font-medium animate-pulse">
                                 <ShieldCheck className="w-5 h-5" />
-                                Processing Security Metadata...
+                                {language === "hi" ? "सुरक्षा मेटाडेटा संसाधित हो रहा है..." : "Processing Security Metadata..."}
                             </div>
                         </div>
                     )}

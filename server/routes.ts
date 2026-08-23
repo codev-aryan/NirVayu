@@ -785,19 +785,18 @@ Return ONLY a JSON object:
     }
   });
 
-  // Create mock data file structure if it doesn't exist (as per requirements)
-  // In a real app we might write to disk, here we just keep in memory but ensure the path concept exists
-
-  // Ward-specific preventive measures (Gemini analyzes live ward stats)
+  // Ward Insights / Bulletin endpoint — specific preventive measures for selected ward
   const bulletinCache: Map<string, { data: any; ts: number }> = new Map();
   const BULLETIN_TTL = 15 * 60 * 1000; // 15 minutes
 
   app.get("/api/ward-bulletin", async (req, res) => {
     try {
       const wardId = parseInt(req.query.wardId as string);
-      if (isNaN(wardId)) return res.status(400).json({ error: "wardId is required." });
+      const isHindi = req.query.language === "hi";
 
-      const cacheKey = `bulletin-${wardId}`;
+      if (isNaN(wardId)) return res.status(400).json({ error: "Invalid wardId." });
+
+      const cacheKey = `bulletin-${wardId}-${isHindi ? "hi" : "en"}`;
       const cached = bulletinCache.get(cacheKey);
       if (cached && Date.now() - cached.ts < BULLETIN_TTL) {
         return res.json(cached.data);
@@ -808,16 +807,38 @@ Return ONLY a JSON object:
       if (!ward) return res.status(404).json({ error: "Ward not found." });
 
       const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) return res.status(500).json({ error: "AI service unavailable." });
 
-      const aqiCategory =
+      const aqiCategoryEn =
         ward.aqi <= 50 ? "Good" :
         ward.aqi <= 100 ? "Satisfactory" :
         ward.aqi <= 200 ? "Moderate" :
         ward.aqi <= 300 ? "Poor" :
         ward.aqi <= 400 ? "Very Poor" : "Severe";
 
+      const aqiCategoryHi =
+        ward.aqi <= 50 ? "अच्छा" :
+        ward.aqi <= 100 ? "संतोषजनक" :
+        ward.aqi <= 200 ? "मध्यम" :
+        ward.aqi <= 300 ? "खराब" :
+        ward.aqi <= 400 ? "बहुत खराब" : "गंभीर";
+
+      const aqiCategory = isHindi ? aqiCategoryHi : aqiCategoryEn;
       const dominantSource = (ward as any).dominant_source || "Mixed";
+
+      const sourceHindiMap: Record<string, string> = {
+        "Traffic": "वाहनों का धुआं",
+        "Construction": "निर्माण धूल",
+        "Industry": "फैक्ट्री उत्सर्जन",
+        "Industrial Emissions": "औद्योगिक उत्सर्जन",
+        "Waste Burning": "कचरा जलाना",
+        "Stubble Burning": "पराली धुआं",
+        "Mixed": "मिश्रित प्रदूषण",
+      };
+      const dominantSourceText = isHindi ? (sourceHindiMap[dominantSource] || dominantSource) : dominantSource;
+
+      const langInstruction = isHindi
+        ? "CRITICAL: You MUST output all values in natural, clear Devanagari Hindi (हिन्दी)."
+        : "Output in clear, direct English.";
 
       const prompt = `You are a public health advisor for Delhi air quality. Analyze the following live statistics for ${ward.name} ward and generate specific preventive health measures for residents.
 
@@ -826,13 +847,12 @@ Live Ward Statistics:
 - Current AQI: ${ward.aqi} (Category: ${aqiCategory})
 - PM2.5: ${ward.pm25} µg/m³
 - PM10: ${ward.pm10} µg/m³
-- NO2: ${ward.no2} ppb
-- Primary Pollution Source: ${dominantSource}
+- Primary Pollution Source: ${dominantSourceText}
 
 Generate ONLY this JSON (no markdown, no backticks, raw JSON only):
 {
   "measures": [
-    "Specific measure 1 tailored to ${dominantSource} pollution and AQI ${ward.aqi}",
+    "Specific measure 1 tailored to ${dominantSourceText} pollution and AQI ${ward.aqi}",
     "Specific measure 2",
     "Specific measure 3",
     "Specific measure 4"
@@ -843,55 +863,77 @@ Generate ONLY this JSON (no markdown, no backticks, raw JSON only):
 }
 
 riskLevel must be exactly one of: "low", "moderate", "high", "very high", "severe".
-Tailor each measure specifically to the ${dominantSource} source and avoid generic advice.`;
+${langInstruction}`;
 
       let parsed;
-      try {
-        const { GoogleGenerativeAI } = await import("@google/generative-ai");
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro"];
-        let text = "";
-        for (const m of modelsToTry) {
-          try {
-            const model = genAI.getGenerativeModel({ model: m });
-            const result = await model.generateContent(prompt);
-            text = result.response.text().trim();
-            if (text) break;
-          } catch (e: any) {
-            console.warn(`[Gemini Bulletin] Model ${m} failed: ${e?.message}`);
+      if (apiKey) {
+        try {
+          const { GoogleGenerativeAI } = await import("@google/generative-ai");
+          const genAI = new GoogleGenerativeAI(apiKey);
+          const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro"];
+          let text = "";
+          for (const m of modelsToTry) {
+            try {
+              const model = genAI.getGenerativeModel({ model: m });
+              const result = await model.generateContent(prompt);
+              text = result.response.text().trim();
+              if (text) break;
+            } catch (e: any) {
+              console.warn(`[Gemini Bulletin] Model ${m} failed: ${e?.message}`);
+            }
           }
+          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+        } catch (aiErr: any) {
+          console.warn("AI measures generation fallback for ward", ward.name, aiErr.message);
         }
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
-      } catch (aiErr: any) {
-        console.warn("AI measures generation fallback for ward", ward.name, aiErr.message);
+      }
+
+      if (!parsed) {
         parsed = {
-          measures: [
-            `Limit exposure to ${dominantSource.toLowerCase()} emissions during peak morning and evening hours.`,
-            ward.aqi > 200 ? "Wear an N95 mask when stepping outdoors in this ward." : "Use a protective mask when near high-traffic or dusty areas.",
-            "Keep indoor spaces ventilated with air purifiers where available.",
-            "Stay hydrated and avoid strenuous outdoor exercise during severe smog."
-          ],
+          measures: isHindi
+            ? [
+                `सुबह और शाम के पीक आवर्स के दौरान ${dominantSourceText} के संपर्क में आने से बचें।`,
+                ward.aqi > 200 ? "इस वार्ड में बाहर निकलते समय N95 मास्क अवश्य पहनें।" : "भारी यातायात और धूल वाले इलाकों में मास्क का प्रयोग करें।",
+                "घरों के खिड़की-दरवाजे बंद रखें और संभव हो तो एयर प्यूरीफायर चलाएं।",
+                "पर्याप्त पानी पिएं और स्मॉग के दौरान बाहर भारी व्यायाम से बचें。"
+              ]
+            : [
+                `Limit exposure to ${dominantSource.toLowerCase()} emissions during peak morning and evening hours.`,
+                ward.aqi > 200 ? "Wear an N95 mask when stepping outdoors in this ward." : "Use a protective mask when near high-traffic or dusty areas.",
+                "Keep indoor spaces ventilated with air purifiers where available.",
+                "Stay hydrated and avoid strenuous outdoor exercise during severe smog."
+              ],
           riskLevel: ward.aqi > 300 ? "very high" : ward.aqi > 200 ? "high" : ward.aqi > 100 ? "moderate" : "low",
-          outdoorAdvice: ward.aqi > 200 ? `AQI in ${ward.name} is ${ward.aqi} (${aqiCategory}). Limit outdoor activity.` : `AQI in ${ward.name} is ${ward.aqi} (${aqiCategory}). Outdoor activity is manageable with basic precautions.`,
-          sensitiveGroups: "Children, elderly, pregnant women, and residents with respiratory conditions."
+          outdoorAdvice: isHindi
+            ? (ward.aqi > 200 ? `${ward.name} में AQI ${ward.aqi} (${aqiCategory}) है। बाहर अनावश्यक गतिविधियों से बचें।` : `${ward.name} में AQI ${ward.aqi} (${aqiCategory}) है। सामान्य सावधानियों के साथ बाहर जाना सुरक्षित है।`)
+            : (ward.aqi > 200 ? `AQI in ${ward.name} is ${ward.aqi} (${aqiCategory}). Limit outdoor activity.` : `AQI in ${ward.name} is ${ward.aqi} (${aqiCategory}). Outdoor activity is manageable with basic precautions.`),
+          sensitiveGroups: isHindi
+            ? "बच्चे, बुजुर्ग, गर्भवती महिलाएं और सांस के मरीज।"
+            : "Children, elderly, pregnant women, and residents with respiratory conditions."
         };
       }
 
-      const data = { ...parsed, ward: ward.name, aqi: ward.aqi, aqiCategory, dominantSource, generatedAt: new Date().toISOString() };
+      const data = { ...parsed, ward: ward.name, aqi: ward.aqi, aqiCategory, dominantSource: dominantSourceText, generatedAt: new Date().toISOString() };
       bulletinCache.set(cacheKey, { data, ts: Date.now() });
       return res.json(data);
     } catch (err: any) {
       console.error("Measures route error:", err.message);
+      const isHindi = req.query.language === "hi";
       return res.json({
         ward: "Delhi Ward",
         aqi: 200,
-        aqiCategory: "Moderate",
-        dominantSource: "Traffic",
+        aqiCategory: isHindi ? "मध्यम" : "Moderate",
+        dominantSource: isHindi ? "वाहनों का धुआं" : "Traffic",
         riskLevel: "moderate",
-        outdoorAdvice: "Monitor local air quality before planning outdoor activities.",
-        sensitiveGroups: "Sensitive individuals and elderly.",
-        measures: [
+        outdoorAdvice: isHindi ? "बाहर जाने से पहले अपने क्षेत्र की हवा की जांच करें।" : "Monitor local air quality before planning outdoor activities.",
+        sensitiveGroups: isHindi ? "सांस के मरीज और बुजुर्ग।" : "Sensitive individuals and elderly.",
+        measures: isHindi ? [
+          "भीड़भाड़ वाले समय में बाहर निकलते समय मास्क पहनें।",
+          "धूल या धुआं अधिक होने पर घर की खिड़कियां बंद रखें।",
+          "AQI 150 से अधिक होने पर घर में एयर प्यूरीफायर चलाएं।",
+          "पर्याप्त पानी पिएं और अधिक भागदौड़ से बचें।"
+        ] : [
           "Wear a protective mask outdoors during high traffic hours.",
           "Keep windows closed when ambient dust or smoke is high.",
           "Use air purifiers indoors when AQI exceeds 150.",

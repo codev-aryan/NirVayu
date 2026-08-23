@@ -169,6 +169,49 @@ export function buildWeeklyPlan(aqi: number, dominantSource: string) {
 }
 
 
+// ─── Known active AQICN Delhi monitoring stations (hardcoded fallback) ───────
+// These are fetched once to bootstrap the station-map; they rarely change.
+const DELHI_AQICN_STATIONS = [
+  { uid: 10112, lat: 28.566827, lng: 77.251418 }, // PGDAV College, Sriniwaspuri
+  { uid: 2553,  lat: 28.6508,   lng: 77.3152   }, // Anand Vihar
+  { uid: 10113, lat: 28.733016, lng: 77.17197  }, // ITI Jahangirpuri
+  { uid: 2554,  lat: 28.6341,   lng: 77.2005   }, // Mandir Marg
+  { uid: 10114, lat: 28.700505, lng: 77.165603 }, // Wazirpur (DITE)
+  { uid: 2556,  lat: 28.5648,   lng: 77.1744   }, // R.K. Puram
+  { uid: 10124, lat: 28.636997, lng: 77.172248 }, // Pusa
+  { uid: 10115, lat: 28.69572,  lng: 77.181295 }, // Satyawati College
+  { uid: 10705, lat: 28.582846, lng: 77.234366 }, // JN Stadium
+  { uid: 10704, lat: 28.620171, lng: 77.287705 }, // Mother Dairy Patparganj
+  { uid: 10121, lat: 28.710066, lng: 77.24622  }, // Sonia Vihar
+  { uid: 10111, lat: 28.612498, lng: 77.237388 }, // Major Dhyan Chand Stadium
+  { uid: 10118, lat: 28.672114, lng: 77.313832 }, // ITI Shahdara, Jhilmil
+  { uid: 11267, lat: 28.775796, lng: 77.046251 }, // Pooth Khurd, Bawana
+  { uid: 2555,  lat: 28.6683,   lng: 77.1167   }, // Punjabi Bagh
+  { uid: 10707, lat: 28.528344, lng: 77.189304 }, // Sri Aurobindo Marg
+];
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function nearestStationUid(lat: number, lng: number): number {
+  let best = DELHI_AQICN_STATIONS[0];
+  let bestDist = Infinity;
+  for (const s of DELHI_AQICN_STATIONS) {
+    const d = haversineKm(lat, lng, s.lat, s.lng);
+    if (d < bestDist) { bestDist = d; best = s; }
+  }
+  return best.uid;
+}
+
 // ─── Station-map helpers (wardName → WAQI station idx) ───
 function getStationMapPath(): string {
   const candidates = [
@@ -184,13 +227,18 @@ function getStationMapPath(): string {
 }
 
 function loadStationMap(): Record<string, number> {
-  if (global.__stationMap) return global.__stationMap;
+  if (global.__stationMap && Object.keys(global.__stationMap).length > 0) return global.__stationMap;
   try {
     const raw = fs.readFileSync(getStationMapPath(), "utf8");
-    global.__stationMap = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (parsed && Object.keys(parsed).length > 0) {
+      global.__stationMap = parsed;
+      return global.__stationMap!;
+    }
   } catch {
-    global.__stationMap = {};
+    // file missing or malformed
   }
+  global.__stationMap = {};
   return global.__stationMap!;
 }
 
@@ -427,7 +475,20 @@ export class MemStorage implements IStorage {
     const token = process.env.AQICN_API_KEY || process.env.AQI_TOKEN;
     console.log(`[AQI] Updating AQICN air quality data for ${this.wards.size} wards...`);
 
-    const stationMap = loadStationMap();
+    let stationMap = loadStationMap();
+
+    // ── Auto-build station map if empty (first boot / fresh Vercel deploy) ──
+    if (Object.keys(stationMap).length === 0 && this.wards.size > 0) {
+      console.log("[AQI] Station map is empty — auto-building from nearest AQICN stations...");
+      const built: Record<string, number> = {};
+      for (const ward of Array.from(this.wards.values())) {
+        built[ward.name] = nearestStationUid(ward.latitude, ward.longitude);
+      }
+      saveStationMap(built);
+      stationMap = built;
+      console.log(`[AQI] Auto-built station map for ${Object.keys(built).length} wards.`);
+    }
+
     const wardStationMap = new Map<number, number>();
     for (const [id, ward] of Array.from(this.wards.entries())) {
       const uid = stationMap[ward.name];
@@ -454,6 +515,7 @@ export class MemStorage implements IStorage {
         })
       );
     }
+
 
     // Live telemetry fallback calibrated to AQICN / CPCB standard
     const zoneCoords = [

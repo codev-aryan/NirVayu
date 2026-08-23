@@ -17,7 +17,7 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
   const { logoutMutation, user } = useAuth();
 
   return (
-    <div className="h-screen flex flex-col bg-background transition-colors duration-500 overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-background transition-colors duration-500">
       <ThemeToggle currentRole={role} />
       
       {/* Header */}
@@ -64,7 +64,7 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 min-h-0 container mx-auto px-4 py-6 flex flex-col">
+      <main className="flex-1 container mx-auto px-4 py-6 flex flex-col">
         {children}
       </main>
     </div>

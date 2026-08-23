@@ -43,9 +43,9 @@ export function AuthorityDashboard() {
   const criticalWard = [...wards].sort((a, b) => b.aqi - a.aqi)[0];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
       {/* LEFT: Ward List & Map */}
-      <div className="lg:col-span-4 flex flex-col gap-6 min-h-0 overflow-y-auto">
+      <div className="lg:col-span-4 flex flex-col gap-6">
         <div className="flex items-center justify-between px-1">
           <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider flex items-center gap-1">
             <Activity className="w-3 h-3" /> Last Updated: {new Date(lastUpdated).toLocaleTimeString()}
@@ -93,7 +93,7 @@ export function AuthorityDashboard() {
       </div>
 
       {/* RIGHT: Detailed Controls */}
-      <div className="lg:col-span-8 flex flex-col gap-6 overflow-y-auto pb-10">
+      <div className="lg:col-span-8 flex flex-col gap-6 pb-10">
         {selectedWard && (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}

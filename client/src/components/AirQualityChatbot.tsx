@@ -26,10 +26,63 @@ export function AirQualityChatbot() {
   const [isListening, setIsListening] = useState(false);
   const [autoSpeech, setAutoSpeech] = useState(true);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  // Pre-load and listen to speech synthesis voices as Chrome loads them asynchronously
+  useEffect(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+    const loadVoices = () => {
+      const v = window.speechSynthesis.getVoices();
+      if (v && v.length > 0) {
+        setAvailableVoices(v);
+      }
+    };
+
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }, []);
+
+  // Helper to strictly find a female voice for Hindi/English
+  const getFemaleVoice = (lang: string, voicesList: SpeechSynthesisVoice[]) => {
+    const isHi = lang === "hi";
+    const langPrefix = isHi ? "hi" : "en";
+    const voices = voicesList.length > 0 ? voicesList : (typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis.getVoices() : []);
+
+    const femaleKeywords = [
+      "zira", "hazel", "heera", "swara", "kalpana", "samantha", "victoria", 
+      "karen", "aria", "jenny", "sara", "sonia", "veena", "catherine", 
+      "susan", "lisa", "amy", "emma", "joanna", "female", "woman", "girl",
+      "google us english", "google uk english female", "google हिन्दी", 
+      "microsoft zira", "microsoft hazel", "microsoft heera", "natural"
+    ];
+
+    const maleKeywords = [
+      "david", "mark", "george", "ravi", "hemant", "guy", "stefan", 
+      "james", "alex", "fred", "daniel", "tom", "oliver", "rishi", "male", "man"
+    ];
+
+    const langVoices = voices.filter(v => v.lang.toLowerCase().startsWith(langPrefix));
+
+    // 1. Voice in target language explicitly containing a female keyword
+    let found = langVoices.find(v => femaleKeywords.some(kw => v.name.toLowerCase().includes(kw)));
+
+    // 2. Voice in target language that does NOT contain any male keyword
+    if (!found) {
+      found = langVoices.find(v => !maleKeywords.some(kw => v.name.toLowerCase().includes(kw)));
+    }
+
+    // 3. Any global voice across system containing female keyword
+    if (!found) {
+      found = voices.find(v => femaleKeywords.some(kw => v.name.toLowerCase().includes(kw)));
+    }
+
+    return found || null;
+  };
 
   // Initialize welcome message when language or component loads
   useEffect(() => {
@@ -108,36 +161,13 @@ export function AirQualityChatbot() {
     window.speechSynthesis.cancel();
     const cleanSpoken = cleanTextForSpeech(text);
     const utterance = new SpeechSynthesisUtterance(cleanSpoken);
-    const langCode = language === "hi" ? "hi" : "en";
     utterance.lang = language === "hi" ? "hi-IN" : "en-IN";
     utterance.rate = 1.0;
+    utterance.pitch = 1.25; // Feminine pitch tuning
 
-    // Pick female voice specifically (no male voice)
-    const voices = window.speechSynthesis.getVoices();
-    const targetVoices = voices.filter(v => v.lang.toLowerCase().startsWith(langCode));
-
-    // Priority search for known female voice keywords
-    const femaleKeywords = ["female", "zira", "swara", "kalpana", "samantha", "victoria", "karen", "aria", "jenny", "natural", "google हिन्दी", "google english"];
-    const maleKeywords = ["male", "david", "mark", "george", "ravi", "hemant", "guy", "stefan", "james"];
-
-    let selectedVoice = targetVoices.find(v => 
-      femaleKeywords.some(kw => v.name.toLowerCase().includes(kw))
-    );
-
-    // Fallback: any voice in target language that isn't explicitly male
-    if (!selectedVoice) {
-      selectedVoice = targetVoices.find(v => 
-        !maleKeywords.some(kw => v.name.toLowerCase().includes(kw))
-      );
-    }
-
-    // Global fallback across all voices for female keyword
-    if (!selectedVoice) {
-      selectedVoice = voices.find(v => femaleKeywords.some(kw => v.name.toLowerCase().includes(kw)));
-    }
-
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
+    const femaleVoice = getFemaleVoice(language, availableVoices);
+    if (femaleVoice) {
+      utterance.voice = femaleVoice;
     }
 
     utterance.onstart = () => {

@@ -1004,6 +1004,9 @@ Tailor each measure specifically to the ${dominantSource} source and avoid gener
     let avgAqi = 89;
     let avgPm25 = 53;
     let avgPm10 = 59;
+    let humidity = 83;
+    let temp = 29.5;
+    let windSpeed = 2.7;
     let isHindi = req.body?.language === "hi";
 
     try {
@@ -1029,6 +1032,21 @@ Tailor each measure specifically to the ${dominantSource} source and avoid gener
         console.warn("Could not fetch wards for chat context", e);
       }
 
+      // Fetch live weather data (humidity, temperature, wind) for Delhi from Open-Meteo
+      try {
+        const wRes = await fetch("https://api.open-meteo.com/v1/forecast?latitude=28.6139&longitude=77.2090&current=temperature_2m,relative_humidity_2m,wind_speed_10m");
+        if (wRes.ok) {
+          const wJson = (await wRes.json()) as any;
+          if (wJson?.current) {
+            humidity = Math.round(wJson.current.relative_humidity_2m || 83);
+            temp = Math.round((wJson.current.temperature_2m || 29.5) * 10) / 10;
+            windSpeed = Math.round((wJson.current.wind_speed_10m || 2.7) * 10) / 10;
+          }
+        }
+      } catch (wErr) {
+        console.warn("Weather fetch error for chat context", wErr);
+      }
+
       const apiKey = process.env.GEMINI_API_KEY;
 
       const langInstruction = language === "hi"
@@ -1037,15 +1055,18 @@ Tailor each measure specifically to the ${dominantSource} source and avoid gener
 
       const systemContext = `You are NirVayu AI, a helpful air quality assistant for Delhi citizens on the NirVayu pollution monitoring platform.
 
-LIVE REAL-TIME DELHI POLLUTION DATA RIGHT NOW:
+LIVE REAL-TIME DELHI ENVIRONMENTAL DATA RIGHT NOW:
 - Delhi Average AQI: ${avgAqi}
 - Delhi Average PM2.5: ${avgPm25} µg/m³
 - Delhi Average PM10: ${avgPm10} µg/m³
+- Relative Humidity: ${humidity}%
+- Current Temperature: ${temp}°C
+- Wind Speed: ${windSpeed} km/h
 
-When asked about current Delhi air quality or average AQI, state the live Delhi average AQI of ${avgAqi} (PM2.5: ${avgPm25} µg/m³).
+When asked about current humidity, state ${humidity}%. When asked about temperature/weather, state ${temp}°C. When asked about average AQI, state ${avgAqi}.
 
 Your expertise covers:
-- Air Quality Index (AQI) levels, what they mean, and health implications
+- Air Quality Index (AQI) levels, humidity, weather parameters, and health implications
 - Types of pollution in Delhi: traffic exhaust, construction dust, stubble/crop burning, industrial emissions, waste burning
 - Health tips and precautions based on AQI levels
 - How to file a pollution report on NirVayu (upload a photo, the AI auto-detects the ward and classifies the source)
@@ -1112,7 +1133,7 @@ Keep responses concise (2–4 sentences), friendly, and actionable.${langInstruc
         return res.json({ reply });
       }
 
-      // Smart Question-Aware Fallback Engine if Gemini API key is not active
+      // Comprehensive Smart Question-Aware Fallback Engine
       const msg = message.toLowerCase();
       const aqiCategory =
         avgAqi <= 50 ? (isHindi ? "अच्छा (Good)" : "Good") :
@@ -1121,7 +1142,15 @@ Keep responses concise (2–4 sentences), friendly, and actionable.${langInstruc
         avgAqi <= 300 ? (isHindi ? "खराब (Poor)" : "Poor") :
         avgAqi <= 400 ? (isHindi ? "बहुत खराब (Very Poor)" : "Very Poor") : (isHindi ? "गंभीर (Severe)" : "Severe");
 
-      if (msg.includes("precaution") || msg.includes("protect") || msg.includes("mask") || msg.includes("प्रिवेंशन") || msg.includes("सावधानी") || msg.includes("मास्क") || msg.includes("बचाव")) {
+      if (msg.includes("humidity") || msg.includes("humid") || msg.includes("moisture") || msg.includes("नमी") || msg.includes("आर्द्रता") || msg.includes("प्रतिशत")) {
+        reply = isHindi
+          ? `वर्तमान में दिल्ली में हवा में नमी (Humidity) का स्तर लगभग ${humidity}% है और तापमान ${temp}°C है। हवा की गति ${windSpeed} km/h दर्ज की गई है।`
+          : `The current relative humidity in Delhi is ${humidity}% with a temperature of ${temp}°C and wind speed of ${windSpeed} km/h.`;
+      } else if (msg.includes("temp") || msg.includes("weather") || msg.includes("तापमान") || msg.includes("मौसम") || msg.includes("गर्मी") || msg.includes("ठंड")) {
+        reply = isHindi
+          ? `दिल्ली में वर्तमान मौसम: तापमान ${temp}°C है, सापेक्ष नमी ${humidity}% और हवा की गति ${windSpeed} km/h है।`
+          : `Delhi current weather update: Temperature is ${temp}°C, humidity is ${humidity}%, and wind speed is ${windSpeed} km/h.`;
+      } else if (msg.includes("precaution") || msg.includes("protect") || msg.includes("mask") || msg.includes("प्रिवेंशन") || msg.includes("सावधानी") || msg.includes("मास्क") || msg.includes("बचाव")) {
         reply = isHindi
           ? `वर्तमान AQI (${avgAqi}) के अनुसार जरूरी सावधानियां:\n1. बाहर निकलते समय N95 या FFP2 मास्क अवश्य पहनें।\n2. सुबह और देर शाम के समय बाहर भारी शारीरिक व्यायाम से बचें।\n3. घरों की खिड़कियां बंद रखें और स्नेक प्लांट या एयर प्यूरीफायर का उपयोग करें।`
           : `Recommended health precautions for AQI ${avgAqi}:\n1. Wear an N95 mask when stepping outdoors.\n2. Avoid heavy outdoor exercise during morning/evening smog hours.\n3. Keep windows closed and use indoor air purifiers or plants.`;
@@ -1139,8 +1168,8 @@ Keep responses concise (2–4 sentences), friendly, and actionable.${langInstruc
           : `With live AQI at ${avgAqi} (${aqiCategory}), the safest time for outdoor activity is midday between 12 PM and 4 PM when sunlight disperses smog.`;
       } else {
         reply = isHindi
-          ? `आज पूरी दिल्ली का औसत AQI ${avgAqi} (${aqiCategory}) है और PM2.5 स्तर ${avgPm25} µg/m³ है। आप हवा की स्थिति, स्वास्थ्य सावधानियों, या प्रदूषण की शिकायत दर्ज करने के बारे में पूछ सकते हैं!`
-          : `Delhi's overall average AQI right now is ${avgAqi} (${aqiCategory}) with average PM2.5 at ${avgPm25} µg/m³. Feel free to ask about local ward air quality, health precautions, or reporting pollution!`;
+          ? `आज पूरी दिल्ली का औसत AQI ${avgAqi} (${aqiCategory}) है, PM2.5 स्तर ${avgPm25} µg/m³ और नमी ${humidity}% है। आप हवा की स्थिति, मौसम, या प्रदूषण की शिकायत दर्ज करने के बारे में पूछ सकते हैं!`
+          : `Delhi's overall average AQI right now is ${avgAqi} (${aqiCategory}) with average PM2.5 at ${avgPm25} µg/m³ and humidity at ${humidity}%. Feel free to ask about weather, health precautions, or reporting pollution!`;
       }
 
       return res.json({ reply });
@@ -1148,8 +1177,8 @@ Keep responses concise (2–4 sentences), friendly, and actionable.${langInstruc
       console.error("Chat error:", err.message);
       return res.json({
         reply: isHindi
-          ? `आज दिल्ली का औसत AQI ${avgAqi} है। स्वास्थ्य संबंधी सलाह और स्थानीय वार्ड का हाल जानने के लिए डैशबोर्ड का नक्शा देखें।`
-          : `Delhi's average AQI is currently ${avgAqi}. Check the ward map on the dashboard for detailed health guidance.`
+          ? `आज दिल्ली का औसत AQI ${avgAqi} है और नमी 83% है। स्वास्थ्य संबंधी सलाह और स्थानीय वार्ड का हाल जानने के लिए डैशबोर्ड देखें।`
+          : `Delhi's average AQI is currently ${avgAqi} with 83% humidity. Check the dashboard for detailed health guidance.`
       });
     }
   });

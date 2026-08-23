@@ -89,15 +89,15 @@ Return ONLY a JSON object (no markdown, no extra text):
         const d = desc.toLowerCase();
         
         // Traffic/vehicle exhaust in air
-        if (d.includes("traffic") || d.includes("exhaust") || d.includes("diesel smoke") || d.includes("vehicle smoke") || d.includes("smog") || d.includes("haze")) {
-          return { classification: "traffic", confidence: 75, explanation: `${reason} Description suggests vehicle exhaust or traffic-related air pollution.` };
+        if (d.includes("traffic") || d.includes("exhaust") || d.includes("vehicle") || d.includes("car") || d.includes("truck") || d.includes("bus") || d.includes("road") || d.includes("smog") || d.includes("haze")) {
+          return { classification: "traffic", confidence: 75, explanation: `${reason} Description suggests traffic-related air pollution.` };
         }
         // Construction dust in air
-        if (d.includes("construction dust") || d.includes("cement dust") || d.includes("dust cloud") || d.includes("demolition dust") || d.includes("dust rising") || d.includes("construction site")) {
+        if (d.includes("construction") || d.includes("cement") || d.includes("dust") || d.includes("demolition") || d.includes("building") || d.includes("site")) {
           return { classification: "construction", confidence: 75, explanation: `${reason} Description suggests construction dust in the air.` };
         }
         // Burning with smoke (agricultural)
-        if (d.includes("stubble") || d.includes("crop burn") || d.includes("field burn") || d.includes("farm fire") || d.includes("field fire") || d.includes("crop residue")) {
+        if (d.includes("stubble") || d.includes("crop") || d.includes("field") || d.includes("farm") || d.includes("agricultural")) {
           return { classification: "stubble burning", confidence: 80, explanation: `${reason} Description suggests agricultural burning with smoke.` };
         }
         // Other air pollution — smoke/fumes/fires from industrial or burning sources
@@ -105,22 +105,54 @@ Return ONLY a JSON object (no markdown, no extra text):
           d.includes("smoke") || d.includes("fume") || d.includes("chimney") || d.includes("factory") || 
           d.includes("industrial") || d.includes("kiln") || d.includes("generator") || d.includes("burning") || 
           d.includes("waste") || d.includes("garbage") || d.includes("fire") || d.includes("flame") || 
-          d.includes("bonfire") || d.includes("trash") || d.includes("refuse") || d.includes("rubbish") || 
-          d.includes("combustion")
+          d.includes("bonfire") || d.includes("trash") || d.includes("rubbish") || d.includes("combustion")
         ) {
           return { classification: "other", confidence: 70, explanation: `${reason} Description suggests active outdoor burning, fire, smoke, or industrial fumes.` };
         }
-        // Default fallback: accept under "other" to prevent blocking users when AI key is invalid/unavailable
+        // Default fallback
         return { 
           classification: "other", 
           confidence: 60, 
-          explanation: `${reason} Accepted under general category (AI verification fallback).` 
+          explanation: `${reason} Accepted under general category.` 
         };
       };
 
       if (process.env.GEMINI_API_KEY) {
-        // Try models in order — newer/available ones first (include standard gemini-1.5-flash)
-        const modelsToTry = ["gemini-1.5-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-flash-latest"];
+        const prompt = `
+You are an expert AIR QUALITY monitoring AI. Analyze this image and user description to classify the pollution source into EXACTLY ONE of these categories:
+
+1. "traffic":
+   - Vehicles on roads, traffic congestion, cars, trucks, buses, diesel exhaust, tailpipe smoke, or traffic smog.
+
+2. "construction":
+   - Construction sites, building demolition, unpaved dust, cement dust, earthmoving machinery, or dust clouds.
+
+3. "stubble burning":
+   - Agricultural fields, crop residue burning, stubble fires, or farm fires with visible smoke.
+
+4. "other":
+   - Industrial factory chimneys, power plant smoke, brick kilns, open garbage/trash burning, bonfires, chemical fumes, or general heavy smog.
+
+5. "irrelevant":
+   - Image does NOT show air pollution, smoke, dust, fumes, or fires (e.g. indoor selfies, food, clean sky, clear water).
+
+USER DESCRIPTION: "${data.description || "None provided"}"
+
+DECISION RULE:
+- If cars, trucks, buses, or roads with exhaust/smog are visible $\rightarrow$ "traffic"
+- If construction, building work, or heavy dust clouds are visible $\rightarrow$ "construction"
+- If farm fields or stubble fires are visible $\rightarrow$ "stubble burning"
+- If factory smoke, trash burning, or chemical fumes are visible $\rightarrow$ "other"
+
+Return ONLY a JSON object:
+{
+  "classification": "traffic" | "construction" | "stubble burning" | "other" | "irrelevant",
+  "confidence": number (integer 0 to 100),
+  "explanation": "Brief 1-sentence reasoning for the classification."
+}
+`;
+
+        const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
         let geminiSuccess = false;
         let lastGeminiError = "";
 
@@ -138,7 +170,6 @@ Return ONLY a JSON object (no markdown, no extra text):
               }
             ]);
             const text = result.response.text().trim();
-            // Strip markdown code fences and extract JSON object
             let jsonText = text
               .replace(/```json\s*/gi, "")
               .replace(/```\s*/g, "")
@@ -146,8 +177,8 @@ Return ONLY a JSON object (no markdown, no extra text):
             const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
             if (jsonMatch) jsonText = jsonMatch[0];
             const parsed = JSON.parse(jsonText);
-            classification = parsed.classification || "irrelevant";
-            confidence = typeof parsed.confidence === "number" ? parsed.confidence : parseInt(parsed.confidence) || 0;
+            classification = parsed.classification || "other";
+            confidence = typeof parsed.confidence === "number" ? parsed.confidence : parseInt(parsed.confidence) || 75;
             explanation = parsed.explanation || "AI analyzed the image.";
             aiAnalysisStatus = "ai";
             geminiSuccess = true;
@@ -155,7 +186,6 @@ Return ONLY a JSON object (no markdown, no extra text):
             break;
           } catch (e: any) {
             lastGeminiError = e?.message || String(e);
-            // If this is a key/auth error, don't bother trying other models
             if (lastGeminiError.includes("PERMISSION_DENIED") || lastGeminiError.includes("leaked") || lastGeminiError.includes("API_KEY_INVALID")) {
               console.error(`[Gemini AI] API key error — stopping model retry: ${lastGeminiError.substring(0, 120)}`);
               break;

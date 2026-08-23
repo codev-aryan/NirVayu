@@ -788,6 +788,64 @@ Return ONLY a JSON object:
   // Create mock data file structure if it doesn't exist (as per requirements)
   // In a real app we might write to disk, here we just keep in memory but ensure the path concept exists
 
+  // News endpoint — ward-specific pollution news from NewsAPI
+  const newsCache: Map<string, { data: any; ts: number }> = new Map();
+  const NEWS_TTL = 10 * 60 * 1000; // 10 minutes
+
+  app.get("/api/news", async (req, res) => {
+    try {
+      const wardName = (req.query.ward as string) || "";
+      const cacheKey = wardName.toLowerCase().trim() || "delhi";
+
+      const cached = newsCache.get(cacheKey);
+      if (cached && Date.now() - cached.ts < NEWS_TTL) {
+        return res.json(cached.data);
+      }
+
+      const apiKey = process.env.NEWS_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "News service unavailable — NEWS_API_KEY not configured." });
+      }
+
+      // Build a targeted query: ward name + Delhi pollution keywords
+      const query = wardName
+        ? `"${wardName}" pollution OR AQI OR air quality Delhi`
+        : "Delhi pollution OR AQI OR air quality OR smog";
+
+      const url = new URL("https://newsapi.org/v2/everything");
+      url.searchParams.set("q", query);
+      url.searchParams.set("language", "en");
+      url.searchParams.set("sortBy", "publishedAt");
+      url.searchParams.set("pageSize", "15");
+      url.searchParams.set("apiKey", apiKey);
+
+      const response = await fetch(url.toString());
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("NewsAPI error:", errText);
+        return res.status(502).json({ error: "Failed to fetch news." });
+      }
+
+      const json = await response.json() as any;
+      const articles = (json.articles || [])
+        .filter((a: any) => a.title && a.title !== "[Removed]")
+        .slice(0, 10)
+        .map((a: any) => ({
+          title: a.title,
+          source: a.source?.name || "News",
+          url: a.url,
+          publishedAt: a.publishedAt,
+        }));
+
+      const result = { articles, ward: wardName || "Delhi", fetchedAt: new Date().toISOString() };
+      newsCache.set(cacheKey, { data: result, ts: Date.now() });
+      return res.json(result);
+    } catch (err: any) {
+      console.error("News fetch error:", err.message);
+      return res.status(500).json({ error: "News service error." });
+    }
+  });
+
   // Chat endpoint for Citizen AI Chatbot
   app.post("/api/chat", async (req, res) => {
     try {

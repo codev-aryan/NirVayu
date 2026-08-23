@@ -16,6 +16,7 @@ import { WardMap } from "./WardMap";
 import { StatusBadge } from "./StatusBadge";
 import { CaptureEvidence } from "./CaptureEvidence";
 import { apiRequest } from "@/lib/queryClient";
+import { NewsBulletin } from "./NewsBulletin";
 
 function SourceIcon({ source }: { source: string }) {
   switch (source) {
@@ -63,7 +64,10 @@ export function CitizenDashboard() {
     : [];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* News Ticker */}
+      <NewsBulletin wardName={selectedWard?.name} />
+
       {/* Row 1: Key Cards Section */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <MetricCard

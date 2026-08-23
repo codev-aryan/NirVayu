@@ -923,11 +923,10 @@ Tailor each measure specifically to the ${dominantSource} source and avoid gener
       }
 
       const json = await response.json() as any;
-      const articles = (json.articles || [])
+      let articles = (json.articles || [])
         .filter((a: any) => {
           if (!a.title || a.title === "[Removed]") return false;
           const text = `${a.title} ${a.description || ""}`.toLowerCase();
-          // Must contain at least one air-pollution keyword
           return relevantKeywords.some((kw) => text.includes(kw));
         })
         .slice(0, 10)
@@ -938,10 +937,38 @@ Tailor each measure specifically to the ${dominantSource} source and avoid gener
           publishedAt: a.publishedAt,
         }));
 
+      // If zone query returned no results, fall back to general Delhi/India air pollution news
+      if (articles.length === 0 && zone) {
+        const fallbackUrl = new URL("https://newsapi.org/v2/everything");
+        fallbackUrl.searchParams.set("q", `Delhi ${airPollutionTerms}`);
+        fallbackUrl.searchParams.set("language", "en");
+        fallbackUrl.searchParams.set("sortBy", "publishedAt");
+        fallbackUrl.searchParams.set("pageSize", "20");
+        fallbackUrl.searchParams.set("apiKey", apiKey);
+
+        const fbResp = await fetch(fallbackUrl.toString());
+        if (fbResp.ok) {
+          const fbJson = await fbResp.json() as any;
+          articles = (fbJson.articles || [])
+            .filter((a: any) => {
+              if (!a.title || a.title === "[Removed]") return false;
+              const text = `${a.title} ${a.description || ""}`.toLowerCase();
+              return relevantKeywords.some((kw) => text.includes(kw));
+            })
+            .slice(0, 10)
+            .map((a: any) => ({
+              title: a.title,
+              source: a.source?.name || "News",
+              url: a.url,
+              publishedAt: a.publishedAt,
+            }));
+        }
+      }
 
       const result = { articles, zone: zone || "Delhi", fetchedAt: new Date().toISOString() };
       newsCache.set(cacheKey, { data: result, ts: Date.now() });
       return res.json(result);
+
     } catch (err: any) {
       console.error("News fetch error:", err.message);
       return res.status(500).json({ error: "News service error." });

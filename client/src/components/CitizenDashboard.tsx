@@ -253,127 +253,25 @@ export function CitizenDashboard() {
           )}
         </div>
 
-        {/* Right Column - Daily Actions Checklist */}
+        {/* Right Column - AI Recommended Ward-Wise Preventive Measures */}
         <div className="lg:col-span-7">
           {selectedWard ? (
-            <DailyPreventionModule selectedWard={selectedWard} />
+            <WardMeasures wardId={selectedWard.id} wardName={selectedWard.name} />
           ) : (
             <div className="h-[300px] flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-border rounded-3xl bg-muted/20">
               <ShieldCheck className="w-8 h-8 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-bold mb-2">Action Center Locked</h3>
+              <h3 className="text-lg font-bold mb-2">Ward Intelligence Locked</h3>
               <p className="text-muted-foreground text-sm max-w-xs">
-                Select a ward to participate in local environment actions and earn citizen credits.
+                Select a ward from the map or search bar to see AI-analyzed preventive health measures.
               </p>
             </div>
           )}
         </div>
       </div>
-
-      {/* Ward Insights Panel — preventive measures when a ward is selected */}
-      {selectedWard && (
-        <WardMeasures wardId={selectedWard.id} wardName={selectedWard.name} />
-      )}
     </div>
   );
 }
 
-function DailyPreventionModule({ selectedWard }: { selectedWard: any }) {
-  const [completedActions, setCompletedActions] = useState<Set<string>>(new Set());
-  const addCreditMutation = useAddCredit();
-  const aqi = selectedWard.aqi;
-
-  const checklist = {
-    do: ["Check AQI before going out", "Stay hydrated"],
-    avoid: ["Outdoor exercise during peak pollution", "Using wood-burning stoves"]
-  };
-
-  if (aqi < 100) {
-    checklist.do.push("Enjoy outdoor parks", "Natural ventilation");
-  } else if (aqi < 200) {
-    checklist.do.push("Use a cloth mask");
-    checklist.avoid.push("Heavy outdoor exertion");
-  } else {
-    checklist.do.push("Seal window gaps", "Run air purifier");
-    checklist.avoid.push("Stepping outside for any reason");
-  }
-
-  const toggleAction = (item: string) => {
-    if (completedActions.has(item)) return;
-
-    setCompletedActions(prev => new Set(prev).add(item));
-    // Each checklist action adds 10 credits to the ward
-    addCreditMutation.mutate({ id: selectedWard.id, action: "carpooling" }); // Using carpooling as a proxy for "general green action"
-  };
-
-  return (
-    <Card className="border-border shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5 text-primary" /> Preventive Measures Module
-        </CardTitle>
-        <CardDescription>Daily ward-specific actions for {selectedWard.name}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
-            <h4 className="text-xs font-bold text-blue-700 uppercase mb-2">Personal</h4>
-            <ul className="text-xs space-y-1 text-blue-800">
-              <li>• Wear {aqi > 200 ? "N95" : "cloth"} mask</li>
-              <li>• {aqi > 150 ? "Close windows" : "Moderate ventilation"}</li>
-            </ul>
-          </div>
-          <div className="p-3 bg-green-50 border border-green-100 rounded-lg">
-            <h4 className="text-xs font-bold text-green-700 uppercase mb-2">Lifestyle</h4>
-            <ul className="text-xs space-y-1 text-green-800">
-              <li>• Prefer {aqi > 150 ? "Indoor" : "Public"} transport</li>
-              <li>• Zero idling policy</li>
-            </ul>
-          </div>
-          <div className="p-3 bg-orange-50 border border-orange-100 rounded-lg">
-            <h4 className="text-xs font-bold text-orange-700 uppercase mb-2">Community</h4>
-            <ul className="text-xs space-y-1 text-orange-800">
-              <li>• Participate in dust control</li>
-              <li>• Report waste burning</li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <h4 className="text-sm font-bold">Daily Prevention Checklist (Complete to earn Credits)</h4>
-          <div className="space-y-2">
-            {checklist.do.map((item, i) => {
-              const isDone = completedActions.has(item);
-              return (
-                <div
-                  key={i}
-                  onClick={() => toggleAction(item)}
-                  className={cn(
-                    "flex items-center gap-3 p-2 rounded-lg border transition-all cursor-pointer",
-                    isDone ? "bg-green-50 border-green-200 text-green-700" : "hover:bg-muted/50"
-                  )}
-                >
-                  <div className={cn(
-                    "w-5 h-5 rounded border flex items-center justify-center transition-colors",
-                    isDone ? "bg-green-500 border-green-500" : "border-primary/50"
-                  )}>
-                    {isDone && <ShieldCheck className="w-3 h-3 text-white" />}
-                  </div>
-                  <span className="text-sm">{item}</span>
-                  {isDone && <span className="ml-auto text-[10px] font-bold">+10 Credits</span>}
-                </div>
-              );
-            })}
-            {checklist.avoid.map((item, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm text-red-700 p-2">
-                <AlertTriangle className="w-4 h-4" /> {item}
-              </div>
-            ))}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 function MetricCard({ label, value, unit, color = "text-foreground" }: { label: string, value: number, unit: string, color?: string }) {
   return (

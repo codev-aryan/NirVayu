@@ -1222,8 +1222,27 @@ Keep responses concise (2–4 sentences), friendly, and actionable.${langInstruc
           ? `आज पूरी दिल्ली का औसत AQI ${avgAqi} (${aqiCategory}) है। PM2.5 का स्तर ${avgPm25} µg/m³ और PM10 का स्तर ${avgPm10} µg/m³ है।\n• 0-50: अच्छा | 51-100: संतोषजनक | 101-200: मध्यम | 201-300: खराब | 301-400: बहुत खराब | 401+: गंभीर`
           : `Delhi's current live average AQI is ${avgAqi} (${aqiCategory}). PM2.5 is ${avgPm25} µg/m³ and PM10 is ${avgPm10} µg/m³.\n• 0-50: Good | 51-100: Satisfactory | 101-200: Moderate | 201-300: Poor | 301-400: Very Poor | 401+: Severe`;
       }
-      // 11. Universal Fallback for any other question
-      else {
+
+      // 11. Dynamic Wikipedia Knowledge API Search for ANY general question on earth!
+      if (!reply) {
+        try {
+          const cleanTopic = message.replace(/^(what is|what are|define|tell me about|explain|क्या है|क्या होता है|बताओ)\s+/i, "").replace(/[?.,!]/g, "").trim();
+          const wikiLang = isHindi ? "hi" : "en";
+          const wikiUrl = `https://${wikiLang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanTopic)}`;
+          const wRes = await fetch(wikiUrl);
+          if (wRes.ok) {
+            const wData = (await wRes.json()) as any;
+            if (wData.extract && wData.extract.length > 20) {
+              reply = wData.extract;
+            }
+          }
+        } catch (e) {
+          console.warn("Wiki search fallback failed", e);
+        }
+      }
+
+      // 12. Universal Fallback for any other query
+      if (!reply) {
         reply = isHindi
           ? `निर्वायु AI दिल्ली वायु गुणवत्ता और पर्यावरण सहायक है। वर्तमान में दिल्ली का औसत AQI ${avgAqi} (${aqiCategory}), तापमान ${temp}°C और नमी ${humidity}% है। आप हवा की स्थिति, स्वास्थ्य सावधानियों, या प्रदूषण रिपोर्टिंग के बारे में कोई भी प्रश्न पूछ सकते हैं!`
           : `NirVayu AI is Delhi's smart air quality & weather assistant. Currently, Delhi AQI is ${avgAqi} (${aqiCategory}), temperature is ${temp}°C, and humidity is ${humidity}%. Feel free to ask any question about air quality, weather, health advice, or pollution reporting!`;

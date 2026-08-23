@@ -32,5 +32,6 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   res.status(status).json({ message });
 });
 
-// CJS export — compiled by esbuild to dist/vercel.cjs
-export = app;
+export default app;
+// @ts-ignore
+module.exports = app;

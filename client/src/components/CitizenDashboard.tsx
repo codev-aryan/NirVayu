@@ -17,6 +17,16 @@ import { StatusBadge } from "./StatusBadge";
 import { CaptureEvidence } from "./CaptureEvidence";
 import { apiRequest } from "@/lib/queryClient";
 import { NewsBulletin } from "./NewsBulletin";
+import { WardMeasures } from "./WardMeasures";
+
+// Map ward coordinates to Delhi zone for zone-based news
+function getZone(lat: number, lng: number): string {
+  if (lat > 28.73) return "North Delhi";
+  if (lat < 28.55) return "South Delhi";
+  if (lng > 77.25) return "East Delhi";
+  if (lng < 77.10) return "West Delhi";
+  return "Central Delhi";
+}
 
 function SourceIcon({ source }: { source: string }) {
   switch (source) {
@@ -63,10 +73,12 @@ export function CitizenDashboard() {
     ? wards.filter(w => w.name.toLowerCase().includes(searchQuery.toLowerCase()))
     : [];
 
+  const zone = selectedWard ? getZone(selectedWard.latitude, selectedWard.longitude) : undefined;
+
   return (
     <div className="space-y-6">
       {/* News Ticker */}
-      <NewsBulletin wardName={selectedWard?.name} />
+      <NewsBulletin zone={zone} />
 
       {/* Row 1: Key Cards Section */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -256,6 +268,11 @@ export function CitizenDashboard() {
           )}
         </div>
       </div>
+
+      {/* Ward Insights Panel — preventive measures when a ward is selected */}
+      {selectedWard && (
+        <WardMeasures wardId={selectedWard.id} wardName={selectedWard.name} />
+      )}
     </div>
   );
 }

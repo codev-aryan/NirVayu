@@ -788,14 +788,105 @@ Return ONLY a JSON object:
   // Create mock data file structure if it doesn't exist (as per requirements)
   // In a real app we might write to disk, here we just keep in memory but ensure the path concept exists
 
+  // Ward-specific preventive measures (Gemini analyzes live ward stats)
+  const bulletinCache: Map<string, { data: any; ts: number }> = new Map();
+  const BULLETIN_TTL = 15 * 60 * 1000; // 15 minutes
+
+  app.get("/api/ward-bulletin", async (req, res) => {
+    try {
+      const wardId = parseInt(req.query.wardId as string);
+      if (isNaN(wardId)) return res.status(400).json({ error: "wardId is required." });
+
+      const cacheKey = `bulletin-${wardId}`;
+      const cached = bulletinCache.get(cacheKey);
+      if (cached && Date.now() - cached.ts < BULLETIN_TTL) {
+        return res.json(cached.data);
+      }
+
+      const wards = await storage.getWards();
+      const ward = wards.find((w: any) => w.id === wardId);
+      if (!ward) return res.status(404).json({ error: "Ward not found." });
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: "AI service unavailable." });
+
+      const aqiCategory =
+        ward.aqi <= 50 ? "Good" :
+        ward.aqi <= 100 ? "Satisfactory" :
+        ward.aqi <= 200 ? "Moderate" :
+        ward.aqi <= 300 ? "Poor" :
+        ward.aqi <= 400 ? "Very Poor" : "Severe";
+
+      const dominantSource = (ward as any).dominant_source || "Mixed";
+
+      const prompt = `You are a public health advisor for Delhi air quality. Analyze the following live statistics for ${ward.name} ward and generate specific preventive health measures for residents.
+
+Live Ward Statistics:
+- Ward: ${ward.name}
+- Current AQI: ${ward.aqi} (Category: ${aqiCategory})
+- PM2.5: ${ward.pm25} µg/m³
+- PM10: ${ward.pm10} µg/m³
+- NO2: ${ward.no2} ppb
+- Primary Pollution Source: ${dominantSource}
+
+Generate ONLY this JSON (no markdown, no backticks, raw JSON only):
+{
+  "measures": [
+    "Specific measure 1 tailored to ${dominantSource} pollution and AQI ${ward.aqi}",
+    "Specific measure 2",
+    "Specific measure 3",
+    "Specific measure 4"
+  ],
+  "riskLevel": "low",
+  "outdoorAdvice": "One actionable sentence about outdoor safety for ${ward.name} residents right now.",
+  "sensitiveGroups": "Who is most at risk given current conditions in ${ward.name}."
+}
+
+riskLevel must be exactly one of: "low", "moderate", "high", "very high", "severe".
+Tailor each measure specifically to the ${dominantSource} source and avoid generic advice.`;
+
+      const { GoogleGenerativeAI } = await import("@google/generative-ai");
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
+      const result = await model.generateContent(prompt);
+      const text = result.response.text().trim();
+
+      let parsed;
+      try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+      } catch {
+        parsed = {
+          measures: [
+            "Wear an N95 mask if going outdoors.",
+            "Avoid outdoor exercise during peak traffic hours (8–10am, 6–9pm).",
+            "Keep windows closed and use air purifiers indoors.",
+            "Stay hydrated and watch for eye irritation or coughing."
+          ],
+          riskLevel: ward.aqi > 300 ? "very high" : ward.aqi > 200 ? "high" : ward.aqi > 100 ? "moderate" : "low",
+          outdoorAdvice: ward.aqi > 200 ? "Limit outdoor exposure and wear a mask." : "Outdoor activity is manageable with basic precautions.",
+          sensitiveGroups: "Children, elderly, and people with asthma or heart conditions."
+        };
+      }
+
+      const data = { ...parsed, ward: ward.name, aqi: ward.aqi, aqiCategory, dominantSource, generatedAt: new Date().toISOString() };
+      bulletinCache.set(cacheKey, { data, ts: Date.now() });
+      return res.json(data);
+    } catch (err: any) {
+      console.error("Measures error:", err.message);
+      return res.status(500).json({ error: "Failed to generate preventive measures." });
+    }
+  });
+
   // News endpoint — ward-specific pollution news from NewsAPI
   const newsCache: Map<string, { data: any; ts: number }> = new Map();
   const NEWS_TTL = 10 * 60 * 1000; // 10 minutes
 
+
   app.get("/api/news", async (req, res) => {
     try {
-      const wardName = (req.query.ward as string) || "";
-      const cacheKey = wardName.toLowerCase().trim() || "delhi";
+      const zone = (req.query.zone as string) || "";
+      const cacheKey = zone.toLowerCase().trim() || "delhi";
 
       const cached = newsCache.get(cacheKey);
       if (cached && Date.now() - cached.ts < NEWS_TTL) {
@@ -807,10 +898,10 @@ Return ONLY a JSON object:
         return res.status(500).json({ error: "News service unavailable — NEWS_API_KEY not configured." });
       }
 
-      // Strictly air-pollution focused queries
-      const airPollutionTerms = "(\"air pollution\" OR \"air quality\" OR AQI OR smog OR PM2.5 OR PM10 OR \"particulate matter\" OR \"stubble burning\" OR \"vehicular emissions\" OR \"industrial emissions\" OR haze)";
-      const query = wardName
-        ? `Delhi ${airPollutionTerms} "${wardName}"`
+      // Strictly air-pollution focused queries, zone-aware
+      const airPollutionTerms = `("air pollution" OR "air quality" OR AQI OR smog OR PM2.5 OR PM10 OR "particulate matter" OR "stubble burning" OR "vehicular emissions" OR "industrial emissions" OR haze)`;
+      const query = zone
+        ? `"${zone}" Delhi ${airPollutionTerms}`
         : `Delhi ${airPollutionTerms}`;
 
       const url = new URL("https://newsapi.org/v2/everything");
@@ -822,6 +913,7 @@ Return ONLY a JSON object:
 
       // Keywords that must appear in title/description to confirm air-pollution relevance
       const relevantKeywords = ["air", "aqi", "smog", "pm2.5", "pm10", "pollution", "particulate", "stubble", "haze", "emission", "dust", "smoke", "ozone", "no2", "so2"];
+
 
       const response = await fetch(url.toString());
       if (!response.ok) {
@@ -847,7 +939,7 @@ Return ONLY a JSON object:
         }));
 
 
-      const result = { articles, ward: wardName || "Delhi", fetchedAt: new Date().toISOString() };
+      const result = { articles, zone: zone || "Delhi", fetchedAt: new Date().toISOString() };
       newsCache.set(cacheKey, { data: result, ts: Date.now() });
       return res.json(result);
     } catch (err: any) {

@@ -11,7 +11,7 @@ interface Article {
 }
 
 interface NewsBulletinProps {
-  wardName?: string;
+  zone?: string;
 }
 
 function timeAgo(dateStr: string) {
@@ -21,7 +21,7 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-export function NewsBulletin({ wardName }: NewsBulletinProps) {
+export function NewsBulletin({ zone }: NewsBulletinProps) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -34,7 +34,7 @@ export function NewsBulletin({ wardName }: NewsBulletinProps) {
       setLoading(true);
       setError("");
       try {
-        const params = wardName ? `?ward=${encodeURIComponent(wardName)}` : "";
+        const params = zone ? `?zone=${encodeURIComponent(zone)}` : "";
         const res = await fetch(`/api/news${params}`);
         const data = await res.json();
         if (!res.ok || data.error) {
@@ -52,7 +52,7 @@ export function NewsBulletin({ wardName }: NewsBulletinProps) {
     };
 
     fetchNews();
-  }, [wardName]);
+  }, [zone]);
 
   // Auto-advance ticker every 5 seconds
   useEffect(() => {
@@ -91,7 +91,7 @@ export function NewsBulletin({ wardName }: NewsBulletinProps) {
         <div className="flex items-center gap-1.5 px-3 bg-red-600 text-white shrink-0">
           <Radio className="w-3 h-3 animate-pulse" />
           <span className="text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">
-            {wardName ? `${wardName} News` : "Delhi Pollution"}
+            {zone ? `${zone} Air Quality` : "Delhi Pollution"}
           </span>
         </div>
 
@@ -103,7 +103,7 @@ export function NewsBulletin({ wardName }: NewsBulletinProps) {
           {loading ? (
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Loading news for {wardName || "Delhi"}…
+              Loading news for {zone || "Delhi"}…
             </div>
           ) : error ? (
             <div className="flex items-center gap-2 text-xs text-amber-600">
@@ -111,7 +111,7 @@ export function NewsBulletin({ wardName }: NewsBulletinProps) {
               <span>{error}</span>
             </div>
           ) : articles.length === 0 ? (
-            <span className="text-xs text-muted-foreground">No news found for {wardName || "Delhi"}.</span>
+            <span className="text-xs text-muted-foreground">No news found for {zone || "Delhi"}.</span>
           ) : (
             <AnimatePresence mode="wait">
               <motion.a

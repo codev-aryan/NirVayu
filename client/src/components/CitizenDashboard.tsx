@@ -619,17 +619,13 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
                 Ward ID: {successData.report.wardId} (Coordinates: {successData.report.latitude.toFixed(4)}, {successData.report.longitude.toFixed(4)})
               </div>
               <div>
-                <span className="font-bold block text-green-800">Classification:</span>
-                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                  <span className={cn(
-                    "capitalize font-semibold px-1.5 py-0.5 rounded text-[11px]",
-                    successData.report.pollutionType === "traffic" && "bg-blue-100 text-blue-800",
-                    successData.report.pollutionType === "construction" && "bg-orange-100 text-orange-800",
-                    successData.report.pollutionType === "stubble burning" && "bg-red-100 text-red-800",
-                    successData.report.pollutionType === "other" && "bg-purple-100 text-purple-800",
-                  )}>
-                    {successData.report.pollutionType === "other" ? "Other Pollution Source" : successData.report.pollutionType}
-                  </span>
+                <span className="font-bold block text-green-800">AI Analysis:</span>
+                <div className="flex items-start gap-1.5 mt-0.5 flex-wrap">
+                  <p className="text-green-900 leading-relaxed">
+                    {successData.aiExplanation || successData.report.description || "AI analyzed and classified the pollution source."}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                   <span className="text-muted-foreground">(Confidence: {successData.report.aiConfidence}%)</span>
                   {successData.aiAnalysisStatus === "ai" ? (
                     <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-blue-50 text-blue-700 border-blue-200">✦ Gemini Vision</Badge>
@@ -642,6 +638,7 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
                 <span className="font-bold block text-green-800">Status:</span>
                 Accepted
               </div>
+
 
             </div>
           </motion.div>

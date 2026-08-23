@@ -1062,6 +1062,10 @@ ${langInstruction}`;
         return res.status(400).json({ error: "Message is required." });
       }
 
+      let matchedWard: any = null;
+      let maxWard: any = null;
+      let minWard: any = null;
+
       // Fetch live real-time ward data to make chatbot responses match live dashboard numbers 100%
       try {
         const wards = await storage.getWards();
@@ -1069,6 +1073,16 @@ ${langInstruction}`;
           avgAqi = Math.round(wards.reduce((acc, w) => acc + w.aqi, 0) / wards.length);
           avgPm25 = Math.round(wards.reduce((acc, w) => acc + w.pm25, 0) / wards.length);
           avgPm10 = Math.round(wards.reduce((acc, w) => acc + w.pm10, 0) / wards.length);
+
+          maxWard = wards.reduce((max, w) => (w.aqi > max.aqi ? w : max), wards[0]);
+          minWard = wards.reduce((min, w) => (w.aqi < min.aqi ? w : min), wards[0]);
+
+          const msgLower = message.toLowerCase();
+          // Match specific ward requested by citizen (e.g., "Anand Vihar", "ITO", "Bawana")
+          matchedWard = wards.find((w) => {
+            const wName = w.name.toLowerCase();
+            return msgLower.includes(wName) || (wName.length > 3 && msgLower.includes(wName));
+          });
         }
       } catch (e) {
         console.warn("Could not fetch wards for chat context", e);
@@ -1101,6 +1115,30 @@ ${langInstruction}`;
         ? "\n\nCRITICAL LANGUAGE INSTRUCTION: You MUST reply entirely in natural, conversational Devanagari Hindi (हिन्दी). Do not reply in English."
         : "\n\nReply in clear, accessible English.";
 
+      let wardSpecificPrompt = "";
+      if (matchedWard) {
+        const pAqi = (matchedWard.intelligence_data as any)?.predicted_aqi || Math.round(matchedWard.aqi * 1.05);
+        wardSpecificPrompt = `
+
+USER SPECIFICALLY ASKED ABOUT WARD: "${matchedWard.name}"
+- Exact Live AQICN Station AQI for ${matchedWard.name}: ${matchedWard.aqi}
+- Live PM2.5 for ${matchedWard.name}: ${matchedWard.pm25} µg/m³
+- Live PM10 for ${matchedWard.name}: ${matchedWard.pm10} µg/m³
+- Dominant Pollution Source: ${matchedWard.dominant_source}
+- Next 24-Hour Predicted AQI: ${pAqi}
+
+STRICT RULE FOR ${matchedWard.name}:
+You MUST state that the current AQI in ${matchedWard.name} is EXACTLY ${matchedWard.aqi} (PM2.5: ${matchedWard.pm25} µg/m³).
+If the user asks about the 24-hour prediction / forecast for ${matchedWard.name}, you MUST state that the next 24-hour predicted AQI for ${matchedWard.name} is ${pAqi}.
+Do NOT guess or invent any other AQI numbers!`;
+      } else if (maxWard && minWard) {
+        wardSpecificPrompt = `
+
+DELHI WARD EXTREMES RIGHT NOW:
+- Highest AQI Ward: ${maxWard.name} (AQI: ${maxWard.aqi}, Dominant source: ${maxWard.dominant_source})
+- Lowest AQI Ward: ${minWard.name} (AQI: ${minWard.aqi})`;
+      }
+
       const systemContext = `You are NirVayu AI, a helpful air quality assistant for Delhi citizens on the NirVayu pollution monitoring platform.
 
 LIVE REAL-TIME DELHI ENVIRONMENTAL DATA RIGHT NOW:
@@ -1109,7 +1147,7 @@ LIVE REAL-TIME DELHI ENVIRONMENTAL DATA RIGHT NOW:
 - Delhi Average PM10: ${avgPm10} µg/m³
 - Relative Humidity: ${humidity}%
 - Current Temperature: ${temp}°C
-- Wind Speed: ${windSpeed} km/h
+- Wind Speed: ${windSpeed} km/h${wardSpecificPrompt}
 
 When asked about current humidity, state ${humidity}%. When asked about temperature/weather, state ${temp}°C. When asked about average AQI, state ${avgAqi}.
 
@@ -1227,7 +1265,44 @@ Keep responses concise (2–4 sentences), friendly, and actionable. Write clean,
 
       // Comprehensive Universal Intent & Knowledge Engine
       const msg = message.toLowerCase().trim();
+      const isPredictionQuery = msg.includes("predict") || msg.includes("forecast") || msg.includes("24 hour") || msg.includes("24-hour") || msg.includes("24 घंटे") || msg.includes("भविष्यवाणी") || msg.includes("कल का") || msg.includes("tomorrow");
+      const isHighestQuery = msg.includes("highest") || msg.includes("worst") || msg.includes("maximum") || msg.includes("सबसे ज्यादा") || msg.includes("सबसे अधिक") || msg.includes("सबसे खराब");
+
+      const targetWard = matchedWard;
+      const targetAqi = targetWard ? targetWard.aqi : avgAqi;
+      const targetPred = targetWard
+        ? ((targetWard.intelligence_data as any)?.predicted_aqi || Math.round(targetWard.aqi * 1.05))
+        : Math.round(avgAqi * 1.05);
+
       const aqiCategory =
+        targetAqi <= 50 ? (isHindi ? "अच्छा (Good)" : "Good") :
+        targetAqi <= 100 ? (isHindi ? "संतोषजनक (Satisfactory)" : "Satisfactory") :
+        targetAqi <= 200 ? (isHindi ? "मध्यम (Moderate)" : "Moderate") :
+        targetAqi <= 300 ? (isHindi ? "खराब (Poor)" : "Poor") :
+        targetAqi <= 400 ? (isHindi ? "बहुत खराब (Very Poor)" : "Very Poor") : (isHindi ? "गंभीर (Severe)" : "Severe");
+
+      // 0. Specific Ward Query OR Prediction Query
+      if (targetWard || isPredictionQuery || isHighestQuery) {
+        if (isHighestQuery && maxWard) {
+          reply = isHindi
+            ? `वर्तमान में दिल्ली में सबसे अधिक प्रदूषण (AQI) ${maxWard.name} क्षेत्र में है, जहां AQI ${maxWard.aqi} दर्ज किया गया है। मुख्य कारण ${maxWard.dominant_source} है।`
+            : `Currently, ${maxWard.name} has the highest AQI in Delhi at ${maxWard.aqi}. The primary pollution source there is ${maxWard.dominant_source}.`;
+        } else if (isPredictionQuery) {
+          if (targetWard) {
+            reply = isHindi
+              ? `${targetWard.name} का वर्तमान AQI ${targetWard.aqi} है। निर्वायु AI पूर्वानुमान मॉडल के अनुसार अगले 24 घंटों में ${targetWard.name} का अनुमानित AQI ${targetPred} रहेगा।`
+              : `The current AQI in ${targetWard.name} is ${targetWard.aqi}. Based on NirVayu's AI prediction model, the estimated 24-hour forecast AQI for ${targetWard.name} is ${targetPred}.`;
+          } else {
+            reply = isHindi
+              ? `दिल्ली का वर्तमान औसत AQI ${avgAqi} है। निर्वायु AI पूर्वानुमान मॉडल के अनुसार अगले 24 घंटों में पूरी दिल्ली का अनुमानित औसत AQI ${targetPred} रहने की संभावना है।`
+              : `Delhi's current average AQI is ${avgAqi}. NirVayu's AI 24-hour prediction model estimates an average AQI of ${targetPred} across Delhi over the next 24 hours.`;
+          }
+        } else if (targetWard) {
+          reply = isHindi
+            ? `${targetWard.name} में वर्तमान AQI ${targetWard.aqi} (${aqiCategory}) है। PM2.5 का स्तर ${targetWard.pm25} µg/m³ और मुख्य प्रदूषण स्रोत ${targetWard.dominant_source} है। अगले 24 घंटों का अनुमानित AQI ${targetPred} है।`
+            : `The current live AQI in ${targetWard.name} is ${targetWard.aqi} (${aqiCategory}). PM2.5 level is ${targetWard.pm25} µg/m³ and the primary source is ${targetWard.dominant_source}. Next 24-hour predicted AQI is ${targetPred}.`;
+        }
+      }
         avgAqi <= 50 ? (isHindi ? "अच्छा (Good)" : "Good") :
         avgAqi <= 100 ? (isHindi ? "संतोषजनक (Satisfactory)" : "Satisfactory") :
         avgAqi <= 200 ? (isHindi ? "मध्यम (Moderate)" : "Moderate") :

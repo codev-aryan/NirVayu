@@ -1,11 +1,15 @@
 import { type Ward, type User, type InsertUser, type Report, type InsertReport, type Evidence, type InsertEvidence } from "@shared/schema";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import * as turf from "@turf/turf";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const MemoryStore = createMemoryStore(session);
 const execFilePromise = promisify(execFile);
@@ -426,77 +430,13 @@ export class MemStorage implements IStorage {
       return;
     }
 
-    // ── 1. Check global cache (survives Vercel warm invocations) ──
-    const now = Date.now();
-    if (
-      global.__aqiCache &&
-      now - global.__aqiCache.fetchedAt < AQI_CACHE_TTL_MS &&
-      global.__aqiCache.entries.length > 0
-    ) {
-      console.log(`[AQI] Hydrating ${global.__aqiCache.entries.length} wards from global cache (age: ${Math.round((now - global.__aqiCache.fetchedAt) / 1000)}s)`);
-      for (const entry of global.__aqiCache.entries) {
-        const ward = this.wards.get(entry.wardId);
-        if (ward) {
-          this.wards.set(entry.wardId, {
-            ...ward,
-            aqi: entry.aqi,
-            pm25: entry.pm25,
-            pm10: entry.pm10,
-            no2: entry.no2,
-            so2: entry.so2,
-            co: entry.co,
-            o3: entry.o3,
-            dominant_source: entry.dominant_source,
-            intelligence_data: entry.intelligence_data,
-            wprs: entry.wprs,
-            co2_budget_remaining: entry.co2_budget_remaining,
-          });
-        }
-      }
-      this.lastUpdated = new Date(global.__aqiCache.fetchedAt);
-      return;
-    }
+    console.log(`[AQI] Starting ward-centric update for ${this.wards.size} wards...`);
 
-    console.log(`[AQI] Starting bounds-based update for ${this.wards.size} wards...`);
-
-    // ── 2. ONE call: fetch all stations in Delhi bounding box ──
-    // Delhi bounds: SW(28.40, 76.80) → NE(28.90, 77.40)
-    const boundsUrl = `https://api.waqi.info/map/bounds/?latlng=28.40,76.80,28.90,77.40&token=${token}`;
-    let stations: Array<{ uid: number; lat: number; lon: number; aqi: string | number; station: { name: string } }> = [];
-    try {
-      const bRes = await fetch(boundsUrl);
-      const bJson = await bRes.json();
-      if (bJson.status === "ok" && Array.isArray(bJson.data)) {
-        stations = bJson.data;
-        console.log(`[AQI] Bounds API returned ${stations.length} stations in Delhi.`);
-      } else {
-        console.warn("[AQI] Bounds API returned no data:", bJson.status);
-      }
-    } catch (err) {
-      console.error("[AQI] Bounds API call failed:", err);
-    }
-
-    if (stations.length === 0) {
-      console.warn("[AQI] No stations found — skipping update.");
-      return;
-    }
-
-    // ── 3. Map each ward to its nearest station ──
+    const stationMap = loadStationMap();
     const wardStationMap = new Map<number, number>();
     for (const [id, ward] of Array.from(this.wards.entries())) {
-      let bestUid = stations[0].uid;
-      let bestDist = Infinity;
-      for (const s of stations) {
-        const dist = turf.distance(
-          turf.point([ward.longitude, ward.latitude]),
-          turf.point([s.lon, s.lat])
-        );
-        if (dist < bestDist) {
-          bestDist = dist;
-          bestUid = s.uid;
-        }
-      }
-      wardStationMap.set(id, bestUid);
+      const uid = stationMap[ward.name];
+      if (uid) wardStationMap.set(id, uid);
     }
 
     // ── 4. Fetch AQI for unique station IDs only (parallel) ──
@@ -577,51 +517,45 @@ export class MemStorage implements IStorage {
         dominant_source: primarySource,
         intelligence_data
       };
-
-      try {
-        const prediction = predictFutureAqi(aqi, pm25, pm10);
-        updated.intelligence_data!.analysis_summary += ` Prediction: ${prediction.predictedAqi} AQI in ${prediction.horizon} (Confidence: ${Math.round(prediction.confidence * 100)}%).`;
-        updated.intelligence_data!.predicted_aqi = prediction.predictedAqi;
-        updated.intelligence_data!.prediction_horizon = prediction.horizon;
-        updated.intelligence_data!.prediction_confidence = prediction.confidence;
-      } catch { /* ignore */ }
-
       return updated;
     };
 
-    // ── 6. Apply station data to each ward ──
-    let updatedCount = 0;
+    // Second pass: Estimation for wards that still have 0 or failed
     for (const [id, ward] of Array.from(this.wards.entries())) {
-      const uid = wardStationMap.get(id);
-      if (uid === undefined) continue;
-      const data = stationData.get(uid);
-      if (!data) continue;
-      const aqi = Number(data.aqi);
-      const iaqi = data.iaqi || {};
-      this.wards.set(id, buildUpdatedWard(ward, aqi, iaqi));
-      updatedCount++;
-    }
-    console.log(`[AQI] Applied live AQI to ${updatedCount}/${this.wards.size} wards.`);
+      if (ward.aqi === 0 || ward.aqi === null) {
+        let nearestWard: any = null;
+        let minDistance = Infinity;
 
-    // ── 7. Write to global cache ──
-    global.__aqiCache = {
-      fetchedAt: Date.now(),
-      entries: Array.from(this.wards.values()).map(w => ({
-        wardId: w.id,
-        aqi: w.aqi,
-        pm25: w.pm25,
-        pm10: w.pm10,
-        no2: w.no2,
-        so2: w.so2,
-        co: w.co,
-        o3: w.o3,
-        dominant_source: w.dominant_source,
-        intelligence_data: w.intelligence_data,
-        wprs: w.wprs,
-        co2_budget_remaining: w.co2_budget_remaining,
-      }))
-    };
-    console.log(`[AQI] Global cache updated with ${global.__aqiCache.entries.length} ward entries.`);
+        for (const [otherId, otherWard] of Array.from(this.wards.entries())) {
+          if (id === otherId || !otherWard.aqi || otherWard.aqi === 0) continue;
+
+          const dist = turf.distance(
+            turf.point([ward.longitude, ward.latitude]),
+            turf.point([otherWard.longitude, otherWard.latitude])
+          );
+
+          if (dist < minDistance) {
+            minDistance = dist;
+            nearestWard = otherWard;
+          }
+        }
+
+        if (nearestWard) {
+          const estimatedAqi = nearestWard.aqi;
+          this.wards.set(id, {
+            ...ward,
+            aqi: estimatedAqi,
+            pm25: nearestWard.pm25,
+            pm10: nearestWard.pm10,
+            no2: nearestWard.no2,
+            wprs: nearestWard.wprs,
+            intelligence_data: nearestWard.intelligence_data as any,
+            dominant_source: nearestWard.dominant_source
+          });
+          console.log(`[AQI] ${ward.name} → ${estimatedAqi} (estimated from ${nearestWard.name})`);
+        }
+      }
+    }
 
     this.lastUpdated = new Date();
   }
@@ -646,12 +580,10 @@ export class MemStorage implements IStorage {
   }
 
   async getWards() {
-    await this.updatePollutionData();
     return Array.from(this.wards.values());
   }
 
   async getWard(id: number) {
-    await this.updatePollutionData();
     return this.wards.get(id);
   }
 

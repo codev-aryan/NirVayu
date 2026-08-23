@@ -18,18 +18,20 @@ import { cn } from "@/lib/utils";
 import { WardMap } from "./WardMap";
 import { StatusBadge } from "./StatusBadge";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/lib/i18n";
 
 import { ControlType, SimulationRequest } from "@shared/schema";
 
 export function AuthorityDashboard() {
   const { data, isLoading } = useWards();
+  const { t, language } = useLanguage();
   const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-screen bg-background">
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse">Initializing Authority Grid...</p>
+        <p className="text-muted-foreground animate-pulse">{t("common.loading")}</p>
       </div>
     </div>
   );
@@ -40,25 +42,36 @@ export function AuthorityDashboard() {
   const selectedWard = wards.find(w => w.id === selectedWardId) || wards[0];
   const sortedWards = [...wards].sort((a, b) => b.aqi - a.aqi);
 
-  const criticalWard = [...wards].sort((a, b) => b.aqi - a.aqi)[0];
+  const getLocalizedSource = (source: string) => {
+    switch (source) {
+      case "Traffic": return t("source.traffic");
+      case "Construction": return t("source.construction");
+      case "Industrial Emissions": return t("source.industry");
+      case "Waste Burning": return t("source.waste");
+      case "Dust & Local": return t("source.dust");
+      default: return source;
+    }
+  };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0">
       {/* LEFT: Ward List & Map */}
-      <div className="lg:col-span-4 flex flex-col gap-6">
+      <div className="lg:col-span-4 flex flex-col gap-6 min-h-0 overflow-y-auto">
         <div className="flex items-center justify-between px-1">
           <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider flex items-center gap-1">
-            <Activity className="w-3 h-3" /> Last Updated: {new Date(lastUpdated).toLocaleTimeString()}
+            <Activity className="w-3 h-3" /> {t("authority.lastUpdated")}: {new Date(lastUpdated).toLocaleTimeString()}
           </div>
         </div>
 
         <Card className="flex-1 flex flex-col border-border/50 shadow-lg bg-card/50 backdrop-blur-sm">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between">
-              <span>Ward Monitor</span>
-              <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">{wards.length} Active</span>
+              <span>{t("authority.wardMonitor")}</span>
+              <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                {wards.length} {t("common.active")}
+              </span>
             </CardTitle>
-            <CardDescription>Live pollution tracking by jurisdiction</CardDescription>
+            <CardDescription>{t("authority.jurisdictionDesc")}</CardDescription>
           </CardHeader>
           <div className="flex-1 relative min-h-[300px]">
             <WardMap 
@@ -93,7 +106,7 @@ export function AuthorityDashboard() {
       </div>
 
       {/* RIGHT: Detailed Controls */}
-      <div className="lg:col-span-8 flex flex-col gap-6 pb-10">
+      <div className="lg:col-span-8 flex flex-col gap-6 overflow-y-auto pb-10">
         {selectedWard && (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
@@ -105,21 +118,23 @@ export function AuthorityDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="bg-gradient-to-br from-card to-muted/20 border-border/50">
                 <CardContent className="p-6">
-                  <div className="text-sm text-muted-foreground mb-1">Current AQI</div>
+                  <div className="text-sm text-muted-foreground mb-1">
+                    {language === "hi" ? "वर्तमान AQI" : "Current AQI"}
+                  </div>
                   <div className="text-4xl font-display font-bold text-foreground">{selectedWard.aqi}</div>
                   <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                    <Activity className="w-3 h-3" /> Real-time
+                    <Activity className="w-3 h-3" /> {t("common.realtime")}
                   </div>
                 </CardContent>
               </Card>
               <Card className="bg-gradient-to-br from-card to-muted/20 border-border/50">
                 <CardContent className="p-6">
-                  <div className="text-sm text-muted-foreground mb-1">Primary Source</div>
+                  <div className="text-sm text-muted-foreground mb-1">{t("intel.dominantSource")}</div>
                   <div className="text-2xl font-display font-bold text-primary truncate" title={selectedWard.dominant_source}>
-                    {selectedWard.dominant_source}
+                    {getLocalizedSource(selectedWard.dominant_source)}
                   </div>
                   <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                    <TrendingDown className="w-3 h-3" /> Top Contributor
+                    <TrendingDown className="w-3 h-3" /> {language === "hi" ? "शीर्ष योगदानकर्ता" : "Top Contributor"}
                   </div>
                 </CardContent>
               </Card>
@@ -131,7 +146,7 @@ export function AuthorityDashboard() {
                 <CardContent className="p-6 flex flex-col justify-between h-full">
                   <div className="text-sm font-bold flex items-center gap-2">
                     <ShieldAlert className={cn("w-4 h-4", selectedWard.emergency_mode && "text-red-500")} />
-                    Emergency Protocol
+                    {t("authority.emergencyProtocol")}
                   </div>
                   <EmergencyToggle wardId={selectedWard.id} isEnabled={selectedWard.emergency_mode} />
                 </CardContent>
@@ -141,9 +156,9 @@ export function AuthorityDashboard() {
             {/* Main Tabs */}
             <Tabs defaultValue="intelligence" className="w-full">
               <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1">
-                <TabsTrigger value="intelligence">AI Intel</TabsTrigger>
-                <TabsTrigger value="simulation">Policy Simulation</TabsTrigger>
-                <TabsTrigger value="reports">Citizen Reports</TabsTrigger>
+                <TabsTrigger value="intelligence">{t("authority.tab.intelligence")}</TabsTrigger>
+                <TabsTrigger value="simulation">{t("authority.tab.simulation")}</TabsTrigger>
+                <TabsTrigger value="reports">{t("authority.tab.reports")}</TabsTrigger>
               </TabsList>
               
               <TabsContent value="intelligence" className="mt-6">
@@ -167,12 +182,13 @@ export function AuthorityDashboard() {
 
 function EmergencyToggle({ wardId, isEnabled }: { wardId: number, isEnabled: boolean }) {
   const { mutate, isPending } = useToggleEmergency();
+  const { t, language } = useLanguage();
 
   return (
     <div className="flex flex-col gap-2 mt-2">
       <div className="flex items-center justify-between">
         <span className={cn("text-xs font-bold", isEnabled ? "text-red-500" : "text-muted-foreground")}>
-          {isEnabled ? "ACTIVE" : "INACTIVE"}
+          {isEnabled ? t("authority.emergencyActive") : t("authority.emergencyNormal")}
         </span>
         <Switch 
           checked={isEnabled} 
@@ -183,15 +199,15 @@ function EmergencyToggle({ wardId, isEnabled }: { wardId: number, isEnabled: boo
       </div>
       <p className="text-[10px] text-muted-foreground leading-tight">
         {isEnabled 
-          ? "Draconian measures in effect. Public alerted." 
-          : "Activate to enforce mandatory lockdowns."}
+          ? (language === "hi" ? "आपातकालीन उपाय सक्रिय हैं। जनता को सतर्क किया गया है।" : "Draconian measures in effect. Public alerted.")
+          : (language === "hi" ? "अनिवार्य प्रतिबंध लागू करने के लिए सक्रिय करें।" : "Activate to enforce mandatory protocols.")}
       </p>
     </div>
   );
 }
 
-
 function SimulationPanel({ wardId, currentAqi }: { wardId: number, currentAqi: number }) {
+  const { t, language } = useLanguage();
   const [params, setParams] = useState<SimulationRequest>({
     trafficReduction: 0,
     constructionHalt: false,
@@ -205,8 +221,8 @@ function SimulationPanel({ wardId, currentAqi }: { wardId: number, currentAqi: n
   };
 
   const chartData = [
-    { name: "Current", aqi: currentAqi },
-    { name: "Projected", aqi: result?.projectedAqi || currentAqi },
+    { name: language === "hi" ? "वर्तमान" : "Current", aqi: currentAqi },
+    { name: language === "hi" ? "अनुमानित" : "Projected", aqi: result?.projectedAqi || currentAqi },
   ];
 
   return (
@@ -214,7 +230,7 @@ function SimulationPanel({ wardId, currentAqi }: { wardId: number, currentAqi: n
       <div className="space-y-8 p-4 border border-border/50 rounded-xl bg-card/50">
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <Label>Traffic Reduction ({params.trafficReduction}%)</Label>
+            <Label>{t("sim.trafficOddEven")} ({params.trafficReduction}%)</Label>
             <Truck className="w-4 h-4 text-muted-foreground" />
           </div>
           <Slider 
@@ -228,7 +244,7 @@ function SimulationPanel({ wardId, currentAqi }: { wardId: number, currentAqi: n
 
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <Label>Dust Suppression ({params.dustSuppression}%)</Label>
+            <Label>{t("sim.waterSprinkling")} ({params.dustSuppression}%)</Label>
             <Wind className="w-4 h-4 text-muted-foreground" />
           </div>
           <Slider 
@@ -244,8 +260,10 @@ function SimulationPanel({ wardId, currentAqi }: { wardId: number, currentAqi: n
           <div className="flex items-center gap-3">
             <Hammer className="w-5 h-5 text-orange-500" />
             <div className="flex flex-col">
-              <Label className="cursor-pointer">Construction Ban</Label>
-              <span className="text-xs text-muted-foreground">Halt all non-essential work</span>
+              <Label className="cursor-pointer">{t("sim.constructionHalt")}</Label>
+              <span className="text-xs text-muted-foreground">
+                {language === "hi" ? "सभी गैर-जरूरी निर्माण पर रोक" : "Halt all non-essential work"}
+              </span>
             </div>
           </div>
           <Switch 
@@ -260,7 +278,7 @@ function SimulationPanel({ wardId, currentAqi }: { wardId: number, currentAqi: n
           className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/20"
         >
           {isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />}
-          Run Simulation
+          {isPending ? t("sim.calculating") : t("sim.calculate")}
         </Button>
       </div>
 
@@ -270,9 +288,11 @@ function SimulationPanel({ wardId, currentAqi }: { wardId: number, currentAqi: n
             {result ? (
               <div className="w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex justify-between items-center">
-                  <div className="text-sm font-medium text-muted-foreground">Impact Analysis</div>
+                  <div className="text-sm font-medium text-muted-foreground">
+                    {language === "hi" ? "प्रभाव विश्लेषण" : "Impact Analysis"}
+                  </div>
                   <div className="text-xs text-green-500 font-bold bg-green-500/10 px-2 py-1 rounded-full">
-                    -{result.percentageImprovement.toFixed(1)}% IMPROVEMENT
+                    -{result.percentageImprovement.toFixed(1)}% {language === "hi" ? "सुधार" : "IMPROVEMENT"}
                   </div>
                 </div>
                 
@@ -294,11 +314,13 @@ function SimulationPanel({ wardId, currentAqi }: { wardId: number, currentAqi: n
                 </div>
 
                 <div className="text-sm border-l-2 border-primary pl-3 py-1 bg-primary/5 rounded-r">
-                  <div className="font-bold mb-1">Impact Breakdown (AQI Points):</div>
+                  <div className="font-bold mb-1">
+                    {language === "hi" ? "प्रभाव विवरण (AQI अंक कमी):" : "Impact Breakdown (AQI Points):"}
+                  </div>
                   <div className="grid grid-cols-3 gap-2 text-xs mb-2">
-                    <div className="text-blue-600">Dust: -{result.breakdown.dust}</div>
-                    <div className="text-green-600">Traffic: -{result.breakdown.traffic}</div>
-                    <div className="text-orange-600">Const.: -{result.breakdown.construction}</div>
+                    <div className="text-blue-600">{language === "hi" ? "धूल" : "Dust"}: -{result.breakdown.dust}</div>
+                    <div className="text-green-600">{language === "hi" ? "यातायात" : "Traffic"}: -{result.breakdown.traffic}</div>
+                    <div className="text-orange-600">{language === "hi" ? "निर्माण" : "Const."}: -{result.breakdown.construction}</div>
                   </div>
                   <div className="italic">{result.summary}</div>
                 </div>
@@ -306,7 +328,7 @@ function SimulationPanel({ wardId, currentAqi }: { wardId: number, currentAqi: n
             ) : (
               <div className="text-center text-muted-foreground">
                 <BarChart3 className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                <p>Adjust parameters and run simulation to see projected impact.</p>
+                <p>{t("sim.subtitle")}</p>
               </div>
             )}
           </CardContent>
@@ -318,9 +340,10 @@ function SimulationPanel({ wardId, currentAqi }: { wardId: number, currentAqi: n
 
 function IntelligencePanel({ wardId }: { wardId: number }) {
   const { data: wardsData } = useWards();
+  const { t, language } = useLanguage();
   const ward = wardsData?.wards.find(w => w.id === wardId);
 
-  if (!ward?.intelligence_data) return <div className="text-center py-12 text-muted-foreground">Intelligence data unavailable. Wait for ML engine output...</div>;
+  if (!ward?.intelligence_data) return <div className="text-center py-12 text-muted-foreground">{language === "hi" ? "AI डेटा लोड हो रहा है..." : "Intelligence data unavailable. Wait for ML engine output..."}</div>;
 
   const intel = ward.intelligence_data;
 
@@ -385,19 +408,25 @@ function IntelligencePanel({ wardId }: { wardId: number }) {
         <Card className="bg-card border-border/50 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2 uppercase tracking-tighter">
-              <BrainCircuit className="w-4 h-4 text-primary" /> ML-Driven Analysis
+              <BrainCircuit className="w-4 h-4 text-primary" /> {language === "hi" ? "ML-चालित बुद्धिमत्ता विश्लेषण" : "ML-Driven Analysis"}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm leading-relaxed">
             <div className="space-y-2">
               <p>{intel.analysis_summary}</p>
               <div className="flex flex-wrap gap-2 mt-4">
-                <Badge variant="outline">PRIMARY: {intel.primary_pollutant}</Badge>
-                <Badge variant="outline">SEVERITY: {intel.severity}</Badge>
-                <Badge variant="outline">CONFIDENCE: {intel.confidence_level}</Badge>
+                <Badge variant="outline">
+                  {language === "hi" ? "प्रमुख" : "PRIMARY"}: {intel.primary_pollutant}
+                </Badge>
+                <Badge variant="outline">
+                  {language === "hi" ? "गंभीरता" : "SEVERITY"}: {intel.severity}
+                </Badge>
+                <Badge variant="outline">
+                  {language === "hi" ? "सटीकता" : "CONFIDENCE"}: {intel.confidence_level}
+                </Badge>
                 {intel.predicted_aqi && (
                   <Badge variant="default" className="bg-primary text-primary-foreground font-bold">
-                    PREDICTED ({intel.prediction_horizon || '24h'}): {intel.predicted_aqi}
+                    {language === "hi" ? "पूर्वानुमान" : "PREDICTED"} ({intel.prediction_horizon || '24h'}): {intel.predicted_aqi}
                   </Badge>
                 )}
               </div>
@@ -440,7 +469,7 @@ function IntelligencePanel({ wardId }: { wardId: number }) {
       <Card className="border-primary/20 bg-primary/5">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2 uppercase tracking-tighter">
-            <Activity className="w-4 h-4 text-primary" /> Allowed Mitigation Controls
+            <Activity className="w-4 h-4 text-primary" /> {t("intel.allowedControls")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -458,6 +487,7 @@ function IntelligencePanel({ wardId }: { wardId: number }) {
 }
 
 function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
+  const { t, language } = useLanguage();
   const { data: dbReports, isLoading: loadingDb } = useAllReports();
   const { data: chainReports, isLoading: loadingChain } = useBlockchainLedger();
   const actionMutation = useUpdateReportAction();
@@ -469,7 +499,7 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="ml-2 text-sm text-muted-foreground">Loading reports & blockchain ledger...</span>
+        <span className="ml-2 text-sm text-muted-foreground">{t("common.loading")}</span>
       </div>
     );
   }
@@ -526,10 +556,10 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
       <Card className="border-2 border-primary/20 bg-primary/5 shadow-md">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-primary" /> Blockchain Integrity Audit
+            <ShieldCheck className="w-5 h-5 text-primary" /> {language === "hi" ? "ब्लॉकचेन सत्यनिष्ठा ऑडिट" : "Blockchain Integrity Audit"}
           </CardTitle>
           <CardDescription>
-            Real-time audit comparing database entries against the immutable blockchain registry hashes.
+            {language === "hi" ? "अपरिवर्तनीय ब्लॉकचेन रजिस्ट्री हैश के साथ डेटाबेस प्रविष्टियों की रीयल-टाइम तुलना।" : "Real-time audit comparing database entries against the immutable blockchain registry hashes."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -543,16 +573,16 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
               </div>
               <div>
                 <div className="font-bold text-sm">
-                  {missingReports.length > 0 ? "INTEGRITY COMPROMISED" : "INTEGRITY VERIFIED"}
+                  {missingReports.length > 0 ? (language === "hi" ? "डेटा छेड़छाड़ पहचानी गई" : "INTEGRITY COMPROMISED") : (language === "hi" ? "सत्यनिष्ठा सत्यापित" : "INTEGRITY VERIFIED")}
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">
-                  {reports.length} reports in Database • {ledger.length} proofs on Blockchain Ledger
+                  {reports.length} {language === "hi" ? "डेटाबेस में रिपोर्ट" : "reports in Database"} • {ledger.length} {language === "hi" ? "ब्लॉकचेन लेज़र पर रिकॉर्ड" : "proofs on Blockchain Ledger"}
                 </div>
               </div>
             </div>
             {missingReports.length > 0 && (
               <Badge variant="destructive" className="animate-pulse">
-                {missingReports.length} Discrepancies
+                {missingReports.length} {language === "hi" ? "विसंगतियां" : "Discrepancies"}
               </Badge>
             )}
           </div>
@@ -568,10 +598,10 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
                 <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <h4 className="text-sm font-bold text-red-800">
-                    CRITICAL: Mediator Tampering Detected!
+                    {language === "hi" ? "चेतावनी: स्थानीय डेटाबेस में विसंगति!" : "CRITICAL: Mediator Tampering Detected!"}
                   </h4>
                   <p className="text-xs text-red-700 leading-normal">
-                    A report (ID {item.metadata.id}) was deleted from the local database. However, its cryptographic hash verification registry remains immutable on the blockchain.
+                    {language === "hi" ? `रिपोर्ट (ID ${item.metadata.id}) स्थानीय डेटाबेस से गायब है। ब्लॉकचेन लेज़र से इसे पुनर्स्थापित किया जा सकता है।` : `A report (ID ${item.metadata.id}) was deleted from the local database. However, its cryptographic hash verification registry remains immutable on the blockchain.`}
                   </p>
                   <code className="block bg-white/70 p-2 rounded text-[10px] font-mono break-all text-gray-800 mt-2 border border-red-100">
                     Original Ward ID: {item.metadata.wardId} • Category: {item.metadata.pollutionType}
@@ -590,7 +620,7 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
                   ) : (
                     <RefreshCw className="w-3.5 h-3.5" />
                   )}
-                  Restore Database Record from Blockchain
+                  {language === "hi" ? "ब्लॉकचेन से डेटाबेस रिकॉर्ड पुनर्स्थापित करें" : "Restore Database Record from Blockchain"}
                 </Button>
               </div>
             </motion.div>
@@ -601,15 +631,17 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
       {/* 2. Citizens Reports List */}
       <div className="space-y-4">
         <h3 className="text-lg font-bold flex items-center gap-2 px-1">
-          <Clock className="w-5 h-5 text-muted-foreground" /> Citizen Pollution Reports
+          <Clock className="w-5 h-5 text-muted-foreground" /> {t("audit.title")}
         </h3>
 
         {reports.length === 0 ? (
           <div className="text-center py-12 border-2 border-dashed border-border rounded-2xl bg-muted/20">
             <Info className="w-10 h-10 mx-auto text-muted-foreground opacity-30 mb-2" />
-            <p className="text-sm font-medium">No citizen reports recorded in database.</p>
+            <p className="text-sm font-medium">
+              {language === "hi" ? "डेटाबेस में कोई नागरिक रिपोर्ट दर्ज नहीं है।" : "No citizen reports recorded in database."}
+            </p>
             <p className="text-xs text-muted-foreground max-w-xs mx-auto mt-1">
-              File submissions from the citizen portal will automatically appear here.
+              {language === "hi" ? "नागरिक पोर्टल से भेजी गई रिपोर्ट यहां दिखाई देंगी।" : "File submissions from the citizen portal will automatically appear here."}
             </p>
           </div>
         ) : (
@@ -622,12 +654,12 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
                     <img src={report.imageUrl} className="w-full h-full object-cover" alt="Pollution complaint" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      No Image Provided
+                      {language === "hi" ? "कोई फोटो नहीं" : "No Image Provided"}
                     </div>
                   )}
                   <div className="absolute top-2 right-2 flex flex-col gap-1.5 items-end">
                     <Badge variant={report.status === "resolved" ? "default" : report.status === "working" ? "secondary" : "outline"} className="capitalize shadow-md">
-                      {report.status === "working" ? "In Progress" : report.status}
+                      {report.status === "working" ? (language === "hi" ? "प्रगति पर" : "In Progress") : (report.status === "resolved" ? (language === "hi" ? "समाधान हुआ" : "Resolved") : report.status)}
                     </Badge>
                     <Badge variant="outline" className="bg-background/80 backdrop-blur-sm text-foreground border-border shadow-md text-[10px]">
                       Ward {report.wardId}
@@ -647,7 +679,7 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
                       </span>
                     </div>
                     <p className="text-sm font-medium text-foreground line-clamp-2">
-                      {report.description || <span className="italic text-muted-foreground">No description provided</span>}
+                      {report.description || <span className="italic text-muted-foreground">{language === "hi" ? "कोई विवरण नहीं दिया गया" : "No description provided"}</span>}
                     </p>
                   </div>
 
@@ -655,15 +687,17 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
                   <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
-                        <BrainCircuit className="w-4 h-4" /> AI CLASSIFICATION
+                        <BrainCircuit className="w-4 h-4" /> {language === "hi" ? "AI वर्गीकरण" : "AI CLASSIFICATION"}
                       </div>
                       <Badge variant="secondary" className="text-[10px] font-bold">
-                        {report.aiConfidence}% Confidence
+                        {report.aiConfidence}% {language === "hi" ? "सटीकता" : "Confidence"}
                       </Badge>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Category</span>
+                        <span className="text-muted-foreground block text-[10px] uppercase font-semibold">
+                          {language === "hi" ? "श्रेणी" : "Category"}
+                        </span>
                         <span className="capitalize font-bold flex items-center gap-1.5 mt-0.5">
                           {report.pollutionType === "traffic" && <Truck className="w-3.5 h-3.5 text-blue-500" />}
                           {report.pollutionType === "construction" && <Hammer className="w-3.5 h-3.5 text-orange-500" />}
@@ -675,11 +709,13 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
                             report.pollutionType === "construction" && "text-orange-700",
                             report.pollutionType === "stubble burning" && "text-red-700",
                             report.pollutionType === "other" && "text-purple-700",
-                          )}>{report.pollutionType === "other" ? "Other Pollution" : report.pollutionType}</span>
+                          )}>{report.pollutionType === "other" ? "Other" : report.pollutionType}</span>
                         </span>
                       </div>
                       <div className="col-span-2 mt-1">
-                        <span className="text-muted-foreground block text-[10px] uppercase font-semibold">AI Explanation</span>
+                        <span className="text-muted-foreground block text-[10px] uppercase font-semibold">
+                          {language === "hi" ? "AI व्याख्या" : "AI Explanation"}
+                        </span>
                         <p className="text-muted-foreground mt-0.5 leading-normal text-[11px] font-normal">
                           {report.aiExplanation}
                         </p>
@@ -691,10 +727,10 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
                   <div className="p-3 rounded-lg bg-green-500/5 border border-green-500/10 space-y-1.5">
                     <div className="flex items-center justify-between text-xs font-bold text-green-700">
                       <div className="flex items-center gap-1.5">
-                        <ShieldCheck className="w-4 h-4" /> ON-CHAIN INTEGRITY
+                        <ShieldCheck className="w-4 h-4" /> {language === "hi" ? "ऑन-चेन सत्यनिष्ठा" : "ON-CHAIN INTEGRITY"}
                       </div>
                       <span className="text-[10px] font-semibold flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Verified
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> {t("common.verified")}
                       </span>
                     </div>
                   </div>
@@ -710,7 +746,7 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
                     className="text-red-600 hover:text-red-700 hover:bg-red-50 font-semibold text-xs flex items-center gap-1 px-2.5 h-8 border-red-200"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    Simulate Deletion
+                    {language === "hi" ? "छेड़छाड़ सिमुलेट करें" : "Simulate Deletion"}
                   </Button>
 
                   {report.status !== "resolved" && (
@@ -723,7 +759,7 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
                           disabled={actionMutation.isPending}
                           className="h-8 text-xs font-bold"
                         >
-                          Work on Issue
+                          {language === "hi" ? "कार्य शुरू करें" : "Work on Issue"}
                         </Button>
                       )}
                       <Button
@@ -732,7 +768,7 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
                         disabled={actionMutation.isPending}
                         className="h-8 text-xs font-bold"
                       >
-                        Mark Resolved
+                        {language === "hi" ? "समाधान चिन्हित करें" : "Mark Resolved"}
                       </Button>
                     </div>
                   )}
@@ -745,4 +781,3 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
     </div>
   );
 }
-

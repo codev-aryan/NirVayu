@@ -1,9 +1,13 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ClimateClock } from "@/components/ClimateClock";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { ArrowRight, Shield, Users, Wind, Map } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 export default function Home() {
+  const { t } = useLanguage();
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden flex flex-col">
       {/* Background decoration */}
@@ -20,12 +24,14 @@ export default function Home() {
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <Wind className="text-white w-5 h-5" />
           </div>
-          <span className="font-display font-bold text-xl tracking-tight">NirVayu</span>
+          <span className="font-display font-bold text-xl tracking-tight">{t("app.title")}</span>
         </div>
         <div className="md:absolute md:left-1/2 md:-translate-x-1/2 md:top-4">
           <ClimateClock />
         </div>
-        <div className="hidden md:block w-32" /> {/* Spacer to keep layout balanced */}
+        <div className="flex items-center gap-3">
+          <LanguageToggle />
+        </div>
       </nav>
 
       {/* Hero */}
@@ -36,16 +42,16 @@ export default function Home() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
             </span>
-            Live Ward-Wise Monitoring System
+            {t("home.liveSystemPill")}
           </div>
           
           <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/70 pb-2">
-            Breathing data into <br/>
-            <span className="text-primary">actionable change.</span>
+            {t("home.heroTitle1")} <br/>
+            <span className="text-primary">{t("home.heroTitle2")}</span>
           </h1>
           
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            A dual-interface platform connecting citizens with real-time health advisories and authorities with granular pollution controls.
+            {t("home.heroSubtitle")}
           </p>
         </div>
 
@@ -58,12 +64,12 @@ export default function Home() {
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Users className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="text-2xl font-bold font-display mb-2">Citizen Portal</h3>
+              <h3 className="text-2xl font-bold font-display mb-2">{t("home.citizenCard.title")}</h3>
               <p className="text-muted-foreground mb-6 flex-1">
-                Access personalized health plans, check safe outdoor timings, and earn credits for green actions.
+                {t("home.citizenCard.desc")}
               </p>
               <div className="flex items-center text-primary font-semibold text-sm">
-                Enter Dashboard <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                {t("home.citizenCard.cta")} <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
           </Link>
@@ -76,12 +82,12 @@ export default function Home() {
               <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Shield className="w-6 h-6 text-blue-600" />
               </div>
-              <h3 className="text-2xl font-bold font-display mb-2">Authority Hub</h3>
+              <h3 className="text-2xl font-bold font-display mb-2">{t("home.authorityCard.title")}</h3>
               <p className="text-muted-foreground mb-6 flex-1">
-                Monitor ward-level metrics, simulate policy impacts, and deploy emergency protocols.
+                {t("home.authorityCard.desc")}
               </p>
               <div className="flex items-center text-blue-600 font-semibold text-sm">
-                Access Controls <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                {t("home.authorityCard.cta")} <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
           </Link>
@@ -89,7 +95,7 @@ export default function Home() {
       </main>
 
       <footer className="relative z-10 border-t border-border/50 py-6 text-center text-sm text-muted-foreground">
-        © 2024 NirVayu System. Data provided by Ward Sensors Network.
+        {t("home.footer")}
       </footer>
     </div>
   );

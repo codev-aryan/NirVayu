@@ -18,6 +18,7 @@ import { CaptureEvidence } from "./CaptureEvidence";
 import { apiRequest } from "@/lib/queryClient";
 import { NewsBulletin } from "./NewsBulletin";
 import { WardMeasures } from "./WardMeasures";
+import { useLanguage } from "@/lib/i18n";
 
 // Map ward coordinates to Delhi zone for zone-based news
 function getZone(lat: number, lng: number): string {
@@ -40,6 +41,7 @@ function SourceIcon({ source }: { source: string }) {
 
 export function CitizenDashboard() {
   const { data, isLoading } = useWards();
+  const { t } = useLanguage();
   const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -74,6 +76,16 @@ export function CitizenDashboard() {
     : [];
 
   const zone = selectedWard ? getZone(selectedWard.latitude, selectedWard.longitude) : undefined;
+  const getLocalizedSource = (source: string) => {
+    switch (source) {
+      case "Traffic": return t("source.traffic");
+      case "Construction": return t("source.construction");
+      case "Industrial Emissions": return t("source.industry");
+      case "Waste Burning": return t("source.waste");
+      case "Dust & Local": return t("source.dust");
+      default: return source;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -83,30 +95,30 @@ export function CitizenDashboard() {
       {/* Row 1: Key Cards Section */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <MetricCard
-          label={selectedWard ? "AQI" : "Delhi Avg AQI"}
+          label={selectedWard ? t("metric.aqi") : t("metric.delhiAvgAqi")}
           value={selectedWard ? selectedWard.aqi : avgAqi}
           unit=""
           color={selectedWard ? (selectedWard.aqi > 200 ? "text-red-500" : "text-primary") : (avgAqi > 200 ? "text-red-500" : "text-primary")}
         />
         <MetricCard
-          label={selectedWard ? "PM 2.5" : "Delhi Avg PM 2.5"}
+          label={selectedWard ? t("metric.pm25") : t("metric.delhiAvgPm25")}
           value={selectedWard ? selectedWard.pm25 : avgPm25}
           unit="µg/m³"
         />
         <MetricCard
-          label={selectedWard ? "PM 10" : "Delhi Avg PM 10"}
+          label={selectedWard ? t("metric.pm10") : t("metric.delhiAvgPm10")}
           value={selectedWard ? selectedWard.pm10 : avgPm10}
           unit="µg/m³"
         />
         <MetricCard
-          label={selectedWard ? "NO2" : "Delhi Avg NO2"}
+          label={selectedWard ? t("metric.no2") : t("metric.delhiAvgNo2")}
           value={selectedWard ? selectedWard.no2 : avgNo2}
           unit="ppb"
         />
         <MetricCard
-          label={selectedWard ? "CO2 Budget" : "Delhi Avg CO2 Budget"}
+          label={selectedWard ? t("metric.co2Budget") : t("metric.delhiAvgCo2Budget")}
           value={selectedWard ? selectedWard.co2_budget_remaining : avgCo2Budget}
-          unit="tons"
+          unit={t("common.tons")}
           color="text-green-600"
         />
       </div>
@@ -119,17 +131,17 @@ export function CitizenDashboard() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <MapPin className="text-primary" /> Interactive Ward Map
+                  <MapPin className="text-primary" /> {t("citizen.mapTitle")}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Search your neighborhood or click on the map.
+                  {t("citizen.mapSubtitle")}
                 </CardDescription>
               </div>
               <div className="relative w-full md:w-64" onClick={(e) => e.stopPropagation()}>
                 <div className="relative">
                   <Input
                     type="text"
-                    placeholder="Search ward..."
+                    placeholder={t("citizen.searchPlaceholder")}
                     value={searchQuery}
                     onChange={(e) => {
                       setSearchQuery(e.target.value);
@@ -184,9 +196,9 @@ export function CitizenDashboard() {
             <Card className="border-dashed border-2 border-border h-full min-h-[460px] flex flex-col items-center justify-center bg-muted/10">
               <CardContent className="text-center p-8">
                 <Camera className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                <h3 className="text-base font-bold mb-1">Report Pollution</h3>
+                <h3 className="text-base font-bold mb-1">{t("report.title")}</h3>
                 <p className="text-sm text-muted-foreground max-w-xs">
-                  Select a ward from the map or search bar to enable pollution reporting.
+                  {t("citizen.selectWardPrompt")}
                 </p>
               </CardContent>
             </Card>
@@ -202,14 +214,14 @@ export function CitizenDashboard() {
             <div className="bg-card rounded-2xl p-6 shadow-sm border border-border/50 space-y-6">
               <div>
                 <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider flex items-center gap-1 mb-2">
-                  <Clock className="w-3 h-3" /> Updated: {new Date(lastUpdated).toLocaleTimeString()}
+                  <Clock className="w-3 h-3" /> {t("common.lastUpdated")}: {new Date(lastUpdated).toLocaleTimeString()}
                 </div>
                 <h2 className="text-3xl font-display font-bold text-primary mb-1">{selectedWard.name}</h2>
                 <div className="flex flex-wrap items-center gap-3 text-muted-foreground mt-2">
                   <StatusBadge aqi={selectedWard.aqi} />
                   <div className="flex items-center gap-2 bg-muted/50 px-3 py-1 rounded-full border border-border/50">
                     <SourceIcon source={selectedWard.dominant_source} />
-                    <span className="text-sm font-medium">Primary Source: {selectedWard.dominant_source}</span>
+                    <span className="text-sm font-medium">{t("intel.dominantSource")}: {getLocalizedSource(selectedWard.dominant_source)}</span>
                   </div>
                 </div>
               </div>
@@ -221,7 +233,7 @@ export function CitizenDashboard() {
                   className="bg-red-50 border-2 border-red-200 rounded-2xl p-4 shadow-sm relative overflow-hidden"
                 >
                   <h3 className="text-lg font-bold text-red-800 flex items-center gap-2 mb-2">
-                    <AlertTriangle className="w-5 h-5" /> Emergency Declared!
+                    <AlertTriangle className="w-5 h-5" /> {t("common.emergency")}!
                   </h3>
                   <p className="text-red-700 text-sm mb-3">
                     Severe pollution levels detected in {selectedWard.name}. Immediate precautions required.
@@ -237,7 +249,7 @@ export function CitizenDashboard() {
               <div className="space-y-4 pt-4 border-t">
                 <div className="flex items-center gap-2">
                   <HeartPulse className="w-5 h-5 text-primary" />
-                  <h3 className="text-lg font-bold">Personalized Safe Life Planner</h3>
+                  <h3 className="text-lg font-bold">{t("planner.title")}</h3>
                 </div>
                 <SafeLifePlanner wardId={selectedWard.id} />
               </div>
@@ -245,9 +257,9 @@ export function CitizenDashboard() {
           ) : (
             <div className="h-[300px] flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-border rounded-3xl bg-muted/20">
               <MapPin className="w-8 h-8 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-bold mb-2">No Ward Selected</h3>
+              <h3 className="text-lg font-bold mb-2">{t("citizen.selectedWard")}</h3>
               <p className="text-muted-foreground text-sm max-w-xs">
-                Select your neighborhood from the search bar or map to see localized health advice and tools.
+                {t("citizen.selectWardPrompt")}
               </p>
             </div>
           )}
@@ -272,7 +284,6 @@ export function CitizenDashboard() {
   );
 }
 
-
 function MetricCard({ label, value, unit, color = "text-foreground" }: { label: string, value: number, unit: string, color?: string }) {
   return (
     <div className="bg-card p-4 rounded-xl border border-border/50 shadow-sm hover:shadow-md transition-shadow">
@@ -286,6 +297,7 @@ function MetricCard({ label, value, unit, color = "text-foreground" }: { label: 
 }
 
 function SafeLifePlanner({ wardId }: { wardId: number }) {
+  const { t, language } = useLanguage();
   const [formData, setFormData] = useState({
     ageGroup: "adult" as "child" | "adult" | "elderly",
     condition: "healthy" as "healthy" | "asthma" | "sensitive",
@@ -308,39 +320,39 @@ function SafeLifePlanner({ wardId }: { wardId: number }) {
     <Card className="border-primary/10 shadow-lg">
       <CardHeader className="bg-primary/5 pb-4">
         <CardTitle className="flex items-center gap-2 text-primary">
-          <HeartPulse className="w-5 h-5" /> Safe Life Planner
+          <HeartPulse className="w-5 h-5" /> {t("planner.title")}
         </CardTitle>
-        <CardDescription>Get a personalized schedule based on your health profile.</CardDescription>
+        <CardDescription>{t("planner.subtitle")}</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         {!plan ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Age Group</Label>
+                <Label>{t("planner.age")}</Label>
                 <Select value={formData.ageGroup} onValueChange={(v: any) => setFormData(p => ({ ...p, ageGroup: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="child">Child (0-12)</SelectItem>
-                    <SelectItem value="adult">Adult (13-60)</SelectItem>
-                    <SelectItem value="elderly">Elderly (60+)</SelectItem>
+                    <SelectItem value="child">{language === "hi" ? "बच्चे (0-12)" : "Child (0-12)"}</SelectItem>
+                    <SelectItem value="adult">{language === "hi" ? "वयस्क (13-60)" : "Adult (13-60)"}</SelectItem>
+                    <SelectItem value="elderly">{language === "hi" ? "वरिष्ठ नागरिक (60+)" : "Elderly (60+)"}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Health Condition</Label>
+                <Label>{t("planner.healthCondition")}</Label>
                 <Select value={formData.condition} onValueChange={(v: any) => setFormData(p => ({ ...p, condition: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="healthy">Healthy</SelectItem>
-                    <SelectItem value="asthma">Asthma/Respiratory</SelectItem>
-                    <SelectItem value="sensitive">Sensitive Group</SelectItem>
+                    <SelectItem value="healthy">{t("planner.condition.none")}</SelectItem>
+                    <SelectItem value="asthma">{t("planner.condition.asthma")}</SelectItem>
+                    <SelectItem value="sensitive">{t("planner.condition.heart")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Planned Outdoor Hours</Label>
+              <Label>{t("planner.outdoorHours")}</Label>
               <Input
                 type="number"
                 value={formData.outdoorHours}
@@ -349,20 +361,24 @@ function SafeLifePlanner({ wardId }: { wardId: number }) {
               />
             </div>
             <Button onClick={handleSubmit} disabled={isPending} className="w-full font-bold">
-              {isPending ? "Analyzing..." : "Generate Safe Schedule"}
+              {isPending ? t("planner.generating") : t("planner.generateBtn")}
             </Button>
           </div>
         ) : (
           <div className="space-y-6 animate-in zoom-in-95 duration-300">
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-                <div className="text-xs text-green-700 font-bold uppercase mb-1">Safe Window</div>
+                <div className="text-xs text-green-700 font-bold uppercase mb-1">
+                  {language === "hi" ? "सुरक्षित समय" : "Safe Window"}
+                </div>
                 <div className="text-lg font-bold text-green-800 flex items-center justify-center gap-2">
                   <Clock className="w-4 h-4" /> {plan.safeTimeWindow}
                 </div>
               </div>
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center">
-                <div className="text-xs text-red-700 font-bold uppercase mb-1">Avoid Outdoors</div>
+                <div className="text-xs text-red-700 font-bold uppercase mb-1">
+                  {language === "hi" ? "बाहर जाने से बचें" : "Avoid Outdoors"}
+                </div>
                 <div className="text-lg font-bold text-red-800 flex items-center justify-center gap-2">
                   <AlertTriangle className="w-4 h-4" /> {plan.avoidTimeWindow}
                 </div>
@@ -370,19 +386,23 @@ function SafeLifePlanner({ wardId }: { wardId: number }) {
             </div>
 
             <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-              <span className="font-semibold text-sm">Recommended Mask</span>
+              <span className="font-semibold text-sm">
+                {language === "hi" ? "अनुशंसित मास्क" : "Recommended Mask"}
+              </span>
               <Badge variant={plan.maskLevel === "None" ? "secondary" : "destructive"} className="text-sm px-3 py-1">
                 {plan.maskLevel}
               </Badge>
             </div>
 
             <div className="bg-primary/5 p-4 rounded-lg text-sm text-black leading-relaxed border border-primary/10">
-              <span className="font-bold text-primary block mb-1">Expert Advice:</span>
+              <span className="font-bold text-primary block mb-1">
+                {language === "hi" ? "विशेषज्ञ सलाह:" : "Expert Advice:"}
+              </span>
               {plan.advice}
             </div>
 
             <Button variant="ghost" onClick={() => mutate(undefined as any)} className="w-full text-xs text-muted-foreground">
-              Reset Planner
+              {language === "hi" ? "योजना रीसेट करें" : "Reset Planner"}
             </Button>
           </div>
         )}
@@ -392,6 +412,7 @@ function SafeLifePlanner({ wardId }: { wardId: number }) {
 }
 
 function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
+  const { t, language } = useLanguage();
   const [image, setImage] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -414,7 +435,7 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
           });
           setGettingLocation(false);
           toast({
-            title: "Location detected",
+            title: language === "hi" ? "स्थान का पता चला" : "Location detected",
             description: `Latitude: ${position.coords.latitude.toFixed(4)}, Longitude: ${position.coords.longitude.toFixed(4)}`,
           });
         },
@@ -426,8 +447,8 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
           });
           setGettingLocation(false);
           toast({
-            title: "Geolocation failed",
-            description: `Using centroid of ${selectedWard.name} as fallback.`,
+            title: language === "hi" ? "जीपीएस अनुपलब्ध" : "Geolocation failed",
+            description: language === "hi" ? `${selectedWard.name} के केंद्र बिंदु का उपयोग किया जा रहा है।` : `Using centroid of ${selectedWard.name} as fallback.`,
             variant: "destructive"
           });
         },
@@ -461,8 +482,8 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
     e.preventDefault();
     if (!image) {
       toast({
-        title: "Image required",
-        description: "Please upload or capture a photo of the pollution.",
+        title: language === "hi" ? "फोटो आवश्यक है" : "Image required",
+        description: language === "hi" ? "कृपया प्रदूषण की एक फोटो अपलोड करें या खींचें।" : "Please upload or capture a photo of the pollution.",
         variant: "destructive"
       });
       return;
@@ -489,14 +510,14 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
           setImage(null);
           setDescription("");
           toast({
-            title: "Report submitted successfully",
-            description: "Logged to the blockchain ledger.",
+            title: language === "hi" ? "रिपोर्ट सफलतापूर्वक जमा हुई" : "Report submitted successfully",
+            description: language === "hi" ? "ब्लॉकचेन लेज़र में दर्ज की गई।" : "Logged to the blockchain ledger.",
           });
         },
         onError: (err: any) => {
           setErrorMsg(err.message || "Failed to submit report. The image may have been rejected as irrelevant.");
           toast({
-            title: "Report Rejected",
+            title: language === "hi" ? "रिपोर्ट अस्वीकृत" : "Report Rejected",
             description: err.message || "AI classified image as irrelevant.",
             variant: "destructive"
           });
@@ -509,10 +530,10 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
     <Card className="border-border shadow-md h-full flex flex-col">
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
-          <Camera className="w-5 h-5 text-primary" /> Report Local Pollution
+          <Camera className="w-5 h-5 text-primary" /> {t("report.title")}
         </CardTitle>
         <CardDescription>
-          Upload a photo of pollution (traffic, construction dust, or stubble burning). AI will analyze it and auto-detect the nearest ward to register the report.
+          {t("report.subtitle")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 flex-1 overflow-y-auto">
@@ -524,41 +545,38 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
           >
             <div className="flex items-center gap-2 text-green-800 font-bold">
               <CheckCircle2 className="w-5 h-5 text-green-600" />
-              <span>Report Submitted &amp; Cryptographically Verified!</span>
+              <span>{t("report.success")}</span>
             </div>
             {successData.aiAnalysisStatus === "fallback" && (
               <div className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-amber-800">
                 <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                <span><strong>Note:</strong> Gemini Vision AI is currently unavailable (API key issue). Classification was done using description keywords. For real AI image analysis, update the <code className="bg-amber-100 px-1 rounded">GEMINI_API_KEY</code> in <code className="bg-amber-100 px-1 rounded">.env</code> with a valid key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Google AI Studio</a>.</span>
+                <span><strong>Note:</strong> Gemini Vision AI key fallback mode.</span>
               </div>
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-green-950 bg-background/50 p-3 rounded-lg border border-green-100">
               <div>
-                <span className="font-bold block text-green-800">Auto-Detected Ward:</span>
-                Ward ID: {successData.report.wardId} (Coordinates: {successData.report.latitude.toFixed(4)}, {successData.report.longitude.toFixed(4)})
+                <span className="font-bold block text-green-800">{language === "hi" ? "स्वतः पहचाना गया वार्ड:" : "Auto-Detected Ward:"}</span>
+                Ward ID: {successData.report.wardId} ({successData.report.latitude.toFixed(4)}, {successData.report.longitude.toFixed(4)})
               </div>
               <div>
-                <span className="font-bold block text-green-800">AI Analysis:</span>
-                <div className="flex items-start gap-1.5 mt-0.5 flex-wrap">
-                  <p className="text-green-900 leading-relaxed">
-                    {successData.aiExplanation || successData.report.description || "AI analyzed and classified the pollution source."}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                  <span className="text-muted-foreground">(Confidence: {successData.report.aiConfidence}%)</span>
-                  {successData.aiAnalysisStatus === "ai" ? (
-                    <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-blue-50 text-blue-700 border-blue-200">✦ Gemini Vision</Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-amber-50 text-amber-700 border-amber-200">⚠ Keyword Fallback</Badge>
-                  )}
+                <span className="font-bold block text-green-800">{language === "hi" ? "वर्गीकरण:" : "Classification:"}</span>
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  <span className={cn(
+                    "capitalize font-semibold px-1.5 py-0.5 rounded text-[11px]",
+                    successData.report.pollutionType === "traffic" && "bg-blue-100 text-blue-800",
+                    successData.report.pollutionType === "construction" && "bg-orange-100 text-orange-800",
+                    successData.report.pollutionType === "stubble burning" && "bg-red-100 text-red-800",
+                    successData.report.pollutionType === "other" && "bg-purple-100 text-purple-800",
+                  )}>
+                    {successData.report.pollutionType}
+                  </span>
+                  <span className="text-muted-foreground">({successData.report.aiConfidence}%)</span>
                 </div>
               </div>
               <div className="md:col-span-2">
-                <span className="font-bold block text-green-800">Status:</span>
-                Accepted
+                <span className="font-bold block text-green-800">{t("common.status")}:</span>
+                {t("common.verified")}
               </div>
-
-
             </div>
           </motion.div>
         )}
@@ -571,7 +589,7 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
           >
             <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold block">AI Verification Failed</span>
+              <span className="font-bold block">{language === "hi" ? "सत्यापन विफल" : "AI Verification Failed"}</span>
               <p className="text-sm mt-1">{errorMsg}</p>
             </div>
           </motion.div>
@@ -580,7 +598,7 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Image Upload */}
           <div className="space-y-2">
-            <Label>Capture or Upload Photo</Label>
+            <Label>{t("report.uploadPhoto")}</Label>
             <div className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl p-4 bg-muted/20 relative min-h-[180px]">
               {image ? (
                 <div className="relative w-full h-[160px]">
@@ -598,8 +616,8 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
               ) : (
                 <label className="cursor-pointer flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
                   <Upload className="w-8 h-8 text-muted-foreground" />
-                  <span className="text-sm font-semibold">Select/Snap Image</span>
-                  <span className="text-xs text-muted-foreground">JPEG or PNG up to 10MB</span>
+                  <span className="text-sm font-semibold">{t("report.takePhoto")}</span>
+                  <span className="text-xs text-muted-foreground">JPEG / PNG (max 10MB)</span>
                   <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
                 </label>
               )}
@@ -608,10 +626,10 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
 
           {/* Description */}
           <div className="space-y-2">
-            <Label>Description</Label>
+            <Label>{t("report.description")}</Label>
             <textarea
               className="w-full min-h-[80px] p-3 text-sm rounded-lg border border-input bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              placeholder="Provide context (e.g. dense exhaust smog near flyover, open waste dump burning...)"
+              placeholder={t("report.descPlaceholder")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -619,16 +637,18 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
 
           {/* Geo-Location */}
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground block">Geo-Location Status</Label>
+            <Label className="text-xs text-muted-foreground block">
+              {language === "hi" ? "जीपीएस स्थिति" : "Geo-Location Status"}
+            </Label>
             <div className="flex items-center gap-2 p-2 bg-muted/30 border rounded-lg">
               <MapPin className="w-4 h-4 text-primary shrink-0" />
               <div className="text-[11px] text-muted-foreground truncate">
                 {gettingLocation ? (
-                  <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Fetching GPS coordinates...</span>
+                  <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> {language === "hi" ? "स्थान खोजा जा रहा है..." : "Fetching GPS..."}</span>
                 ) : coords ? (
                   <span>GPS: {coords.latitude.toFixed(5)}, {coords.longitude.toFixed(5)}</span>
                 ) : (
-                  <span>Centroid Fallback: {selectedWard.latitude.toFixed(5)}, {selectedWard.longitude.toFixed(5)}</span>
+                  <span>{selectedWard.name} ({selectedWard.latitude.toFixed(4)}, {selectedWard.longitude.toFixed(4)})</span>
                 )}
               </div>
               <Button
@@ -639,7 +659,7 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
                 onClick={detectLocation}
                 disabled={gettingLocation}
               >
-                Refresh
+                {language === "hi" ? "रीफ्रेश" : "Refresh"}
               </Button>
             </div>
           </div>
@@ -650,9 +670,9 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
             className="w-full font-bold shadow-md"
           >
             {submitMutation.isPending ? (
-              <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</span>
+              <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t("report.submitting")}</span>
             ) : (
-              <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Submit</span>
+              <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> {t("report.submitBtn")}</span>
             )}
           </Button>
         </form>
@@ -660,4 +680,3 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
     </Card>
   );
 }
-

@@ -108,8 +108,37 @@ export function AirQualityChatbot() {
     window.speechSynthesis.cancel();
     const cleanSpoken = cleanTextForSpeech(text);
     const utterance = new SpeechSynthesisUtterance(cleanSpoken);
+    const langCode = language === "hi" ? "hi" : "en";
     utterance.lang = language === "hi" ? "hi-IN" : "en-IN";
     utterance.rate = 1.0;
+
+    // Pick female voice specifically (no male voice)
+    const voices = window.speechSynthesis.getVoices();
+    const targetVoices = voices.filter(v => v.lang.toLowerCase().startsWith(langCode));
+
+    // Priority search for known female voice keywords
+    const femaleKeywords = ["female", "zira", "swara", "kalpana", "samantha", "victoria", "karen", "aria", "jenny", "natural", "google हिन्दी", "google english"];
+    const maleKeywords = ["male", "david", "mark", "george", "ravi", "hemant", "guy", "stefan", "james"];
+
+    let selectedVoice = targetVoices.find(v => 
+      femaleKeywords.some(kw => v.name.toLowerCase().includes(kw))
+    );
+
+    // Fallback: any voice in target language that isn't explicitly male
+    if (!selectedVoice) {
+      selectedVoice = targetVoices.find(v => 
+        !maleKeywords.some(kw => v.name.toLowerCase().includes(kw))
+      );
+    }
+
+    // Global fallback across all voices for female keyword
+    if (!selectedVoice) {
+      selectedVoice = voices.find(v => femaleKeywords.some(kw => v.name.toLowerCase().includes(kw)));
+    }
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
 
     utterance.onstart = () => {
       if (msgId) setSpeakingMsgId(msgId);

@@ -8,8 +8,8 @@ import { promisify } from "util";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const _filename = typeof import.meta !== "undefined" && import.meta?.url ? fileURLToPath(import.meta.url) : (typeof __filename !== "undefined" ? __filename : process.cwd());
+const _dirname = typeof __dirname !== "undefined" ? __dirname : path.dirname(_filename);
 
 const MemoryStore = createMemoryStore(session);
 const execFilePromise = promisify(execFile);
@@ -174,8 +174,8 @@ function getStationMapPath(): string {
   const candidates = [
     path.resolve(process.cwd(), "server/data/station-map.json"),
     path.resolve(process.cwd(), "dist/server/data/station-map.json"),
-    path.resolve(__dirname, "data/station-map.json"),
-    path.resolve(__dirname, "../server/data/station-map.json"),
+    path.resolve(_dirname, "data/station-map.json"),
+    path.resolve(_dirname, "../server/data/station-map.json"),
   ];
   for (const p of candidates) {
     if (fs.existsSync(p)) return p;
@@ -324,9 +324,9 @@ export class MemStorage implements IStorage {
     const pathsToTry = [
       path.resolve(process.cwd(), "attached_assets/Delhi_Wards_1768070860005.geojson"),
       path.resolve(process.cwd(), "dist/attached_assets/Delhi_Wards_1768070860005.geojson"),
-      path.resolve(__dirname, "../attached_assets/Delhi_Wards_1768070860005.geojson"),
-      path.resolve(__dirname, "../../attached_assets/Delhi_Wards_1768070860005.geojson"),
-      path.resolve(__dirname, "attached_assets/Delhi_Wards_1768070860005.geojson"),
+      path.resolve(_dirname, "../attached_assets/Delhi_Wards_1768070860005.geojson"),
+      path.resolve(_dirname, "../../attached_assets/Delhi_Wards_1768070860005.geojson"),
+      path.resolve(_dirname, "attached_assets/Delhi_Wards_1768070860005.geojson"),
     ];
 
     let geojsonPath = "";

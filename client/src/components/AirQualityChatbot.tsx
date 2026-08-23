@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Loader2, Bot, User, Sparkles, Wind, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Bot, User, Sparkles, Wind, Mic, MicOff, Volume2, VolumeX, Sliders, Play, Check, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiRequest } from "@/lib/queryClient";
@@ -27,6 +27,14 @@ export function AirQualityChatbot() {
   const [autoSpeech, setAutoSpeech] = useState(true);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
+  const [previewVoiceName, setPreviewVoiceName] = useState<string | null>(null);
+  const [selectedVoiceName, setSelectedVoiceName] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("nirvayu_selected_voice") || "";
+    }
+    return "";
+  });
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,6 +59,12 @@ export function AirQualityChatbot() {
   const getFemaleVoice = (lang: string, voicesList: SpeechSynthesisVoice[]) => {
     const isHi = lang === "hi";
     const voices = voicesList.length > 0 ? voicesList : (typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis.getVoices() : []);
+
+    // 0. User explicit preference from voice selection menu
+    if (selectedVoiceName) {
+      const userPicked = voices.find(v => v.name === selectedVoiceName);
+      if (userPicked) return userPicked;
+    }
 
     const femaleKeywords = [
       "heera", "neerja", "swara", "kalpana", "veena", "sangeeta", "india", 
@@ -103,6 +117,34 @@ export function AirQualityChatbot() {
     }
 
     return found || null;
+  };
+
+  const handleSelectVoice = (voiceName: string) => {
+    setSelectedVoiceName(voiceName);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("nirvayu_selected_voice", voiceName);
+    }
+  };
+
+  const handlePreviewVoice = (voice: SpeechSynthesisVoice) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+
+    const sampleText = language === "hi"
+      ? "नमस्ते! मैं निर्वायु AI हूँ, आपकी वायु गुणवत्ता सहायक।"
+      : "Hello! I am NirVayu AI, your air quality assistant.";
+
+    const utterance = new SpeechSynthesisUtterance(sampleText);
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
+    utterance.rate = 1.0;
+    utterance.pitch = 1.25;
+
+    utterance.onstart = () => setPreviewVoiceName(voice.name);
+    utterance.onend = () => setPreviewVoiceName(null);
+    utterance.onerror = () => setPreviewVoiceName(null);
+
+    window.speechSynthesis.speak(utterance);
   };
 
   // Initialize welcome message when language or component loads
@@ -420,6 +462,18 @@ export function AirQualityChatbot() {
                 <p className="text-emerald-100 text-[11px] truncate">{t("chat.subtitle")}</p>
               </div>
 
+              {/* Voice Selector Settings Button */}
+              <button
+                onClick={() => setShowVoiceSettings(!showVoiceSettings)}
+                className={cn(
+                  "p-1.5 rounded-lg transition-colors text-white",
+                  showVoiceSettings ? "bg-white/30" : "bg-white/10 hover:bg-white/20"
+                )}
+                title={language === "hi" ? "आवाज चुनें व सुनें (Select & Preview Voice)" : "Select & Preview Voice"}
+              >
+                <Sliders className="w-4 h-4 text-white" />
+              </button>
+
               {/* Audio Auto-Readout Toggle */}
               <button
                 onClick={() => {
@@ -441,6 +495,94 @@ export function AirQualityChatbot() {
 
               <Sparkles className="w-4 h-4 text-emerald-200" />
             </div>
+
+            {/* Voice Settings Panel Overlay */}
+            <AnimatePresence>
+              {showVoiceSettings && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="bg-emerald-950/95 text-white p-3 border-b border-emerald-800 space-y-2 text-xs backdrop-blur-md"
+                >
+                  <div className="flex items-center justify-between font-semibold border-b border-emerald-800/80 pb-2">
+                    <span className="flex items-center gap-1.5 text-emerald-200">
+                      <Music className="w-4 h-4 text-emerald-400" />
+                      {language === "hi" ? "AI आवाज चुनें व सुनें (Select Voice)" : "Select AI Voice"}
+                    </span>
+                    <button
+                      onClick={() => setShowVoiceSettings(false)}
+                      className="p-1 hover:bg-white/10 rounded text-emerald-300 hover:text-white"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-emerald-200/80">
+                    {language === "hi" 
+                      ? "नमूना सुनने के लिए ▶ बटन दबाएं, फिर अपनी पसंदीदा आवाज चुनें:" 
+                      : "Click ▶ to listen to a voice preview, then select your favorite:"}
+                  </p>
+
+                  <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                    {availableVoices
+                      .filter((v) => language === "hi" ? v.lang.toLowerCase().includes("hi") : (v.lang.toLowerCase().includes("en") || v.lang.toLowerCase().includes("in")))
+                      .map((voice) => {
+                        const isEnIn = voice.lang.toLowerCase().includes("en-in") || voice.lang.toLowerCase().includes("en_in") || voice.name.toLowerCase().includes("india");
+                        const activeVoice = getFemaleVoice(language, availableVoices);
+                        const isSelected = selectedVoiceName ? selectedVoiceName === voice.name : activeVoice?.name === voice.name;
+                        const isPreviewing = previewVoiceName === voice.name;
+
+                        return (
+                          <div
+                            key={voice.name}
+                            className={cn(
+                              "flex items-center justify-between p-2 rounded-lg border transition-all text-xs",
+                              isSelected 
+                                ? "bg-emerald-600/40 border-emerald-400 text-white font-medium" 
+                                : "bg-emerald-900/30 border-emerald-800/60 text-emerald-100 hover:bg-emerald-900/60"
+                            )}
+                          >
+                            <div className="flex-1 min-w-0 pr-2">
+                              <p className="truncate text-[11px] font-semibold flex items-center gap-1">
+                                {voice.name.replace(/(Microsoft|Google|Apple|Natural|Online|\(Natural\))/gi, "").trim()}
+                                {isEnIn && <span className="text-[9px] bg-emerald-700/80 text-emerald-100 px-1 py-0.5 rounded shrink-0">🇮🇳 Indian</span>}
+                              </p>
+                              <p className="text-[10px] text-emerald-300/70 truncate">{voice.lang}</p>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {/* Listen / Preview Button */}
+                              <button
+                                onClick={() => handlePreviewVoice(voice)}
+                                className={cn(
+                                  "p-1.5 rounded-md transition-colors text-xs flex items-center gap-1",
+                                  isPreviewing ? "bg-amber-500 text-black font-bold animate-pulse" : "bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200"
+                                )}
+                                title="Listen to Voice Sample"
+                              >
+                                {isPreviewing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                              </button>
+
+                              {/* Select Button */}
+                              <button
+                                onClick={() => handleSelectVoice(voice.name)}
+                                className={cn(
+                                  "px-2 py-1 rounded-md text-[11px] font-medium transition-colors flex items-center gap-1",
+                                  isSelected ? "bg-emerald-500 text-black font-bold" : "bg-white/10 hover:bg-white/20 text-emerald-200"
+                                )}
+                              >
+                                {isSelected ? <Check className="w-3.5 h-3.5" /> : null}
+                                {isSelected ? (language === "hi" ? "सक्रिय" : "Active") : (language === "hi" ? "चुनें" : "Select")}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto bg-background/95 backdrop-blur-sm px-3 py-3 space-y-3" style={{ maxHeight: "340px" }}>

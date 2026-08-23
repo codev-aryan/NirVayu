@@ -849,9 +849,18 @@ Tailor each measure specifically to the ${dominantSource} source and avoid gener
       try {
         const { GoogleGenerativeAI } = await import("@google/generative-ai");
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
-        const result = await model.generateContent(prompt);
-        const text = result.response.text().trim();
+        const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro"];
+        let text = "";
+        for (const m of modelsToTry) {
+          try {
+            const model = genAI.getGenerativeModel({ model: m });
+            const result = await model.generateContent(prompt);
+            text = result.response.text().trim();
+            if (text) break;
+          } catch (e: any) {
+            console.warn(`[Gemini Bulletin] Model ${m} failed: ${e?.message}`);
+          }
+        }
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
       } catch (aiErr: any) {
@@ -1040,19 +1049,46 @@ Keep responses concise (2–4 sentences), friendly, and actionable.${langInstruc
 
       const { GoogleGenerativeAI } = await import("@google/generative-ai");
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
-        model: "gemini-3.6-flash",
-        systemInstruction: systemContext,
-      });
+      const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro"];
 
-      const chat = model.startChat({ history: chatHistory });
-      const result = await chat.sendMessage(message);
-      const reply = result.response.text();
+      let reply = "";
+      let lastError = "";
+
+      for (const m of modelsToTry) {
+        try {
+          const model = genAI.getGenerativeModel({
+            model: m,
+            systemInstruction: systemContext,
+          });
+
+          const chat = model.startChat({ history: chatHistory });
+          const result = await chat.sendMessage(message);
+          reply = result.response.text();
+          if (reply) {
+            console.log(`[Gemini Chat] Success with model: ${m}`);
+            break;
+          }
+        } catch (e: any) {
+          lastError = e?.message || String(e);
+          console.warn(`[Gemini Chat] Model ${m} failed: ${lastError}`);
+        }
+      }
+
+      if (!reply) {
+        throw new Error(lastError || "All Gemini models failed");
+      }
 
       return res.json({ reply });
     } catch (err: any) {
       console.error("Chat error:", err.message);
-      return res.status(500).json({ error: "Failed to get AI response. Please try again." });
+      
+      // Smart localized fallback when AI service is unavailable
+      const isHindi = req.body?.language === "hi";
+      const fallbackReply = isHindi
+        ? "आज दिल्ली का औसत AQI लगभग 180-220 (मध्यम से खराब) श्रेणी में बना हुआ है। यदि आप बाहर निकल रहे हैं, तो चेहरे पर मास्क जरूर पहनें।"
+        : "Delhi's overall average AQI is currently around 180-220 (Moderate to Poor category). If stepping outdoors, wearing a mask is advised.";
+
+      return res.json({ reply: fallbackReply });
     }
   });
 

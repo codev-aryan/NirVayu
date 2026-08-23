@@ -807,17 +807,21 @@ Return ONLY a JSON object:
         return res.status(500).json({ error: "News service unavailable — NEWS_API_KEY not configured." });
       }
 
-      // Build a targeted query: ward name + Delhi pollution keywords
+      // Strictly air-pollution focused queries
+      const airPollutionTerms = "(\"air pollution\" OR \"air quality\" OR AQI OR smog OR PM2.5 OR PM10 OR \"particulate matter\" OR \"stubble burning\" OR \"vehicular emissions\" OR \"industrial emissions\" OR haze)";
       const query = wardName
-        ? `"${wardName}" pollution OR AQI OR air quality Delhi`
-        : "Delhi pollution OR AQI OR air quality OR smog";
+        ? `Delhi ${airPollutionTerms} "${wardName}"`
+        : `Delhi ${airPollutionTerms}`;
 
       const url = new URL("https://newsapi.org/v2/everything");
       url.searchParams.set("q", query);
       url.searchParams.set("language", "en");
       url.searchParams.set("sortBy", "publishedAt");
-      url.searchParams.set("pageSize", "15");
+      url.searchParams.set("pageSize", "20");
       url.searchParams.set("apiKey", apiKey);
+
+      // Keywords that must appear in title/description to confirm air-pollution relevance
+      const relevantKeywords = ["air", "aqi", "smog", "pm2.5", "pm10", "pollution", "particulate", "stubble", "haze", "emission", "dust", "smoke", "ozone", "no2", "so2"];
 
       const response = await fetch(url.toString());
       if (!response.ok) {
@@ -828,7 +832,12 @@ Return ONLY a JSON object:
 
       const json = await response.json() as any;
       const articles = (json.articles || [])
-        .filter((a: any) => a.title && a.title !== "[Removed]")
+        .filter((a: any) => {
+          if (!a.title || a.title === "[Removed]") return false;
+          const text = `${a.title} ${a.description || ""}`.toLowerCase();
+          // Must contain at least one air-pollution keyword
+          return relevantKeywords.some((kw) => text.includes(kw));
+        })
         .slice(0, 10)
         .map((a: any) => ({
           title: a.title,
@@ -836,6 +845,7 @@ Return ONLY a JSON object:
           url: a.url,
           publishedAt: a.publishedAt,
         }));
+
 
       const result = { articles, ward: wardName || "Delhi", fetchedAt: new Date().toISOString() };
       newsCache.set(cacheKey, { data: result, ts: Date.now() });

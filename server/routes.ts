@@ -993,9 +993,10 @@ Tailor each measure specifically to the ${dominantSource} source and avoid gener
   // Chat endpoint for Citizen AI Chatbot
   app.post("/api/chat", async (req, res) => {
     try {
-      const { message, history } = req.body as {
+      const { message, history, language } = req.body as {
         message: string;
         history?: { role: "user" | "model"; text: string }[];
+        language?: string;
       };
 
       if (!message || typeof message !== "string") {
@@ -1006,6 +1007,10 @@ Tailor each measure specifically to the ${dominantSource} source and avoid gener
       if (!apiKey) {
         return res.status(500).json({ error: "AI service is currently unavailable." });
       }
+
+      const langInstruction = language === "hi"
+        ? "\n\nCRITICAL LANGUAGE INSTRUCTION: You MUST reply entirely in natural, conversational Devanagari Hindi (हिन्दी). Do not reply in English."
+        : "\n\nReply in clear, accessible English.";
 
       const systemContext = `You are NirVayu AI, a helpful air quality assistant for Delhi citizens on the NirVayu pollution monitoring platform.
 
@@ -1026,7 +1031,7 @@ AQI Scale reference:
 - 301–400: Very Poor (red) — Respiratory illness on prolonged exposure
 - 401–500: Severe (dark red) — Affects healthy people; seriously impacts those with existing diseases
 
-Keep responses concise (2–4 sentences), friendly, and actionable. If asked something outside air quality or NirVayu, politely redirect to your area of expertise.`;
+Keep responses concise (2–4 sentences), friendly, and actionable.${langInstruction}`;
 
       const chatHistory = (history || []).map((h) => ({
         role: h.role,

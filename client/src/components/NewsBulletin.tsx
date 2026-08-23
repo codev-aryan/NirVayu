@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Newspaper, ExternalLink, Radio, ChevronLeft, ChevronRight, Loader2, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n";
 
 interface Article {
   title: string;
@@ -14,20 +15,25 @@ interface NewsBulletinProps {
   zone?: string;
 }
 
-function timeAgo(dateStr: string) {
-  const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
-
 export function NewsBulletin({ zone }: NewsBulletinProps) {
+  const { t } = useLanguage();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const formatTimeAgo = (dateStr: string) => {
+    const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+    if (diff < 3600) {
+      return t("news.agoMinutes", { m: Math.floor(diff / 60) });
+    }
+    if (diff < 86400) {
+      return t("news.agoHours", { h: Math.floor(diff / 3600) });
+    }
+    return t("news.agoDays", { d: Math.floor(diff / 86400) });
+  };
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -76,6 +82,8 @@ export function NewsBulletin({ zone }: NewsBulletinProps) {
     setCurrent((c) => (c + 1) % articles.length);
   };
 
+  const zoneDisplayName = zone || "Delhi";
+
   return (
     <div
       className={cn(
@@ -91,7 +99,7 @@ export function NewsBulletin({ zone }: NewsBulletinProps) {
         <div className="flex items-center gap-1.5 px-3 bg-red-600 text-white shrink-0">
           <Radio className="w-3 h-3 animate-pulse" />
           <span className="text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">
-            {zone ? `${zone} Air Quality` : "Delhi Pollution"}
+            {zone ? t("news.zoneLabel", { zone: zoneDisplayName }) : t("news.label")}
           </span>
         </div>
 
@@ -103,7 +111,7 @@ export function NewsBulletin({ zone }: NewsBulletinProps) {
           {loading ? (
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Loading news for {zone || "Delhi"}…
+              {t("news.loading", { zone: zoneDisplayName })}
             </div>
           ) : error ? (
             <div className="flex items-center gap-2 text-xs text-amber-600">
@@ -111,7 +119,7 @@ export function NewsBulletin({ zone }: NewsBulletinProps) {
               <span>{error}</span>
             </div>
           ) : articles.length === 0 ? (
-            <span className="text-xs text-muted-foreground">No news found for {zone || "Delhi"}.</span>
+            <span className="text-xs text-muted-foreground">{t("news.notFound", { zone: zoneDisplayName })}</span>
           ) : (
             <AnimatePresence mode="wait">
               <motion.a
@@ -128,7 +136,7 @@ export function NewsBulletin({ zone }: NewsBulletinProps) {
                 <Newspaper className="w-3.5 h-3.5 text-red-500 shrink-0" />
                 <span className="font-medium truncate flex-1">{articles[current].title}</span>
                 <span className="text-muted-foreground shrink-0 hidden sm:inline">
-                  {articles[current].source} · {timeAgo(articles[current].publishedAt)}
+                  {articles[current].source} · {formatTimeAgo(articles[current].publishedAt)}
                 </span>
                 <ExternalLink className="w-3 h-3 text-muted-foreground shrink-0 group-hover:text-primary transition-colors" />
               </motion.a>

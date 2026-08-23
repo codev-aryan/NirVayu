@@ -218,6 +218,33 @@ export const translations: Record<Language, Translations> = {
     "lang.toggle": "Switch Language",
     "lang.en": "English",
     "lang.hi": "हिन्दी",
+
+    // News Bulletin Ticker
+    "news.label": "Delhi Pollution",
+    "news.zoneLabel": "{zone} Air Quality",
+    "news.loading": "Loading news for {zone}…",
+    "news.notFound": "No news found for {zone}.",
+    "news.agoMinutes": "{m}m ago",
+    "news.agoHours": "{h}h ago",
+    "news.agoDays": "{d}d ago",
+
+    // Air Quality Chatbot
+    "chat.badge": "Ask NirVayu AI ✨",
+    "chat.title": "NirVayu AI",
+    "chat.subtitle": "Air Quality Assistant · Delhi",
+    "chat.welcome": "Hi! I'm NirVayu AI 🌿 I can help you with air quality questions, AQI levels, health tips, and how to report pollution in Delhi. What would you like to know?",
+    "chat.placeholder": "Ask about AQI, pollution, health tips…",
+    "chat.listening": "Listening...",
+    "chat.speaking": "Speaking...",
+    "chat.micUnsupported": "Voice input not supported in browser",
+    "chat.autoSpeechOn": "Auto Voice Readout On",
+    "chat.autoSpeechOff": "Auto Voice Readout Off",
+    "chat.sug.1": "What does AQI 200 mean?",
+    "chat.sug.2": "How do I file a report?",
+    "chat.sug.3": "Why is Delhi air so bad?",
+    "chat.sug.4": "How to protect myself from smog?",
+    "chat.sug.5": "What causes stubble burning?",
+    "chat.sug.6": "Is today safe to go outside?",
   },
   hi: {
     // Navigation & Common - सरल और बोलचाल की हिंदी
@@ -430,6 +457,33 @@ export const translations: Record<Language, Translations> = {
     "lang.toggle": "भाषा बदलें",
     "lang.en": "English",
     "lang.hi": "हिन्दी",
+
+    // News Bulletin Ticker
+    "news.label": "दिल्ली प्रदूषण खबरें",
+    "news.zoneLabel": "{zone} हवा की स्थिति",
+    "news.loading": "{zone} की ताजा खबरें लोड हो रही हैं…",
+    "news.notFound": "{zone} के लिए खबरें उपलब्ध नहीं हैं।",
+    "news.agoMinutes": "{m} मि. पहले",
+    "news.agoHours": "{h} घंटे पहले",
+    "news.agoDays": "{d} दिन पहले",
+
+    // Air Quality Chatbot
+    "chat.badge": "निर्वायु AI से पूछें ✨",
+    "chat.title": "निर्वायु AI",
+    "chat.subtitle": "पर्यावरण व हवा की स्थिति सहायक · दिल्ली",
+    "chat.welcome": "नमस्ते! मैं निर्वायु AI हूँ 🌿 मैं हवा की गुणवत्ता, AQI स्तर, सेहत की देखभाल और प्रदूषण की शिकायत दर्ज करने में आपकी मदद कर सकता हूँ। आप क्या जानना चाहते हैं?",
+    "chat.placeholder": "AQI, प्रदूषण या सेहत की सलाह पूछें…",
+    "chat.listening": "आपकी आवाज़ सुन रहा हूँ...",
+    "chat.speaking": "AI बोल रहा है...",
+    "chat.micUnsupported": "आपके ब्राउज़र में वॉइस इनपुट सपोर्ट नहीं है",
+    "chat.autoSpeechOn": "स्वचालित वॉइस चालू है",
+    "chat.autoSpeechOff": "स्वचालित वॉइस बंद है",
+    "chat.sug.1": "AQI 200 का क्या मतलब है?",
+    "chat.sug.2": "प्रदूषण की शिकायत कैसे करें?",
+    "chat.sug.3": "दिल्ली की हवा इतनी खराब क्यों है?",
+    "chat.sug.4": "स्मॉग और धुएं से कैसे बचें?",
+    "chat.sug.5": "पराली जलाने के क्या नुकसान हैं?",
+    "chat.sug.6": "क्या आज बाहर जाना सुरक्षित है?",
   }
 };
 

@@ -37,6 +37,134 @@ declare global {
 }
 const AQI_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
+export function buildGrapInfo(aqi: number, primarySource: string) {
+  if (aqi > 450) {
+    return {
+      stage: "STAGE IV",
+      stageName: "Severe+ Emergency",
+      color: "bg-purple-600 text-white",
+      description: "Severe+ conditions (AQI > 450). Extreme emergency measures enforced across Delhi.",
+      enforcement_actions: [
+        "Ban entry of heavy diesel trucks into the ward territory",
+        "Mandatory closure of physical educational institutions (schools & colleges)",
+        "Enforce 50% Work From Home (WFH) for private and government offices",
+        "Implement Odd-Even vehicle rationing scheme on main transit corridors",
+        "Halt all construction, demolition, and infrastructure excavation projects"
+      ]
+    };
+  } else if (aqi > 400) {
+    return {
+      stage: "STAGE III",
+      stageName: "Severe Pollution",
+      color: "bg-red-600 text-white",
+      description: "Severe conditions (AQI 401–450). Strict industrial & construction halts active.",
+      enforcement_actions: [
+        "Full ban on non-essential Construction & Demolition (C&D) activities",
+        "Closure of brick kilns, stone crushers, and hot-mix plants",
+        "Ban on BS-III petrol and BS-IV diesel light motor vehicles (4-wheelers)",
+        "Deploy anti-smog guns continuously at key high-dust intersections",
+        "Increase frequency of public transit (buses and metro runs)"
+      ]
+    };
+  } else if (aqi > 300) {
+    return {
+      stage: "STAGE II",
+      stageName: "Very Poor Pollution",
+      color: "bg-orange-600 text-white",
+      description: "Very Poor conditions (AQI 301–400). Targeted dust & emission controls active.",
+      enforcement_actions: [
+        "Enhance parking fees to discourage personal vehicle usage",
+        "Synchronize traffic signals at congested bottlenecks to minimize idling",
+        "Daily mechanized road sweeping and intensive chemical dust suppressant spraying",
+        "Strict night patrolling to prevent open garbage or plastic waste burning",
+        "Ensure uninterrupted power supply to eliminate diesel generator usage"
+      ]
+    };
+  } else if (aqi > 200) {
+    return {
+      stage: "STAGE I",
+      stageName: "Poor Pollution",
+      color: "bg-amber-600 text-white",
+      description: "Poor conditions (AQI 201–300). Mandatory dust mitigation & inspection active.",
+      enforcement_actions: [
+        "Mandatory anti-smog gun operation at construction sites > 500 sqm",
+        "Mechanized road sweeping and regular water sprinkling on major roads",
+        "Strict enforcement of anti-garbage burning regulations",
+        "Heavy fine imposition on visibly polluting vehicles",
+        "Public advisory issued for vulnerable and sensitive health groups"
+      ]
+    };
+  } else {
+    return {
+      stage: "NORMAL",
+      stageName: "Moderate / Satisfactory",
+      color: "bg-green-600 text-white",
+      description: "Standard monitoring conditions (AQI ≤ 200). Baseline environmental compliance.",
+      enforcement_actions: [
+        "Routine water sprinkling on vulnerable dust corridors",
+        "Regular industrial emission stack inspections",
+        "Standard traffic flow monitoring and signal maintenance",
+        "Ongoing citizen complaint resolution and spot checks"
+      ]
+    };
+  }
+}
+
+export function buildWeeklyPlan(aqi: number, dominantSource: string) {
+  const source = (dominantSource || "").toLowerCase();
+  return [
+    {
+      day: "Day 1 (Today)",
+      title: "Immediate Emergency Mitigation",
+      action: source.includes("traffic")
+        ? "Deploy anti-smog guns & traffic police at peak choke points; enforce heavy vehicle diversion."
+        : source.includes("construction")
+        ? "Halt un-covered earthwork; deploy continuous water sprinklers across all active sites."
+        : source.includes("industrial")
+        ? "Conduct surprise stack emission inspections & issue immediate halt notices to non-compliant units."
+        : "Deploy mobile anti-burning task forces for night-time waste patrol & instant fine imposition.",
+      priority: (aqi > 300 ? "Critical" : "High") as "Critical" | "High" | "Medium"
+    },
+    {
+      day: "Day 2",
+      title: "Targeted Emission Suppression",
+      action: "Mechanized road sweeping across arterial corridors combined with chemical dust suppressant application.",
+      priority: "High" as "Critical" | "High" | "Medium"
+    },
+    {
+      day: "Day 3",
+      title: "Source Inspection & Patrols",
+      action: "Zero-tolerance patrol against open trash/plastic burning and diesel generator non-compliance.",
+      priority: "High" as "Critical" | "High" | "Medium"
+    },
+    {
+      day: "Day 4",
+      title: "Mid-Week AQI & Hotspot Re-evaluation",
+      action: "Recalibrate sensor network data, audit high-AQI clusters, and adjust misting vehicle deployment routes.",
+      priority: "Medium" as "Critical" | "High" | "Medium"
+    },
+    {
+      day: "Day 5",
+      title: "Commercial & Site Compliance Audit",
+      action: "Verify C&D dust barrier height, green netting, and anti-smog gun operational logs across all projects.",
+      priority: "Medium" as "Critical" | "High" | "Medium"
+    },
+    {
+      day: "Day 6",
+      title: "Traffic Corridor & Idling Reduction",
+      action: "Optimize signal timing at major junctions to reduce vehicle idling time and emissions during evening rush hour.",
+      priority: "Medium" as "Critical" | "High" | "Medium"
+    },
+    {
+      day: "Day 7",
+      title: "Weekly Performance & GRAP Stage Audit",
+      action: "Evaluate 7-day AQI trend, compile ward compliance scores, and update GRAP enforcement stage for next week.",
+      priority: "Medium" as "Critical" | "High" | "Medium"
+    }
+  ];
+}
+
+
 // ─── Station-map helpers (wardName → WAQI station idx) ───
 function getStationMapPath(): string {
   const candidates = [
@@ -232,30 +360,32 @@ export class MemStorage implements IStorage {
       if (id % 4 === 0) primarySource = "Construction";
       else if (id % 4 === 1) primarySource = "Industrial Emissions";
       else if (id % 4 === 2) primarySource = "Waste Burning";
- 
+
       const primaryPollutant = aqi > 300 ? "PM2.5" : (no2 > 50 ? "NO2" : "Dust");
       const severity = aqi > 400 ? "Severe+" : aqi > 300 ? "Severe" : aqi > 200 ? "Poor" : "Moderate";
       const allowedControls = ["water_sprinkling", "waste_burning_ban"];
       if (aqi > 200) allowedControls.push("traffic_odd_even", "construction_halt");
 
       const prediction = predictFutureAqi(aqi, pm25, pm10);
- 
+      const grapInfo = buildGrapInfo(aqi, primarySource);
+      const weeklyPlan = buildWeeklyPlan(aqi, primarySource);
+
       const intelligence_data: any = {
         ward: feature.properties.Ward_Name ?? `Ward ${id}`,
         primary_pollutant: primaryPollutant,
         severity,
-        analysis_summary: `ML engine detected ${primaryPollutant} as dominant factor. Current AQI ${aqi} indicates ${severity} conditions. Prediction: ${prediction.predictedAqi} AQI in ${prediction.horizon} (Confidence: ${Math.round(prediction.confidence * 100)}%).`,
+        analysis_summary: `ML engine detected ${primaryPollutant} as dominant factor. Current AQI ${aqi} indicates ${severity} conditions (${grapInfo.stage}). Prediction: ${prediction.predictedAqi} AQI in ${prediction.horizon} (Confidence: ${Math.round(prediction.confidence * 100)}%).`,
+        weekly_plan: weeklyPlan,
+        grap_info: grapInfo,
         execution_plan_90_days: {
           days_0_30: allowedControls.slice(0, 3).map(c => `Immediate enforcement of ${c.replace(/_/g, ' ')}`),
           days_31_60: [
             `Transitioning from ${allowedControls[0].replace(/_/g, ' ')} to structural monitoring`,
-            `Deploying ${primaryPollutant}-specific mitigation units`,
-            `Ward-level compliance score integration (Current: ${Math.max(0, 100 - Math.floor(aqi / 5))}%)`
+            `Deploying ${primaryPollutant}-specific mitigation units`
           ],
           days_61_90: [
             "AI-driven predictive maintenance of control units",
-            "Community-led green buffer expansion",
-            `Evaluation of ${severity} reduction effectiveness`
+            "Evaluation of severity reduction effectiveness"
           ]
         },
         confidence_level: "High",
@@ -411,22 +541,25 @@ export class MemStorage implements IStorage {
       const allowedControls: string[] = ["water_sprinkling", "waste_burning_ban"];
       if (aqi > 200) allowedControls.push("traffic_odd_even", "construction_halt");
 
+      const grapInfo = buildGrapInfo(aqi, primarySource);
+      const weeklyPlan = buildWeeklyPlan(aqi, primarySource);
+
       const intelligence_data: NonNullable<Ward["intelligence_data"]> = {
         ward: ward.name,
         primary_pollutant: primaryPollutant,
         severity,
-        analysis_summary: `ML engine detected ${primaryPollutant} as dominant factor. Current AQI ${aqi} indicates ${severity} conditions.`,
+        analysis_summary: `ML engine detected ${primaryPollutant} as dominant factor. Current AQI ${aqi} indicates ${severity} conditions (${grapInfo.stage}).`,
+        weekly_plan: weeklyPlan,
+        grap_info: grapInfo,
         execution_plan_90_days: {
           days_0_30: allowedControls.slice(0, 3).map(c => `Immediate enforcement of ${c.replace(/_/g, ' ')}`),
           days_31_60: [
             `Transitioning from ${allowedControls[0].replace(/_/g, ' ')} to structural monitoring`,
-            `Deploying ${primaryPollutant}-specific mitigation units`,
-            `Ward-level compliance score integration (Current: ${Math.max(0, 100 - Math.floor(aqi / 5))}%)`
+            `Deploying ${primaryPollutant}-specific mitigation units`
           ],
           days_61_90: [
             "AI-driven predictive maintenance of control units",
-            "Community-led green buffer expansion",
-            `Evaluation of ${severity} reduction effectiveness`
+            "Evaluation of severity reduction effectiveness"
           ]
         },
         confidence_level: "High",

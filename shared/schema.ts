@@ -42,10 +42,18 @@ export const wards = pgTable("wards", {
     primary_pollutant: string;
     severity: string;
     analysis_summary: string;
-    execution_plan_90_days: {
+    execution_plan_90_days?: {
       days_0_30: string[];
       days_31_60: string[];
       days_61_90: string[];
+    };
+    weekly_plan?: { day: string; title: string; action: string; priority: "High" | "Medium" | "Critical" }[];
+    grap_info?: {
+      stage: string;
+      stageName: string;
+      color: string;
+      description: string;
+      enforcement_actions: string[];
     };
     confidence_level: string;
     allowed_controls: string[];

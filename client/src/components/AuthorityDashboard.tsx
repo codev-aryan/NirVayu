@@ -324,10 +324,65 @@ function IntelligencePanel({ wardId }: { wardId: number }) {
 
   const intel = ward.intelligence_data;
 
+  const grap = intel.grap_info || {
+    stage: ward.aqi > 400 ? "STAGE IV" : ward.aqi > 300 ? "STAGE III" : ward.aqi > 200 ? "STAGE II" : "STAGE I",
+    stageName: ward.aqi > 400 ? "Severe+ Emergency" : ward.aqi > 300 ? "Severe Pollution" : ward.aqi > 200 ? "Very Poor" : "Poor",
+    color: ward.aqi > 400 ? "bg-red-600 text-white" : ward.aqi > 300 ? "bg-orange-600 text-white" : "bg-amber-600 text-white",
+    description: `Current AQI ${ward.aqi} requires active GRAP enforcement.`,
+    enforcement_actions: [
+      "Deploy anti-smog guns continuously at high-density traffic junctions",
+      "Mechanized road sweeping and chemical dust suppressant application",
+      "Strict ban on open burning of garbage and plastic waste",
+      "Enforce mandatory dust covers on all active construction projects"
+    ]
+  };
+
+  const weeklyPlan = intel.weekly_plan || [
+    { day: "Day 1 (Today)", title: "Emergency Mitigation", action: `Deploy anti-smog guns & traffic diversion tailored to ${ward.dominant_source}.`, priority: "Critical" },
+    { day: "Day 2", title: "Road Misting", action: "Mechanized road sweeping across arterial corridors.", priority: "High" },
+    { day: "Day 3", title: "Waste Burning Patrol", action: "Zero-tolerance night-time patrol against open garbage burning.", priority: "High" },
+    { day: "Day 4", title: "Hotspot Audit", action: "Recalibrate sensor data and audit high-emission clusters.", priority: "Medium" },
+    { day: "Day 5", title: "Construction Audit", action: "Inspect C&D dust barrier compliance across active sites.", priority: "Medium" },
+    { day: "Day 6", title: "Traffic Optimization", action: "Optimize signal timing at congested bottlenecks.", priority: "Medium" },
+    { day: "Day 7", title: "Weekly Review", action: "Compile compliance score and reassess GRAP stage.", priority: "Medium" }
+  ];
+
   return (
     <div className="space-y-6">
+      {/* GRAP Implementation Module */}
+      <Card className="border-border shadow-sm overflow-hidden">
+        <CardHeader className="pb-3 bg-muted/30">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <AlertOctagon className="w-5 h-5 text-red-500" /> GRAP Implementation Suggestions
+            </CardTitle>
+            <Badge className={cn("px-2.5 py-1 text-xs font-bold uppercase", grap.color)}>
+              {grap.stage} · {grap.stageName}
+            </Badge>
+          </div>
+          <CardDescription className="text-xs mt-1">
+            Graded Response Action Plan status for {ward.name} (AQI: {ward.aqi})
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 space-y-3">
+          <p className="text-xs text-muted-foreground leading-relaxed">{grap.description}</p>
+          <div className="space-y-2">
+            <span className="text-[11px] font-bold text-foreground uppercase tracking-wider block">Mandatory Enforcement Actions:</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {grap.enforcement_actions.map((act: string, i: number) => (
+                <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-muted/40 border border-border/50 text-xs">
+                  <ShieldAlert className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                  <span className="text-foreground/90 font-medium leading-snug">{act}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="bg-muted/30 border-border/50">
+        {/* ML Analysis Card */}
+        <Card className="bg-card border-border/50 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2 uppercase tracking-tighter">
               <BrainCircuit className="w-4 h-4 text-primary" /> ML-Driven Analysis
@@ -350,31 +405,34 @@ function IntelligencePanel({ wardId }: { wardId: number }) {
           </CardContent>
         </Card>
 
-        <Card className="bg-muted/30 border-border/50">
+        {/* Dynamic 7-Day Weekly Action Plan */}
+        <Card className="bg-card border-border/50 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2 uppercase tracking-tighter">
-              <ShieldCheck className="w-4 h-4 text-green-600" /> 90-Day Execution Plan
+              <Clock className="w-4 h-4 text-primary" /> Dynamic Ward-Wise Weekly Action Plan
             </CardTitle>
+            <CardDescription className="text-xs">7-Day operational schedule tailored to {ward.name}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="text-[10px] font-bold text-primary uppercase mb-1">Days 0-30: Immediate</div>
-              <ul className="text-xs list-disc list-inside space-y-1 text-muted-foreground">
-                {intel.execution_plan_90_days.days_0_30.map((task, i) => <li key={i}>{task}</li>)}
-              </ul>
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-primary uppercase mb-1">Days 31-60: Enforcement</div>
-              <ul className="text-xs list-disc list-inside space-y-1 text-muted-foreground">
-                {intel.execution_plan_90_days.days_31_60.map((task, i) => <li key={i}>{task}</li>)}
-              </ul>
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-primary uppercase mb-1">Days 61-90: Monitoring</div>
-              <ul className="text-xs list-disc list-inside space-y-1 text-muted-foreground">
-                {intel.execution_plan_90_days.days_61_90.map((task, i) => <li key={i}>{task}</li>)}
-              </ul>
-            </div>
+          <CardContent className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+            {weeklyPlan.map((item: any, i: number) => (
+              <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg border border-border/50 bg-muted/20 text-xs">
+                <div className="shrink-0 flex flex-col items-center">
+                  <span className="font-bold text-primary text-[11px] whitespace-nowrap">{item.day}</span>
+                  <Badge variant="outline" className={cn(
+                    "text-[9px] px-1 py-0 h-4 mt-1 font-semibold",
+                    item.priority === "Critical" && "border-red-300 text-red-700 bg-red-50",
+                    item.priority === "High" && "border-amber-300 text-amber-700 bg-amber-50",
+                    item.priority === "Medium" && "border-blue-300 text-blue-700 bg-blue-50"
+                  )}>
+                    {item.priority}
+                  </Badge>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="font-bold text-foreground block">{item.title}</span>
+                  <p className="text-muted-foreground text-[11px] leading-snug mt-0.5">{item.action}</p>
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>

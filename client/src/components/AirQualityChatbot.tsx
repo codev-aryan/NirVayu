@@ -47,37 +47,47 @@ export function AirQualityChatbot() {
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }, []);
 
-  // Helper to strictly find Hindi Female Voice (Google हिन्दी / Microsoft Swara / Kalpana)
-  const getHindiVoice = (voicesList: SpeechSynthesisVoice[]) => {
+  // Helper to find standard, natural female voice for Hindi & English
+  const getStandardFemaleVoice = (lang: string, voicesList: SpeechSynthesisVoice[]) => {
+    const isHi = lang === "hi";
     const voices = voicesList.length > 0 ? voicesList : (typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis.getVoices() : []);
 
-    const hiVoices = voices.filter(v => 
-      v.lang.toLowerCase().includes("hi") || 
-      v.name.toLowerCase().includes("हिन्दी") || 
-      v.name.toLowerCase().includes("hindi")
-    );
+    const femaleNames = [
+      "google हिन्दी", "swara", "kalpana", "heera", "neerja", "veena", "sangeeta",
+      "zira", "google us english", "google uk english female", "google india english",
+      "samantha", "victoria", "karen", "aria", "jenny", "natural"
+    ];
 
-    // Priority: Swara / Kalpana / Google हिन्दी female voices
-    let selected = hiVoices.find(v => 
-      v.name.toLowerCase().includes("swara") || 
-      v.name.toLowerCase().includes("kalpana") || 
-      v.name.toLowerCase().includes("google")
-    );
+    const maleNames = ["david", "mark", "george", "ravi", "hemant", "madhur", "guy", "stefan", "james", "male"];
 
-    if (!selected && hiVoices.length > 0) {
-      selected = hiVoices[0];
+    if (isHi) {
+      // 1. Target natural Hindi female voices
+      const hiVoices = voices.filter(v => v.lang.toLowerCase().includes("hi") || v.name.toLowerCase().includes("हिन्दी") || v.name.toLowerCase().includes("hindi"));
+      let selected = hiVoices.find(v => femaleNames.some(kw => v.name.toLowerCase().includes(kw)) && !maleNames.some(kw => v.name.toLowerCase().includes(kw)));
+      if (!selected && hiVoices.length > 0) selected = hiVoices[0];
+      if (!selected) selected = voices.find(v => v.lang.toLowerCase().includes("in") && femaleNames.some(kw => v.name.toLowerCase().includes(kw)));
+      return selected || null;
+    } else {
+      // 2. Target standard natural English female voices (en-IN, en-US, en-GB)
+      const enVoices = voices.filter(v => v.lang.toLowerCase().startsWith("en"));
+      
+      // First try en-IN Indian accent female
+      let selected = enVoices.find(v => (v.lang.toLowerCase().includes("in") || v.name.toLowerCase().includes("india")) && femaleNames.some(kw => v.name.toLowerCase().includes(kw)));
+      
+      // Next try standard natural English female (Zira, Google US English Female, Samantha, Victoria)
+      if (!selected) {
+        selected = enVoices.find(v => femaleNames.some(kw => v.name.toLowerCase().includes(kw)) && !maleNames.some(kw => v.name.toLowerCase().includes(kw)));
+      }
+
+      // Any English voice that isn't explicitly male
+      if (!selected) {
+        selected = enVoices.find(v => !maleNames.some(kw => v.name.toLowerCase().includes(kw)));
+      }
+
+      return selected || null;
     }
-
-    // Fallback if no explicit hi locale on OS: en-IN female voice
-    if (!selected) {
-      selected = voices.find(v => 
-        (v.lang.toLowerCase().includes("in") || v.name.toLowerCase().includes("india")) &&
-        (v.name.toLowerCase().includes("heera") || v.name.toLowerCase().includes("neerja") || v.name.toLowerCase().includes("veena") || v.name.toLowerCase().includes("swara"))
-      );
-    }
-
-    return selected || null;
   };
+
   // Initialize welcome message when language or component loads
   useEffect(() => {
     setMessages([
@@ -155,13 +165,15 @@ export function AirQualityChatbot() {
     window.speechSynthesis.cancel();
     const cleanSpoken = cleanTextForSpeech(text);
     const utterance = new SpeechSynthesisUtterance(cleanSpoken);
-    utterance.lang = "hi-IN";
+    
+    // Standard natural female voice parameters
+    utterance.lang = language === "hi" ? "hi-IN" : "en-IN";
     utterance.rate = 1.0;
-    utterance.pitch = 1.8; // Hindi Voice with Pitch 1.8
+    utterance.pitch = 1.0; // Standard natural warm pitch
 
-    const hindiVoice = getHindiVoice(availableVoices);
-    if (hindiVoice) {
-      utterance.voice = hindiVoice;
+    const standardFemaleVoice = getStandardFemaleVoice(language, availableVoices);
+    if (standardFemaleVoice) {
+      utterance.voice = standardFemaleVoice;
     }
 
     utterance.onstart = () => {

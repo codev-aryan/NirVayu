@@ -1187,8 +1187,19 @@ Keep responses concise (2–4 sentences), friendly, and actionable.${langInstruc
           ? `दिल्ली में प्रदूषण के मुख्य 4 कारण:\n1. वाहनों का अत्यधिक धुआं (35-40%)\n2. निर्माण स्थलों की उड़ती धूल (25%)\n3. फैक्ट्रियों का उत्सर्जन और खुले में कचरा जलाना\n4. सर्दियों में धीमी हवा और पराली जलाने का धुआं।`
           : `Top causes of Delhi air pollution:\n1. Vehicular exhaust emissions (35-40%)\n2. Construction and road dust (25%)\n3. Industrial emissions and waste burning\n4. Winter thermal inversion and stubble burning.`;
       }
-      // 7. Safe Outdoor Timings / बाहर जाने का समय / टाइम
-      else if (msg.includes("safe") || msg.includes("outside") || msg.includes("outdoor") || msg.includes("बाहर") || msg.includes("समय") || msg.includes("टाइम")) {
+      // 7. Morning Walk / Jogging / Outdoor Exercise / वॉक / मॉर्निंग / जॉगिंग / व्यायाम / दौड़ / निकलना / सुरक्षित
+      else if (
+        msg.includes("walk") || msg.includes("jog") || msg.includes("run") || msg.includes("exercise") || 
+        msg.includes("morning") || msg.includes("evening") || msg.includes("वॉक") || msg.includes("मॉर्निंग") || 
+        msg.includes("टहल") || msg.includes("जॉगिंग") || msg.includes("व्यायाम") || msg.includes("दौड़") || 
+        msg.includes("जिम") || msg.includes("निकलना") || msg.includes("सुरक्षित") || msg.includes("सुरक्षा") || msg.includes("safe")
+      ) {
+        reply = isHindi
+          ? `आज पूरी दिल्ली का औसत AQI ${avgAqi} (${aqiCategory}) है।\n• चूँकि AQI 100 से कम (संतोषजनक) है, इसलिए बाहर टहलना या मॉर्निंग वॉक पर जाना सामान्य रूप से सुरक्षित है।\n• सुबह के समय हल्की धुंध/स्मॉग से बचने के लिए सूरज निकलने के बाद (सुबह 7:30 बजे के बाद) टहलना सबसे स्वास्थ्यप्रद रहता है!`
+          : `Delhi's average AQI today is ${avgAqi} (${aqiCategory}).\n• With AQI under 100, going for a morning walk or outdoor jog is generally safe.\n• For best health, walk after sunrise (after 7:30 AM) when morning humidity and ground smog dissipate!`;
+      }
+      // 8. Safe Outdoor Timings / बाहर जाने का समय / टाइम
+      else if (msg.includes("outside") || msg.includes("outdoor") || msg.includes("बाहर") || msg.includes("समय") || msg.includes("टाइम")) {
         reply = isHindi
           ? `आज पूरी दिल्ली का औसत AQI ${avgAqi} (${aqiCategory}) है। बाहर जाने के लिए दोपहर 12 बजे से शाम 4 बजे का समय सबसे अच्छा होता है जब धूप के कारण ज़मीनी धुंध कम होती है।`
           : `With live AQI at ${avgAqi} (${aqiCategory}), the safest outdoor window is midday between 12 PM and 4 PM when sunlight helps disperse smog.`;

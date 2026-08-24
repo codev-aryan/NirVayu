@@ -189,72 +189,80 @@ export function CitizenDashboard() {
         </div>
       </div>
 
-      {/* Row 3: Lower Section - Health Info + Daily Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column - Ward Info & Safe Life Planner */}
-        <div className="lg:col-span-5 space-y-6">
-          {selectedWard ? (
-            <div className="bg-card rounded-2xl p-6 shadow-sm border border-border/50 space-y-6">
-              <div>
-                <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider flex items-center gap-1 mb-2">
-                  <Clock className="w-3 h-3" /> {t("common.lastUpdated")}: {new Date(lastUpdated).toLocaleTimeString()}
-                </div>
-                <h2 className="text-3xl font-display font-bold text-primary mb-1">{selectedWard.name}</h2>
-                <div className="flex flex-wrap items-center gap-3 text-muted-foreground mt-2">
-                  <StatusBadge aqi={selectedWard.aqi} />
-                  <div className="flex items-center gap-2 bg-muted/50 px-3 py-1 rounded-full border border-border/50">
-                    <SourceIcon source={selectedWard.dominant_source} />
-                    <span className="text-sm font-medium">{t("intel.dominantSource")}: {getLocalizedSource(selectedWard.dominant_source)}</span>
-                  </div>
-                </div>
+      {/* Row 3: Lower Section — Ward Intelligence, Travel Planner & Health Risk */}
+      {selectedWard ? (
+        <div className="space-y-8">
+          {/* Ward Header Card (Full Width Banner) */}
+          <div className="bg-card rounded-2xl p-5 shadow-sm border border-border/50 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider flex items-center gap-1 mb-1">
+                <Clock className="w-3.5 h-3.5" /> {t("common.lastUpdated")}: {new Date(lastUpdated).toLocaleTimeString()}
               </div>
+              <h2 className="text-2xl font-display font-bold text-primary flex items-center gap-2">
+                {selectedWard.name}
+              </h2>
+            </div>
 
-              {selectedWard.emergency_mode && (
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="bg-red-50 border-2 border-red-200 rounded-2xl p-4 shadow-sm relative overflow-hidden"
-                >
-                  <h3 className="text-lg font-bold text-red-800 flex items-center gap-2 mb-2">
-                    <AlertTriangle className="w-5 h-5" /> {t("common.emergency")}!
+            <div className="flex flex-wrap items-center gap-3">
+              <StatusBadge aqi={selectedWard.aqi} />
+              <div className="flex items-center gap-2 bg-muted/50 px-3.5 py-1.5 rounded-full border border-border/50 text-xs">
+                <SourceIcon source={selectedWard.dominant_source} />
+                <span className="font-semibold text-foreground">
+                  {t("intel.dominantSource")}: {getLocalizedSource(selectedWard.dominant_source)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {selectedWard.emergency_mode && (
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-800 rounded-2xl p-4 shadow-sm flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6 text-red-600 shrink-0" />
+                <div>
+                  <h3 className="text-sm font-bold text-red-800 dark:text-red-300">
+                    {t("common.emergency")}! Severe Pollution Alert in {selectedWard.name}
                   </h3>
-                  <p className="text-red-700 text-sm mb-3">
-                    Severe pollution levels detected in {selectedWard.name}. Immediate precautions required.
+                  <p className="text-xs text-red-700 dark:text-red-400">
+                    Immediate precautions required: Avoid all outdoor exertion & wear N95 masks.
                   </p>
-                  <ul className="text-xs text-red-800 space-y-1 font-medium">
-                    <li>• Avoid all outdoor activities</li>
-                    <li>• Wear N95 masks if stepping out</li>
-                    <li>• Use air purifiers indoors</li>
-                  </ul>
-                </motion.div>
-              )}
-
-              <div className="pt-4 border-t space-y-6">
-                <SafeLifePlanner ward={selectedWard} />
-                <HistoricAqiChart ward={selectedWard} />
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="h-[300px] flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-border rounded-3xl bg-muted/20">
-              <MapPin className="w-8 h-8 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-bold mb-2">{t("citizen.selectedWard")}</h3>
-              <p className="text-muted-foreground text-sm max-w-xs">
-                {t("citizen.selectWardPrompt")}
-              </p>
-            </div>
+            </motion.div>
           )}
-        </div>
 
-        {/* Dynamic Cigarette Equivalent & Health Risk Assessments */}
-        <div className="lg:col-span-7">
-          <CigaretteHealthRiskCard
-            wardName={selectedWard?.name}
-            aqi={selectedWard ? selectedWard.aqi : overallAqi}
-            pm25={selectedWard ? selectedWard.pm25 : overallPm25}
-            dominantSource={selectedWard ? selectedWard.dominant_source : "Traffic"}
-          />
+          {/* Equal 2-Column Split: Clean Air Navigator (Left) + 7-Day Historic Graph (Right) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="lg:col-span-6">
+              <SafeLifePlanner ward={selectedWard} />
+            </div>
+            <div className="lg:col-span-6">
+              <HistoricAqiChart ward={selectedWard} />
+            </div>
+          </div>
+
+          {/* Full Width Cigarette & Health Risk Assessment */}
+          <div>
+            <CigaretteHealthRiskCard
+              wardName={selectedWard.name}
+              aqi={selectedWard.aqi}
+              pm25={selectedWard.pm25}
+              dominantSource={selectedWard.dominant_source}
+            />
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="h-[220px] flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-border rounded-3xl bg-muted/20">
+          <MapPin className="w-8 h-8 text-muted-foreground mb-3" />
+          <h3 className="text-base font-bold mb-1">{t("citizen.selectedWard")}</h3>
+          <p className="text-muted-foreground text-xs max-w-xs">
+            {t("citizen.selectWardPrompt")}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

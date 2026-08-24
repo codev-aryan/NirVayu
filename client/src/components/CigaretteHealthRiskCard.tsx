@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+const BERKELEY_EARTH_SOURCE = "https://berkeleyearth.org/air-pollution-and-cigarette-equivalence/";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, Cigarette, Info } from "lucide-react";
@@ -249,8 +250,15 @@ export function CigaretteHealthRiskCard({
               {weeklyCigarettes} <span className="text-sm font-normal text-muted-foreground">cigarettes</span>
             </div>
             <p className="text-xs text-muted-foreground font-medium pt-1 flex items-center gap-1">
-              <span>Source Formula</span>
-              <Info className="w-3 h-3 text-amber-600 dark:text-amber-400 inline" />
+              <a
+                href={BERKELEY_EARTH_SOURCE}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-amber-600 dark:text-amber-400 hover:underline hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+              >
+                <span>Source Formula</span>
+                <Info className="w-3 h-3 inline" />
+              </a>
             </p>
           </div>
 

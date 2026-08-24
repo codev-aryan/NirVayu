@@ -1,7 +1,7 @@
 // CAQM Official Graded Response Action Plan (GRAP) for NCR (Revision: 21.11.2025)
 
 export interface GrapStageInfo {
-  stage: "Stage I" | "Stage II" | "Stage III" | "Stage IV" | "Moderate / Good";
+  stage: "Stage I" | "Stage II" | "Stage III" | "Stage IV" | "Moderate / Good" | "No GRAP Required";
   stageName: "Poor" | "Very Poor" | "Severe" | "Severe +" | "Satisfactory / Good";
   aqiRange: string;
   color: string;

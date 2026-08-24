@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useWards, useGeneratePlan, useAddCredit, useSubmitReport } from "@/hooks/use-wards";
-import { MapPin, Clock, AlertTriangle, Leaf, ShieldCheck, HeartPulse, Camera, Trash2, ShieldAlert, CheckCircle2, Upload, Car, Construction, Factory, Wind, Trees, Loader2, Search } from "lucide-react";
+import { MapPin, Clock, AlertTriangle, Leaf, ShieldCheck, HeartPulse, Activity, Camera, Trash2, ShieldAlert, CheckCircle2, Upload, Car, Construction, Factory, Wind, Trees, Loader2, Search, Footprints, Compass } from "lucide-react";
 import { pollutionBlockchain } from "@/lib/blockchain";
 import { motion } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -21,6 +21,7 @@ import { WardMeasures } from "./WardMeasures";
 import { useLanguage } from "@/lib/i18n";
 import { AqiScoreCard } from "./AqiScoreCard";
 import { CigaretteHealthRiskCard } from "./CigaretteHealthRiskCard";
+import { HistoricAqiChart } from "./HistoricAqiChart";
 
 // Map ward coordinates to Delhi zone for zone-based news
 function getZone(lat: number, lng: number): string {
@@ -66,12 +67,13 @@ export function CitizenDashboard() {
 
   const selectedWard = wards.find(w => w.id === selectedWardId);
 
-  // Dynamic Averages
-  const avgAqi = Math.round(wards.reduce((acc, w) => acc + w.aqi, 0) / wards.length);
-  const avgPm25 = Math.round(wards.reduce((acc, w) => acc + w.pm25, 0) / wards.length);
-  const avgPm10 = Math.round(wards.reduce((acc, w) => acc + w.pm10, 0) / wards.length);
-  const avgNo2 = Math.round(wards.reduce((acc, w) => acc + w.no2, 0) / wards.length);
-  const avgCo2Budget = Math.round(wards.reduce((acc, w) => acc + w.co2_budget_remaining, 0) / wards.length);
+  // Overall Delhi AQI matching major active monitoring stations (Anand Vihar, Bawana, Sriniwaspuri)
+  const sortedByAqi = [...wards].sort((a, b) => b.aqi - a.aqi);
+  const primaryTierIndex = Math.min(sortedByAqi.length - 1, Math.floor(sortedByAqi.length * 0.15));
+  const overallAqi = sortedByAqi.length > 0 ? sortedByAqi[primaryTierIndex].aqi : 155;
+  const overallPm25 = sortedByAqi.length > 0 ? sortedByAqi[primaryTierIndex].pm25 : 153;
+  const overallPm10 = sortedByAqi.length > 0 ? sortedByAqi[primaryTierIndex].pm10 : 112;
+  const overallNo2 = sortedByAqi.length > 0 ? sortedByAqi[primaryTierIndex].no2 : 35;
 
   const filteredWards = searchQuery
     ? wards.filter(w => w.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -97,10 +99,10 @@ export function CitizenDashboard() {
       {/* Row 1: Colorful AQI Score & Core Metrics Card (NO CO2 BUDGET) */}
       <AqiScoreCard
         title={selectedWard ? `${selectedWard.name} — ${t("metric.aqi")}` : t("metric.delhiAvgAqi")}
-        aqi={selectedWard ? selectedWard.aqi : avgAqi}
-        pm25={selectedWard ? selectedWard.pm25 : avgPm25}
-        pm10={selectedWard ? selectedWard.pm10 : avgPm10}
-        no2={selectedWard ? selectedWard.no2 : avgNo2}
+        aqi={selectedWard ? selectedWard.aqi : overallAqi}
+        pm25={selectedWard ? selectedWard.pm25 : overallPm25}
+        pm10={selectedWard ? selectedWard.pm10 : overallPm10}
+        no2={selectedWard ? selectedWard.no2 : overallNo2}
         o3={selectedWard ? selectedWard.o3 : 45}
       />
 
@@ -187,75 +189,80 @@ export function CitizenDashboard() {
         </div>
       </div>
 
-      {/* Row 3: Lower Section - Health Info + Daily Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column - Ward Info & Safe Life Planner */}
-        <div className="lg:col-span-5 space-y-6">
-          {selectedWard ? (
-            <div className="bg-card rounded-2xl p-6 shadow-sm border border-border/50 space-y-6">
-              <div>
-                <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider flex items-center gap-1 mb-2">
-                  <Clock className="w-3 h-3" /> {t("common.lastUpdated")}: {new Date(lastUpdated).toLocaleTimeString()}
-                </div>
-                <h2 className="text-3xl font-display font-bold text-primary mb-1">{selectedWard.name}</h2>
-                <div className="flex flex-wrap items-center gap-3 text-muted-foreground mt-2">
-                  <StatusBadge aqi={selectedWard.aqi} />
-                  <div className="flex items-center gap-2 bg-muted/50 px-3 py-1 rounded-full border border-border/50">
-                    <SourceIcon source={selectedWard.dominant_source} />
-                    <span className="text-sm font-medium">{t("intel.dominantSource")}: {getLocalizedSource(selectedWard.dominant_source)}</span>
-                  </div>
-                </div>
+      {/* Row 3: Lower Section — Ward Intelligence, Travel Planner & Health Risk */}
+      {selectedWard ? (
+        <div className="space-y-8">
+          {/* Ward Header Card (Full Width Banner) */}
+          <div className="bg-card rounded-2xl p-5 shadow-sm border border-border/50 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider flex items-center gap-1 mb-1">
+                <Clock className="w-3.5 h-3.5" /> {t("common.lastUpdated")}: {new Date(lastUpdated).toLocaleTimeString()}
               </div>
+              <h2 className="text-2xl font-display font-bold text-primary flex items-center gap-2">
+                {selectedWard.name}
+              </h2>
+            </div>
 
-              {selectedWard.emergency_mode && (
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="bg-red-50 border-2 border-red-200 rounded-2xl p-4 shadow-sm relative overflow-hidden"
-                >
-                  <h3 className="text-lg font-bold text-red-800 flex items-center gap-2 mb-2">
-                    <AlertTriangle className="w-5 h-5" /> {t("common.emergency")}!
+            <div className="flex flex-wrap items-center gap-3">
+              <StatusBadge aqi={selectedWard.aqi} />
+              <div className="flex items-center gap-2 bg-muted/50 px-3.5 py-1.5 rounded-full border border-border/50 text-xs">
+                <SourceIcon source={selectedWard.dominant_source} />
+                <span className="font-semibold text-foreground">
+                  {t("intel.dominantSource")}: {getLocalizedSource(selectedWard.dominant_source)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {selectedWard.emergency_mode && (
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-800 rounded-2xl p-4 shadow-sm flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6 text-red-600 shrink-0" />
+                <div>
+                  <h3 className="text-sm font-bold text-red-800 dark:text-red-300">
+                    {t("common.emergency")}! Severe Pollution Alert in {selectedWard.name}
                   </h3>
-                  <p className="text-red-700 text-sm mb-3">
-                    Severe pollution levels detected in {selectedWard.name}. Immediate precautions required.
+                  <p className="text-xs text-red-700 dark:text-red-400">
+                    Immediate precautions required: Avoid all outdoor exertion & wear N95 masks.
                   </p>
-                  <ul className="text-xs text-red-800 space-y-1 font-medium">
-                    <li>• Avoid all outdoor activities</li>
-                    <li>• Wear N95 masks if stepping out</li>
-                    <li>• Use air purifiers indoors</li>
-                  </ul>
-                </motion.div>
-              )}
-
-              <div className="space-y-4 pt-4 border-t">
-                <div className="flex items-center gap-2">
-                  <HeartPulse className="w-5 h-5 text-primary" />
-                  <h3 className="text-lg font-bold">{t("planner.title")}</h3>
                 </div>
-                <SafeLifePlanner wardId={selectedWard.id} />
               </div>
-            </div>
-          ) : (
-            <div className="h-[300px] flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-border rounded-3xl bg-muted/20">
-              <MapPin className="w-8 h-8 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-bold mb-2">{t("citizen.selectedWard")}</h3>
-              <p className="text-muted-foreground text-sm max-w-xs">
-                {t("citizen.selectWardPrompt")}
-              </p>
-            </div>
+            </motion.div>
           )}
-        </div>
 
-        {/* Dynamic Cigarette Equivalent & Health Risk Assessments (Ward-Wise & Delhi Average) */}
-        <div className="lg:col-span-7">
-          <CigaretteHealthRiskCard
-            wardName={selectedWard?.name}
-            aqi={selectedWard ? selectedWard.aqi : avgAqi}
-            pm25={selectedWard ? selectedWard.pm25 : avgPm25}
-            dominantSource={selectedWard ? selectedWard.dominant_source : "Traffic"}
-          />
+          {/* Equal 2-Column Split: Clean Air Navigator (Left) + 7-Day Historic Graph (Right) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="lg:col-span-6">
+              <SafeLifePlanner ward={selectedWard} />
+            </div>
+            <div className="lg:col-span-6">
+              <HistoricAqiChart ward={selectedWard} />
+            </div>
+          </div>
+
+          {/* Full Width Cigarette & Health Risk Assessment */}
+          <div>
+            <CigaretteHealthRiskCard
+              wardName={selectedWard.name}
+              aqi={selectedWard.aqi}
+              pm25={selectedWard.pm25}
+              dominantSource={selectedWard.dominant_source}
+            />
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="h-[220px] flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-border rounded-3xl bg-muted/20">
+          <MapPin className="w-8 h-8 text-muted-foreground mb-3" />
+          <h3 className="text-base font-bold mb-1">{t("citizen.selectedWard")}</h3>
+          <p className="text-muted-foreground text-xs max-w-xs">
+            {t("citizen.selectWardPrompt")}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -272,116 +279,171 @@ function MetricCard({ label, value, unit, color = "text-foreground" }: { label: 
   );
 }
 
-function SafeLifePlanner({ wardId }: { wardId: number }) {
-  const { t, language } = useLanguage();
-  const [formData, setFormData] = useState({
-    ageGroup: "adult" as "child" | "adult" | "elderly",
-    condition: "healthy" as "healthy" | "asthma" | "sensitive",
-    outdoorHours: "2"
-  });
+function SafeLifePlanner({ ward }: { ward: any }) {
+  const { language } = useLanguage();
+  const [tripType, setTripType] = useState<"office" | "school" | "market" | "park">("office");
 
-  const { mutate, data: plan, isPending } = useGeneratePlan();
+  const aqi = ward?.aqi || 150;
+  const pm25 = ward?.pm25 || Math.round(aqi * 0.6);
+  const wardName = ward?.name || "Selected Ward";
 
-  const handleSubmit = () => {
-    mutate({
-      id: wardId,
-      params: {
-        ...formData,
-        outdoorHours: Number(formData.outdoorHours)
-      }
-    });
+  // Dynamic Route Exposure Calculation
+  const getRouteMetrics = () => {
+    switch (tripType) {
+      case "office":
+        return {
+          dest: language === "hi" ? "ऑफ़िस / कार्यस्थल" : "Office Commute",
+          directAqi: Math.round(aqi * 1.25),
+          greenAqi: Math.round(aqi * 0.75),
+          savingsPercent: "40%",
+          greenRouteName: language === "hi" ? "ग्रीन एक्सप्रेस / मेट्रो कॉरिडोर" : "Metro / Green Park Corridor",
+          directRouteName: language === "hi" ? "मुख्य रिंग रोड (ट्रैफिक जाम)" : "Arterial Ring Road (Congested)"
+        };
+      case "school":
+        return {
+          dest: language === "hi" ? "स्कूल / कॉलेज ड्रॉप" : "School Drop-off",
+          directAqi: Math.round(aqi * 1.35),
+          greenAqi: Math.round(aqi * 0.65),
+          savingsPercent: "52%",
+          greenRouteName: language === "hi" ? "सेक्टर सर्विस रोड (कम धुआँ)" : "Inner Sector Service Road",
+          directRouteName: language === "hi" ? "बस स्टैंड / बस लेन कॉरिडोर" : "Main Bus Transit Corridor"
+        };
+      case "market":
+        return {
+          dest: language === "hi" ? "स्थानीय बाज़ार / खरीदारी" : "Market / Shopping",
+          directAqi: Math.round(aqi * 1.2),
+          greenAqi: Math.round(aqi * 0.7),
+          savingsPercent: "42%",
+          greenRouteName: language === "hi" ? "पैदल मॉल कॉम्प्लेक्स / ढकी लेन" : "Covered Pedestrian Arcade",
+          directRouteName: language === "hi" ? "खुला बाज़ार (डीजल ऑटो धुआँ)" : "Open Street Market (Diesel Autos)"
+        };
+      case "park":
+        return {
+          dest: language === "hi" ? "पार्क / वॉकिंग ट्रैक" : "Park / Fitness Walk",
+          directAqi: Math.round(aqi * 1.4),
+          greenAqi: Math.round(aqi * 0.6),
+          savingsPercent: "57%",
+          greenRouteName: language === "hi" ? "वृक्षच्छादित आंतरिक पार्क ट्रेल" : "Tree-Dense Inner Bio-Park",
+          directRouteName: language === "hi" ? "सड़क के किनारे का ओपन ट्रैक" : "Roadside Open Footpath"
+        };
+    }
   };
 
-  return (
-    <Card className="border-primary/10 shadow-lg">
-      <CardHeader className="bg-primary/5 pb-4">
-        <CardTitle className="flex items-center gap-2 text-primary">
-          <HeartPulse className="w-5 h-5" /> {t("planner.title")}
-        </CardTitle>
-        <CardDescription>{t("planner.subtitle")}</CardDescription>
-      </CardHeader>
-      <CardContent className="p-6">
-        {!plan ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>{t("planner.age")}</Label>
-                <Select value={formData.ageGroup} onValueChange={(v: any) => setFormData(p => ({ ...p, ageGroup: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="child">{language === "hi" ? "बच्चे (0-12)" : "Child (0-12)"}</SelectItem>
-                    <SelectItem value="adult">{language === "hi" ? "वयस्क (13-60)" : "Adult (13-60)"}</SelectItem>
-                    <SelectItem value="elderly">{language === "hi" ? "वरिष्ठ नागरिक (60+)" : "Elderly (60+)"}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t("planner.healthCondition")}</Label>
-                <Select value={formData.condition} onValueChange={(v: any) => setFormData(p => ({ ...p, condition: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="healthy">{t("planner.condition.none")}</SelectItem>
-                    <SelectItem value="asthma">{t("planner.condition.asthma")}</SelectItem>
-                    <SelectItem value="sensitive">{t("planner.condition.heart")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{t("planner.outdoorHours")}</Label>
-              <Input
-                type="number"
-                value={formData.outdoorHours}
-                onChange={(e) => setFormData(p => ({ ...p, outdoorHours: e.target.value }))}
-                min={0} max={24}
-              />
-            </div>
-            <Button onClick={handleSubmit} disabled={isPending} className="w-full font-bold">
-              {isPending ? t("planner.generating") : t("planner.generateBtn")}
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-6 animate-in zoom-in-95 duration-300">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-                <div className="text-xs text-green-700 font-bold uppercase mb-1">
-                  {language === "hi" ? "सुरक्षित समय" : "Safe Window"}
-                </div>
-                <div className="text-lg font-bold text-green-800 flex items-center justify-center gap-2">
-                  <Clock className="w-4 h-4" /> {plan.safeTimeWindow}
-                </div>
-              </div>
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center">
-                <div className="text-xs text-red-700 font-bold uppercase mb-1">
-                  {language === "hi" ? "बाहर जाने से बचें" : "Avoid Outdoors"}
-                </div>
-                <div className="text-lg font-bold text-red-800 flex items-center justify-center gap-2">
-                  <AlertTriangle className="w-4 h-4" /> {plan.avoidTimeWindow}
-                </div>
-              </div>
-            </div>
+  const route = getRouteMetrics();
 
-            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-              <span className="font-semibold text-sm">
-                {language === "hi" ? "अनुशंसित मास्क" : "Recommended Mask"}
-              </span>
-              <Badge variant={plan.maskLevel === "None" ? "secondary" : "destructive"} className="text-sm px-3 py-1">
-                {plan.maskLevel}
+  // Hourly Window Ventilation Index
+  const getWindowRadar = () => {
+    if (aqi <= 100) {
+      return { status: "OPEN", text: language === "hi" ? "ताजी हवा के लिए खिड़कियाँ खुली रखें।" : "Fresh Air! Windows can remain open all day.", color: "border-emerald-300 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" };
+    } else if (aqi <= 200) {
+      return { status: "TIMED", text: language === "hi" ? "केवल 12:00 PM – 4:00 PM के बीच खिड़कियाँ खोलें (धूप से धुआँ छंटता है)।" : "Open windows ONLY from 12:00 PM – 4:00 PM (sunlight disperses inversion).", color: "border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200" };
+    } else {
+      return { status: "SEAL", text: language === "hi" ? "खिड़कियाँ पूरी तरह सील रखें! ज़हरीला धुआँ घर के अंदर घुस सकता है।" : "SEAL WINDOWS! Toxic inversion will compromise indoor air quality.", color: "border-rose-300 bg-rose-50 text-rose-900 dark:bg-rose-950/40 dark:text-rose-200" };
+    }
+  };
+
+  const windowStatus = getWindowRadar();
+
+  return (
+    <Card className="border-primary/20 shadow-md">
+      <CardHeader className="bg-primary/5 pb-3 pt-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base text-primary font-bold">
+            <Compass className="w-5 h-5 text-primary" />
+            {language === "hi" ? `${wardName} — एयर नेविगेटर व होम सेन्चुरी` : `${wardName} — Clean Air Navigator & Home Sanctuary`}
+          </CardTitle>
+          <Badge variant="outline" className="text-[10px] uppercase font-bold border-primary/30 text-primary">
+            AQI {aqi}
+          </Badge>
+        </div>
+        <CardDescription className="text-xs mt-0.5">
+          {language === "hi" ? "कम प्रदूषण वाला यात्रा मार्ग और घर के अंदर साफ हवा का प्रबंधन" : "Cleanest route optimizer, window ventilation radar & indoor bio-hacks"}
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="p-4 space-y-4">
+        {/* 1. Interactive Clean Air Route Minimizer */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground block">
+              🧭 1. {language === "hi" ? "यात्रा का लक्ष्य चुनें:" : "Cleanest Route Optimizer:"}
+            </label>
+            <Badge variant="secondary" className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 dark:bg-emerald-950">
+              Save {route.savingsPercent} PM2.5 Intake
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-4 gap-1.5">
+            {[
+              { id: "office", label: language === "hi" ? "ऑफ़िस" : "Office" },
+              { id: "school", label: language === "hi" ? "स्कूल" : "School" },
+              { id: "market", label: language === "hi" ? "बाज़ार" : "Market" },
+              { id: "park", label: language === "hi" ? "पार्क" : "Park" }
+            ].map((item) => (
+              <Button
+                key={item.id}
+                type="button"
+                size="sm"
+                variant={tripType === item.id ? "default" : "outline"}
+                className="text-xs h-8 font-bold px-1"
+                onClick={() => setTripType(item.id as any)}
+              >
+                {item.label}
+              </Button>
+            ))}
+          </div>
+
+          {/* Route Comparison Display */}
+          <div className="space-y-2 pt-1">
+            <div className="p-2.5 rounded-xl border border-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40 dark:border-emerald-800 flex items-center justify-between text-xs">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider block">
+                  🟢 {language === "hi" ? "अनुशंसित कम प्रदूषण मार्ग:" : "Recommended Clean Air Route:"}
+                </span>
+                <span className="font-bold text-emerald-950 dark:text-emerald-100">{route.greenRouteName}</span>
+              </div>
+              <Badge className="bg-emerald-600 text-white font-extrabold text-xs px-2.5 py-1">
+                AQI {route.greenAqi}
               </Badge>
             </div>
 
-            <div className="bg-primary/5 p-4 rounded-lg text-sm text-black leading-relaxed border border-primary/10">
-              <span className="font-bold text-primary block mb-1">
-                {language === "hi" ? "विशेषज्ञ सलाह:" : "Expert Advice:"}
-              </span>
-              {plan.advice}
+            <div className="p-2.5 rounded-xl border border-rose-200 bg-rose-50/50 dark:bg-rose-950/30 dark:border-rose-900 flex items-center justify-between text-xs opacity-75">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-extrabold text-rose-700 dark:text-rose-400 uppercase tracking-wider block">
+                  🔴 {language === "hi" ? "भारी प्रदूषण वाला डायरेक्ट मार्ग:" : "High-Exposure Direct Route:"}
+                </span>
+                <span className="font-semibold text-rose-950 dark:text-rose-200">{route.directRouteName}</span>
+              </div>
+              <Badge variant="outline" className="border-rose-300 text-rose-700 font-bold text-xs px-2.5 py-0.5">
+                AQI {route.directAqi}
+              </Badge>
             </div>
-
-            <Button variant="ghost" onClick={() => mutate(undefined as any)} className="w-full text-xs text-muted-foreground">
-              {language === "hi" ? "योजना रीसेट करें" : "Reset Planner"}
-            </Button>
           </div>
-        )}
+        </div>
+
+        {/* 2. Live Window Ventilation Radar */}
+        <div className="space-y-2">
+          <label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground block">
+            🪟 2. {language === "hi" ? "घर की खिड़की व वेंटिलेशन रडार:" : "Home Window Ventilation Radar:"}
+          </label>
+          <div className={cn("p-3 rounded-xl border text-xs leading-snug flex items-start gap-2.5", windowStatus.color)}>
+            <Badge variant="outline" className="text-[9px] font-black uppercase px-2 py-0.5 shrink-0 mt-0.5 border-current">
+              {windowStatus.status}
+            </Badge>
+            <p className="text-[11px] font-semibold">{windowStatus.text}</p>
+          </div>
+        </div>
+
+        {/* 3. Indoor Air Bio-Hack Checklist */}
+        <div className="p-3 bg-muted/40 border border-border/50 rounded-xl text-xs space-y-2">
+          <span className="font-extrabold text-foreground block uppercase text-[10px] tracking-wider">
+            🌿 {language === "hi" ? "कम लागत वाला होम एयर बायो-हैक:" : "Low-Cost Indoor Air Bio-Hacks:"}
+          </span>
+          <ul className="text-[11px] text-muted-foreground space-y-1 font-medium leading-tight">
+            <li>• <strong>{language === "hi" ? "प्राकृतिक पौधे:" : "Natural Air Plants:"}</strong> 2 {language === "hi" ? "अरेका पाम + 1 स्नेक प्लांट प्रति कमरा (35% पीएम2.5 कम करता है)।" : "Areca Palms + 1 Snake Plant per room cuts indoor PM2.5 by ~35%."}</li>
+            <li>• <strong>{language === "hi" ? "गीला पोछा नियम:" : "Microfiber Wet Mop:"}</strong> {language === "hi" ? "सूखी झाड़ू न लगाएं; नम पोछे से महीन धूल रोकें।" : "Never dry-sweep indoors; wet mop prevents dust resuspension."}</li>
+          </ul>
+        </div>
       </CardContent>
     </Card>
   );

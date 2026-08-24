@@ -54,15 +54,15 @@ export const translations: Record<Language, Translations> = {
 
     // Metrics
     "metric.aqi": "AQI",
-    "metric.delhiAvgAqi": "Delhi Avg AQI",
+    "metric.delhiAvgAqi": "Delhi Air Quality Index",
     "metric.pm25": "PM 2.5",
-    "metric.delhiAvgPm25": "Delhi Avg PM 2.5",
+    "metric.delhiAvgPm25": "Delhi PM 2.5",
     "metric.pm10": "PM 10",
-    "metric.delhiAvgPm10": "Delhi Avg PM 10",
+    "metric.delhiAvgPm10": "Delhi PM 10",
     "metric.no2": "NO2",
-    "metric.delhiAvgNo2": "Delhi Avg NO2",
+    "metric.delhiAvgNo2": "Delhi NO2",
     "metric.co2Budget": "CO2 Budget",
-    "metric.delhiAvgCo2Budget": "Delhi Avg CO2 Budget",
+    "metric.delhiAvgCo2Budget": "Delhi CO2 Budget",
 
     // Status Levels
     "status.good": "Good",
@@ -293,15 +293,15 @@ export const translations: Record<Language, Translations> = {
 
     // Metrics
     "metric.aqi": "AQI (हवा की गुणवत्ता)",
-    "metric.delhiAvgAqi": "दिल्ली का औसत AQI",
+    "metric.delhiAvgAqi": "दिल्ली वायु गुणवत्ता सूचकांक",
     "metric.pm25": "PM 2.5 (महीन धूल)",
-    "metric.delhiAvgPm25": "दिल्ली औसत PM 2.5",
+    "metric.delhiAvgPm25": "दिल्ली PM 2.5",
     "metric.pm10": "PM 10 (धूल कण)",
-    "metric.delhiAvgPm10": "दिल्ली औसत PM 10",
+    "metric.delhiAvgPm10": "दिल्ली PM 10",
     "metric.no2": "NO2 (गैस)",
-    "metric.delhiAvgNo2": "दिल्ली औसत NO2",
+    "metric.delhiAvgNo2": "दिल्ली NO2",
     "metric.co2Budget": "CO2 बजट",
-    "metric.delhiAvgCo2Budget": "दिल्ली औसत CO2 बजट",
+    "metric.delhiAvgCo2Budget": "दिल्ली CO2 बजट",
 
     // Status Levels
     "status.good": "अच्छा (Good)",

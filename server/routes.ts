@@ -808,31 +808,31 @@ Return ONLY a JSON object (no markdown, no extra text):
     });
 
     try {
+      const { predictWithRandomForest } = await import("./rf_evaluator");
+      const hourly = predictWithRandomForest({
+        pm10: body.pm10 ?? 80,
+        o3: body.o3 ?? 25,
+        no2: body.no2 ?? 20,
+        so2: body.so2 ?? 10,
+        co: body.co ?? 8,
+        timestamp: body.timestamp ?? new Date().toISOString(),
+      });
+
+      if (hourly && hourly.length === 24) {
+        return res.json({ hourly });
+      }
+
       // Spawn the Python inference script with a 1.5-second hard timeout.
-      // execFile (not exec) avoids shell-injection risk.
       const { stdout } = await execFileAsync(
         PYTHON_EXE,
         [AQI_PREDICTOR_SCRIPT, inputPayload],
         { timeout: 1500 }
       );
 
-      // Parse stdout — must be a JSON array of exactly 24 integers.
       const parsed: unknown = JSON.parse(stdout.trim());
-
-      if (
-        !Array.isArray(parsed) ||
-        parsed.length !== 24 ||
-        !parsed.every((v) => typeof v === "number")
-      ) {
-        throw new Error(
-          `Python script returned unexpected shape: ${JSON.stringify(parsed).slice(0, 120)}`
-        );
+      if (Array.isArray(parsed) && parsed.length === 24) {
+        return res.json({ hourly: (parsed as number[]).map((v) => Math.max(0, Math.round(v))) });
       }
-
-      // Clamp all values to non-negative integers (defensive)
-      const hourly = (parsed as number[]).map((v) => Math.max(0, Math.round(v)));
-      return res.json({ hourly });
-
     } catch (err: any) {
       // -----------------------------------------------------------------------
       // Fallback path — triggers on: spawn failure (Python not on PATH),

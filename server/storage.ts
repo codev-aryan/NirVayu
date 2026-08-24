@@ -165,6 +165,8 @@ export function buildGrapInfo(aqi: number, primarySource: string) {
   }
 }
 
+import { predictWithRandomForest } from "./rf_evaluator";
+
 export function predictFutureAqi(
   aqi: number,
   pm25: number,
@@ -174,40 +176,22 @@ export function predictFutureAqi(
   co: number = 8,
   o3: number = 25
 ) {
-  try {
-    const { execFileSync } = require("child_process");
-    const inputPayload = JSON.stringify({
-      pm10: pm10 || 80,
-      o3: o3 || 25,
-      no2: no2 || 20,
-      so2: so2 || 10,
-      co: co || 8,
-      timestamp: new Date().toISOString()
-    });
+  const rfPredictions = predictWithRandomForest({
+    pm10: pm10 || Math.round(aqi * 0.75),
+    o3: o3 || Math.round(aqi * 0.03),
+    no2: no2 || Math.round(aqi * 0.1),
+    so2: so2 || Math.round(aqi * 0.05),
+    co: co || Math.round(aqi * 0.02 * 10) / 10
+  });
 
-    const pythonExe = process.platform === "win32" ? "py" : "python3";
-    const scriptPath = path.join(process.cwd(), "server", "aqi_predictor.py");
-
-    const stdout = execFileSync(pythonExe, [scriptPath, inputPayload], {
-      timeout: 2000,
-      encoding: "utf-8"
-    });
-
-    const lines = stdout.trim().split("\n");
-    const lastLine = lines[lines.length - 1].trim();
-    const parsed: number[] = JSON.parse(lastLine);
-
-    if (Array.isArray(parsed) && parsed.length === 24) {
-      const avgPredicted = Math.round(parsed.reduce((a: number, b: number) => a + b, 0) / parsed.length);
-      const predictedAqi = Math.max(30, Math.min(500, avgPredicted));
-      return {
-        predictedAqi,
-        horizon: "24h",
-        confidence: 0.94
-      };
-    }
-  } catch (err: any) {
-    // Graceful fallback to heuristic if Python model runtime is unavailable
+  if (rfPredictions && rfPredictions.length === 24) {
+    const avgPredicted = Math.round(rfPredictions.reduce((a, b) => a + b, 0) / rfPredictions.length);
+    const predictedAqi = Math.max(30, Math.min(500, avgPredicted));
+    return {
+      predictedAqi,
+      horizon: "24h",
+      confidence: 0.94
+    };
   }
 
   const pmRatio = pm10 > 0 ? pm25 / pm10 : 0.6;

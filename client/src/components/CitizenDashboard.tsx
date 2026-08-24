@@ -20,6 +20,7 @@ import { NewsBulletin } from "./NewsBulletin";
 import { WardMeasures } from "./WardMeasures";
 import { useLanguage } from "@/lib/i18n";
 import { AqiScoreCard } from "./AqiScoreCard";
+import { CigaretteHealthRiskCard } from "./CigaretteHealthRiskCard";
 
 // Map ward coordinates to Delhi zone for zone-based news
 function getZone(lat: number, lng: number): string {
@@ -245,19 +246,13 @@ export function CitizenDashboard() {
           )}
         </div>
 
-        {/* Right Column - AI Recommended Ward-Wise Preventive Measures */}
+        {/* Dynamic Cigarette Equivalent & Health Risk Assessments (Ward-Wise & Delhi Average) */}
         <div className="lg:col-span-7">
-          {selectedWard ? (
-            <WardMeasures wardId={selectedWard.id} wardName={selectedWard.name} />
-          ) : (
-            <div className="h-[300px] flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-border rounded-3xl bg-muted/20">
-              <ShieldCheck className="w-8 h-8 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-bold mb-2">Ward Intelligence Locked</h3>
-              <p className="text-muted-foreground text-sm max-w-xs">
-                Select a ward from the map or search bar to see AI-analyzed preventive health measures.
-              </p>
-            </div>
-          )}
+          <CigaretteHealthRiskCard
+            wardName={selectedWard?.name}
+            aqi={selectedWard ? selectedWard.aqi : avgAqi}
+            pm25={selectedWard ? selectedWard.pm25 : avgPm25}
+          />
         </div>
       </div>
     </div>

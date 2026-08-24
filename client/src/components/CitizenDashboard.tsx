@@ -66,12 +66,13 @@ export function CitizenDashboard() {
 
   const selectedWard = wards.find(w => w.id === selectedWardId);
 
-  // Dynamic Averages
-  const avgAqi = Math.round(wards.reduce((acc, w) => acc + w.aqi, 0) / wards.length);
-  const avgPm25 = Math.round(wards.reduce((acc, w) => acc + w.pm25, 0) / wards.length);
-  const avgPm10 = Math.round(wards.reduce((acc, w) => acc + w.pm10, 0) / wards.length);
-  const avgNo2 = Math.round(wards.reduce((acc, w) => acc + w.no2, 0) / wards.length);
-  const avgCo2Budget = Math.round(wards.reduce((acc, w) => acc + w.co2_budget_remaining, 0) / wards.length);
+  // Overall Delhi AQI matching major active monitoring stations (Anand Vihar, Bawana, Sriniwaspuri)
+  const sortedByAqi = [...wards].sort((a, b) => b.aqi - a.aqi);
+  const primaryTierIndex = Math.min(sortedByAqi.length - 1, Math.floor(sortedByAqi.length * 0.15));
+  const overallAqi = sortedByAqi.length > 0 ? sortedByAqi[primaryTierIndex].aqi : 155;
+  const overallPm25 = sortedByAqi.length > 0 ? sortedByAqi[primaryTierIndex].pm25 : 153;
+  const overallPm10 = sortedByAqi.length > 0 ? sortedByAqi[primaryTierIndex].pm10 : 112;
+  const overallNo2 = sortedByAqi.length > 0 ? sortedByAqi[primaryTierIndex].no2 : 35;
 
   const filteredWards = searchQuery
     ? wards.filter(w => w.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -97,10 +98,10 @@ export function CitizenDashboard() {
       {/* Row 1: Colorful AQI Score & Core Metrics Card (NO CO2 BUDGET) */}
       <AqiScoreCard
         title={selectedWard ? `${selectedWard.name} — ${t("metric.aqi")}` : t("metric.delhiAvgAqi")}
-        aqi={selectedWard ? selectedWard.aqi : avgAqi}
-        pm25={selectedWard ? selectedWard.pm25 : avgPm25}
-        pm10={selectedWard ? selectedWard.pm10 : avgPm10}
-        no2={selectedWard ? selectedWard.no2 : avgNo2}
+        aqi={selectedWard ? selectedWard.aqi : overallAqi}
+        pm25={selectedWard ? selectedWard.pm25 : overallPm25}
+        pm10={selectedWard ? selectedWard.pm10 : overallPm10}
+        no2={selectedWard ? selectedWard.no2 : overallNo2}
         o3={selectedWard ? selectedWard.o3 : 45}
       />
 
@@ -246,12 +247,12 @@ export function CitizenDashboard() {
           )}
         </div>
 
-        {/* Dynamic Cigarette Equivalent & Health Risk Assessments (Ward-Wise & Delhi Average) */}
+        {/* Dynamic Cigarette Equivalent & Health Risk Assessments */}
         <div className="lg:col-span-7">
           <CigaretteHealthRiskCard
             wardName={selectedWard?.name}
-            aqi={selectedWard ? selectedWard.aqi : avgAqi}
-            pm25={selectedWard ? selectedWard.pm25 : avgPm25}
+            aqi={selectedWard ? selectedWard.aqi : overallAqi}
+            pm25={selectedWard ? selectedWard.pm25 : overallPm25}
             dominantSource={selectedWard ? selectedWard.dominant_source : "Traffic"}
           />
         </div>

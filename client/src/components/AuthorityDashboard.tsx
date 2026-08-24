@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useWards, useToggleEmergency, useUpdateControls, useSimulatePolicy, useWardIntelligence, useAllReports, useUpdateReportAction, useDeleteReportLocal, useRestoreReport, useBlockchainLedger } from "@/hooks/use-wards";
-import { Loader2, Activity, Trophy, Medal, AlertTriangle, AlertOctagon, ShieldAlert, ShieldCheck, Truck, Hammer, Wind, Factory, TrendingDown, BarChart3, CheckCircle, ExternalLink, BrainCircuit, Info, Clock, Trash2, RefreshCw, Search } from "lucide-react";
+import { Loader2, Activity, Trophy, Medal, AlertTriangle, AlertOctagon, ShieldAlert, ShieldCheck, Truck, Hammer, Wind, Factory, TrendingDown, TrendingUp, BarChart3, CheckCircle, ExternalLink, BrainCircuit, Info, Clock, Trash2, RefreshCw, Search } from "lucide-react";
 import { pollutionBlockchain } from "@/lib/blockchain";
 import { motion } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";

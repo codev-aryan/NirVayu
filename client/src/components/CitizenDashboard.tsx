@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useWards, useGeneratePlan, useAddCredit, useSubmitReport } from "@/hooks/use-wards";
-import { MapPin, Clock, AlertTriangle, Leaf, ShieldCheck, HeartPulse, Camera, Trash2, ShieldAlert, CheckCircle2, Upload, Car, Construction, Factory, Wind, Trees, Loader2, Search } from "lucide-react";
+import { MapPin, Clock, AlertTriangle, Leaf, ShieldCheck, HeartPulse, Activity, Camera, Trash2, ShieldAlert, CheckCircle2, Upload, Car, Construction, Factory, Wind, Trees, Loader2, Search } from "lucide-react";
 import { pollutionBlockchain } from "@/lib/blockchain";
 import { motion } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";

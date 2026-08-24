@@ -512,7 +512,7 @@ function IntelligencePanel({ wardId }: { wardId: number }) {
                   {language === "hi" ? "सटीकता" : "CONFIDENCE"}: {intel.confidence_level}
                 </Badge>
                 {(() => {
-                  const predVal = intel.predicted_aqi || Math.round(selectedWard.aqi * 1.05);
+                  const predVal = intel.predicted_aqi || Math.round(ward.aqi * 1.05);
                   const predHorizon = intel.prediction_horizon || '24h';
                   return (
                     <Badge variant="default" className="bg-primary text-primary-foreground font-extrabold shadow-sm">

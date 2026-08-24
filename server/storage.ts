@@ -442,19 +442,7 @@ function co2_budget_from_aqi(
   return Math.round(Math.max(co2_budget, e_max * 0.25) * 100) / 100;
 }
 
-function predictFutureAqi(currentAqi: number, pm25: number, pm10: number): { predictedAqi: number; confidence: number; horizon: string } {
-  let trendFactor = 1.05; // Default slight increase
-  if (pm25 > 150 || pm10 > 250) {
-    trendFactor = 1.15; // Higher accumulation probability
-  } else if (currentAqi < 50) {
-    trendFactor = 1.02; // Stable at low levels
-  }
-  return {
-    predictedAqi: Math.round(currentAqi * trendFactor * 100) / 100,
-    confidence: currentAqi > 0 ? 0.85 : 0.0,
-    horizon: "24h"
-  };
-}
+
 
 
 export class MemStorage implements IStorage {

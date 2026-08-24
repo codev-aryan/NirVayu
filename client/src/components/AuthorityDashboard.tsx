@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useWards, useToggleEmergency, useUpdateControls, useSimulatePolicy, useWardIntelligence, useAllReports, useUpdateReportAction, useDeleteReportLocal, useRestoreReport, useBlockchainLedger } from "@/hooks/use-wards";
-import { Loader2, Activity, Trophy, Medal, AlertTriangle, AlertOctagon, ShieldAlert, ShieldCheck, Truck, Hammer, Wind, Factory, TrendingDown, BarChart3, CheckCircle, ExternalLink, BrainCircuit, Info, Clock, Trash2, RefreshCw } from "lucide-react";
+import { Loader2, Activity, Trophy, Medal, AlertTriangle, AlertOctagon, ShieldAlert, ShieldCheck, Truck, Hammer, Wind, Factory, TrendingDown, BarChart3, CheckCircle, ExternalLink, BrainCircuit, Info, Clock, Trash2, RefreshCw, Search } from "lucide-react";
 import { pollutionBlockchain } from "@/lib/blockchain";
 import { motion } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, Cell } from 
 import { cn } from "@/lib/utils";
 import { WardMap } from "./WardMap";
 import { StatusBadge } from "./StatusBadge";
+import { AqiScoreCard } from "./AqiScoreCard";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/i18n";
 
@@ -26,6 +27,7 @@ export function AuthorityDashboard() {
   const { data, isLoading } = useWards();
   const { t, language } = useLanguage();
   const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-screen bg-background">
@@ -41,6 +43,10 @@ export function AuthorityDashboard() {
 
   const selectedWard = wards.find(w => w.id === selectedWardId) || wards[0];
   const sortedWards = [...wards].sort((a, b) => b.aqi - a.aqi);
+  const filteredWards = sortedWards.filter(w => 
+    w.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    w.id.toString().includes(searchQuery)
+  );
 
   const getLocalizedSource = (source: string) => {
     switch (source) {
@@ -64,16 +70,28 @@ export function AuthorityDashboard() {
         </div>
 
         <Card className="flex-1 flex flex-col border-border/50 shadow-lg bg-card/50 backdrop-blur-sm">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 space-y-2">
             <CardTitle className="flex items-center justify-between">
               <span>{t("authority.wardMonitor")}</span>
               <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                {wards.length} {t("common.active")}
+                {filteredWards.length} {t("common.active")}
               </span>
             </CardTitle>
             <CardDescription>{t("authority.jurisdictionDesc")}</CardDescription>
+            
+            {/* Ward Search Bar */}
+            <div className="relative pt-1">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder={language === "hi" ? "वर्ड खोजें (नाम या ID)..." : "Search ward by name or ID..."}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 text-xs h-9 bg-background border-border/60"
+              />
+            </div>
           </CardHeader>
-          <div className="flex-1 relative min-h-[300px]">
+
+          <div className="flex-1 relative min-h-[260px]">
             <WardMap 
               wards={wards} 
               selectedWardId={selectedWard?.id} 
@@ -81,26 +99,33 @@ export function AuthorityDashboard() {
               className="absolute inset-0 m-4 rounded-xl border border-border"
             />
           </div>
-          <div className="h-[300px] overflow-y-auto border-t border-border/50 p-2 space-y-2">
-            {sortedWards.map(ward => (
-              <div 
-                key={ward.id}
-                onClick={() => setSelectedWardId(ward.id)}
-                className={cn(
-                  "p-3 rounded-lg cursor-pointer transition-all border border-transparent hover:bg-muted/50",
-                  selectedWard?.id === ward.id ? "bg-primary/10 border-primary/20 shadow-sm" : ""
-                )}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold text-sm">{ward.name}</span>
-                  {ward.emergency_mode && <AlertOctagon className="w-4 h-4 text-red-500 animate-pulse" />}
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <div />
-                  <StatusBadge aqi={ward.aqi} size="sm" />
-                </div>
+
+          <div className="h-[280px] overflow-y-auto border-t border-border/50 p-2 space-y-1.5">
+            {filteredWards.length === 0 ? (
+              <div className="p-6 text-center text-xs text-muted-foreground italic">
+                {language === "hi" ? "कोई वर्ड नहीं मिला" : "No matching ward found"}
               </div>
-            ))}
+            ) : (
+              filteredWards.map(ward => (
+                <div 
+                  key={ward.id}
+                  onClick={() => setSelectedWardId(ward.id)}
+                  className={cn(
+                    "p-3 rounded-lg cursor-pointer transition-all border border-transparent hover:bg-muted/50",
+                    selectedWard?.id === ward.id ? "bg-primary/10 border-primary/20 shadow-sm" : ""
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-semibold text-sm">{ward.name}</span>
+                    {ward.emergency_mode && <AlertOctagon className="w-4 h-4 text-red-500 animate-pulse" />}
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="text-[10px] text-muted-foreground font-semibold">Ward #{ward.id}</span>
+                    <StatusBadge aqi={ward.aqi} size="sm" />
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </Card>
       </div>
@@ -114,30 +139,60 @@ export function AuthorityDashboard() {
             key={selectedWard.id}
             className="space-y-6"
           >
-            {/* Header Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="bg-gradient-to-br from-card to-muted/20 border-border/50">
-                <CardContent className="p-6">
-                  <div className="text-sm text-muted-foreground mb-1">
-                    {language === "hi" ? "वर्तमान AQI" : "Current AQI"}
+            {/* Header AQI & Authority Overview Row */}
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+              {/* Left: Colorful Citizen-Style AQI Score Card adapted for Authority */}
+              <div className="xl:col-span-8">
+                <AqiScoreCard
+                  title={`${selectedWard.name.toUpperCase()} (WARD #${selectedWard.id}) — REAL-TIME AQI`}
+                  aqi={selectedWard.aqi}
+                  pm25={selectedWard.pm25}
+                  pm10={selectedWard.pm10}
+                  no2={selectedWard.no2}
+                  o3={selectedWard.o3}
+                  so2={selectedWard.so2}
+                  className="h-full border-primary/20 shadow-sm"
+                />
+              </div>
+
+              {/* Right: Authority Compliance & Jurisdiction Card */}
+              <div className="xl:col-span-4 flex flex-col gap-4">
+                <Card className="flex-1 p-6 border-border shadow-sm bg-card rounded-2xl flex flex-col justify-between space-y-4">
+                  <div className="space-y-3">
+                    <div className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-widest flex items-center justify-between">
+                      <span>{t("intel.dominantSource")}</span>
+                      <Badge variant="outline" className="text-[10px] uppercase font-bold border-primary/30 text-primary">
+                        {selectedWard.aqi > 300 ? "GRAP STAGE III/IV" : selectedWard.aqi > 200 ? "GRAP STAGE II" : "GRAP STAGE I"}
+                      </Badge>
+                    </div>
+
+                    <div className="text-2xl font-black text-primary tracking-tight">
+                      {getLocalizedSource(selectedWard.dominant_source)}
+                    </div>
+
+                    <p className="text-xs text-muted-foreground font-medium leading-relaxed">
+                      {language === "hi" 
+                        ? `इस क्षेत्र में मुख्य प्रदूषण स्रोत ${getLocalizedSource(selectedWard.dominant_source)} है। प्राधिकरण द्वारा निवारक कदम लागू हैं।`
+                        : `Primary contributor for ${selectedWard.name}. Ward action protocols enforced.`}
+                    </p>
                   </div>
-                  <div className="text-4xl font-display font-bold text-foreground">{selectedWard.aqi}</div>
-                  <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                    <Activity className="w-3 h-3" /> {t("common.realtime")}
+
+                  <div className="pt-4 border-t border-border/60 grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase block">Compliance Score</span>
+                      <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                        {Math.max(0, 100 - Math.floor(selectedWard.aqi / 5))}/100
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase block">Active Controls</span>
+                      <span className="text-xl font-black text-blue-600 dark:text-blue-400">
+                        {selectedWard.active_controls?.length || 2} Enforced
+                      </span>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-gradient-to-br from-card to-muted/20 border-border/50">
-                <CardContent className="p-6">
-                  <div className="text-sm text-muted-foreground mb-1">{t("intel.dominantSource")}</div>
-                  <div className="text-2xl font-display font-bold text-primary truncate" title={selectedWard.dominant_source}>
-                    {getLocalizedSource(selectedWard.dominant_source)}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                    <TrendingDown className="w-3 h-3" /> {language === "hi" ? "शीर्ष योगदानकर्ता" : "Top Contributor"}
-                  </div>
-                </CardContent>
-              </Card>
+                </Card>
+              </div>
             </div>
 
             {/* Main Tabs */}

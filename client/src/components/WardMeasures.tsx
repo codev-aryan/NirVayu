@@ -7,6 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/lib/i18n";
+import { getOfficialGrapStage } from "@shared/grapRules";
 
 interface WardMeasuresData {
   measures: string[];
@@ -137,10 +138,32 @@ export function WardMeasures({ wardId, wardName }: WardMeasuresProps) {
               </span>
             </div>
 
+            {/* CAQM Official Citizen Charter (Revision: 21.11.2025) */}
+            <div className="border-t border-border/60 pt-3 space-y-2">
+              <div className="flex items-center justify-between flex-wrap gap-1">
+                <span className="text-xs font-extrabold text-foreground uppercase tracking-wider">
+                  {isHindi ? "CAQM GRAP नागरिक चार्टर (21.11.2025)" : "CAQM GRAP Citizen Charter (CAQM Rev: 21.11.2025)"}
+                </span>
+                {risk && (
+                  <Badge variant="outline" className={cn("text-[10px] font-bold uppercase", risk.color, risk.border, risk.bg)}>
+                    {data.aqiCategory} (AQI: {data.aqi})
+                  </Badge>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                {getOfficialGrapStage(data.aqi).citizenCharter.map((item, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs text-foreground/90 bg-muted/30 p-2 rounded-lg border border-border/40">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                    <span className="leading-snug">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <p className="text-[10px] text-muted-foreground">
               {isHindi
-                ? `✦ AI द्वारा लाइव AQI + PM2.5 + प्रदूषण स्रोत विश्लेषण · अपडेट समय ${new Date(data.generatedAt).toLocaleTimeString("hi-IN", { hour: "2-digit", minute: "2-digit" })}`
-                : `✦ Gemini analyzed live AQI + PM2.5 + source data · Updated ${new Date(data.generatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`}
+                ? `✦ AI द्वारा लाइव AQI + PM2.5 + CAQM GRAP (21.11.2025) दिशा-निर्देश · अपडेट समय ${new Date(data.generatedAt).toLocaleTimeString("hi-IN", { hour: "2-digit", minute: "2-digit" })}`
+                : `✦ CAQM GRAP Revision (21.11.2025) + Gemini live AQI analysis · Updated ${new Date(data.generatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`}
             </p>
           </div>
         ) : null}

@@ -1,5 +1,4 @@
-import fs from "fs";
-import path from "path";
+import rfTreesData from "./models/rf_trees.json";
 
 interface TreeData {
   children_left: number[];
@@ -14,22 +13,7 @@ interface ModelData {
   trees: TreeData[];
 }
 
-let modelData: ModelData | null = null;
-
-function loadModel(): ModelData | null {
-  if (modelData) return modelData;
-  try {
-    const jsonPath = path.join(process.cwd(), "server", "models", "rf_trees.json");
-    if (fs.existsSync(jsonPath)) {
-      const content = fs.readFileSync(jsonPath, "utf-8");
-      modelData = JSON.parse(content);
-      return modelData;
-    }
-  } catch (err) {
-    console.error("[RF Evaluator] Failed to load rf_trees.json:", err);
-  }
-  return null;
-}
+const modelData: ModelData = rfTreesData as ModelData;
 
 function evaluateTree(tree: TreeData, featureValues: number[]): number {
   let node = 0;
@@ -53,8 +37,7 @@ export function predictWithRandomForest(input: {
   co: number;
   timestamp?: string;
 }): number[] | null {
-  const model = loadModel();
-  if (!model) return null;
+  if (!modelData || !modelData.trees || modelData.trees.length === 0) return null;
 
   const now = input.timestamp ? new Date(input.timestamp) : new Date();
   const startOfYear = new Date(now.getFullYear(), 0, 0);
@@ -84,10 +67,10 @@ export function predictWithRandomForest(input: {
     ];
 
     let sum = 0;
-    for (const tree of model.trees) {
+    for (const tree of modelData.trees) {
       sum += evaluateTree(tree, featureValues);
     }
-    const avg = sum / model.trees.length;
+    const avg = sum / modelData.trees.length;
     hourlyPredictions.push(Math.max(0, Math.round(avg)));
   }
 

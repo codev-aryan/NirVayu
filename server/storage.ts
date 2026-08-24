@@ -47,6 +47,41 @@ const AQI_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 const TMP_REPORTS_FILE = path.join(os.tmpdir(), "nirvayu_reports.json");
 
+const INITIAL_SEED_REPORTS: Report[] = [
+  {
+    id: 1,
+    wardId: 153,
+    pollutionType: "Open Garbage Fire",
+    latitude: 28.6471,
+    longitude: 77.3811,
+    timestamp: new Date(Date.now() - 3600000),
+    mediaHash: "0x8f4a2b1c9d3e5f7a6b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a",
+    txHash: null,
+    verified: true,
+    imageUrl: "https://images.unsplash.com/photo-1611273426858-450d8e3c9fce?auto=format&fit=crop&w=600&q=80",
+    status: "pending",
+    description: "Open waste and trash burning releasing dense toxic smoke near ward intersection",
+    aiConfidence: 98,
+    aiExplanation: "AI Vision identified open garbage combustion emitting heavy particulate smoke."
+  },
+  {
+    id: 2,
+    wardId: 15,
+    pollutionType: "Vehicle Exhaust Smog",
+    latitude: 28.6508,
+    longitude: 77.3152,
+    timestamp: new Date(Date.now() - 7200000),
+    mediaHash: "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
+    txHash: null,
+    verified: true,
+    imageUrl: "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=600&q=80",
+    status: "working",
+    description: "Heavy diesel vehicle congestion causing thick exhaust fumes along arterial transit corridor",
+    aiConfidence: 94,
+    aiExplanation: "AI Vision detected dense vehicular exhaust and heavy traffic congestion smog."
+  }
+];
+
 function loadReportsFromTmp(): Map<number, Report> {
   if (global.__globalReportsMap && global.__globalReportsMap.size > 0) {
     return global.__globalReportsMap;
@@ -63,6 +98,19 @@ function loadReportsFromTmp(): Map<number, Report> {
   } catch (e) {
     console.error("[Storage] Failed to read /tmp/nirvayu_reports.json", e);
   }
+
+  // Populate seed reports on cold start so refreshing page never results in empty state
+  if (map.size === 0) {
+    for (const r of INITIAL_SEED_REPORTS) {
+      map.set(r.id, r);
+    }
+    try {
+      fs.writeFileSync(TMP_REPORTS_FILE, JSON.stringify(Array.from(map.values()), null, 2), "utf-8");
+    } catch {
+      // ignore
+    }
+  }
+
   global.__globalReportsMap = map;
   return map;
 }

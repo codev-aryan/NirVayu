@@ -38,7 +38,12 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
               <span className="font-display font-bold text-xl hidden md:inline">{t("app.title")}</span>
             </Link>
             <div className="h-6 w-[1px] bg-border mx-2" />
-            <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            <span className={cn(
+              "text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full border",
+              role === "citizen" 
+                ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300" 
+                : "bg-blue-100 text-blue-900 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300"
+            )}>
               {role === "citizen" ? t("nav.citizen") : t("nav.authority")}
             </span>
           </div>

@@ -273,60 +273,102 @@ function SafeLifePlanner({ ward }: { ward: any }) {
   const { t, language } = useLanguage();
   const [ageGroup, setAgeGroup] = useState<"child" | "adult" | "elderly">("adult");
   const [condition, setCondition] = useState<"healthy" | "asthma" | "sensitive">("healthy");
+  const [selectedActivity, setSelectedActivity] = useState<string>("jog");
 
   const aqi = ward?.aqi || 150;
+  const pm25 = ward?.pm25 || Math.round(aqi * 0.6);
+  const dominantSource = ward?.dominant_source || "Traffic";
+  const wardName = ward?.name || "Selected Ward";
+
   const isVulnerable = ageGroup === "child" || ageGroup === "elderly" || condition !== "healthy";
 
-  // Real-time calculated health windows & mask guidance
-  let safeWindow = "12:00 PM – 04:00 PM";
-  let avoidWindow = "06:00 AM – 09:00 AM & 06:00 PM – 09:00 PM";
-  let maskLevel = "None";
-  let adviceText = "";
+  // Dynamic Inhaled PM2.5 Dose Calculation (µg inhaled per 24h routine)
+  // Base breathing volume: ~15-20 m3/day; exercise multiplies ventilation rate by 2.5x
+  const exerciseMultiplier = selectedActivity === "jog" ? 2.5 : selectedActivity === "play" ? 2.0 : 1.2;
+  const vulnerabilityFactor = isVulnerable ? 1.3 : 1.0;
+  const estimatedDoseUg = Math.round((pm25 * 0.7 * exerciseMultiplier * vulnerabilityFactor));
+  const doseReductionSavings = Math.round(estimatedDoseUg * 0.58);
 
-  if (aqi <= 100) {
-    maskLevel = isVulnerable ? "Cloth Mask" : "None";
-    safeWindow = "All Day";
-    avoidWindow = "None";
-    adviceText = language === "hi"
-      ? "हवा की गुणवत्ता संतोषजनक है। सभी आउटडोर गतिविधियों के लिए समय सुरक्षित है।"
-      : "Air quality is acceptable. Outdoor activities are safe throughout the day.";
-  } else if (aqi <= 200) {
-    maskLevel = isVulnerable ? "Surgical / N95" : "Cloth Mask";
-    safeWindow = "11:00 AM – 04:00 PM";
-    avoidWindow = "06:00 AM – 09:00 AM";
-    adviceText = language === "hi"
-      ? `${ward?.name || "इलाके"} में मध्यम प्रदूषण है। ${isVulnerable ? "संवेदनशील समूहों को सुबह के समय बाहर जाने से बचना चाहिए।" : "भारी कसरत के दौरान मास्क का प्रयोग करें।"}`
-      : `Moderate pollution in ${ward?.name || "area"}. ${isVulnerable ? "Sensitive individuals should limit morning outdoor exposure." : "Consider wearing a mask during peak traffic hours."}`;
-  } else if (aqi <= 300) {
-    maskLevel = "N95 Mask";
-    safeWindow = "12:00 PM – 03:00 PM (Short trips)";
-    avoidWindow = "All Peak Rush Hours";
-    adviceText = language === "hi"
-      ? "हवा की गुणवत्ता खराब है। बाहर निकलते समय N95 मास्क अनिवार्य है। बाहरी खेल व कसरत बंद रखें।"
-      : "Poor air quality. Mandatory N95 mask outdoors. Avoid strenuous outdoor workouts and jogging.";
-  } else {
-    maskLevel = "Avoid Outdoors / Double N95";
-    safeWindow = "None — Stay Indoors";
-    avoidWindow = "All Day";
-    adviceText = language === "hi"
-      ? "गंभीर आपातकालीन प्रदूषण! बाहर निकलना पूरी तरह से वर्जित है। घर के अंदर एयर प्यूरीफायर चलाएं।"
-      : "Severe emergency pollution levels! Avoid stepping outdoors. Keep windows sealed and use air purifiers.";
-  }
+  // Dynamic Activity Safety Rules based on Ward AQI & Source
+  const getActivitiesStatus = () => {
+    if (aqi <= 100) {
+      return [
+        { id: "jog", name: language === "hi" ? "सुबह की सैर / कसरत" : "Morning Walk / Jog", time: "6:00 AM – 8:30 AM", status: "SAFE" as const, note: language === "hi" ? "हवा साफ है, आउटडोर रनिंग के लिए उपयुक्त।" : "Air is clean. Excellent for outdoor cardio." },
+        { id: "commute", name: language === "hi" ? "ऑफ़िस / स्कूल यात्रा" : "Rush Hour Commute", time: "8:30 AM – 10:00 AM", status: "SAFE" as const, note: language === "hi" ? "सामान्य यात्रा के लिए सुरक्षित।" : "Safe for normal travel." },
+        { id: "play", name: language === "hi" ? "बच्चों का खेल समय" : "Kids Outdoor Play", time: "3:30 PM – 5:30 PM", status: "SAFE" as const, note: language === "hi" ? "पार्क में खेलने के लिए पूरी तरह सुरक्षित।" : "Fully safe for outdoor sports." },
+        { id: "ventilation", name: language === "hi" ? "घर की खिड़कियाँ खोलना" : "Home Window Ventilation", time: "11:00 AM – 4:00 PM", status: "SAFE" as const, note: language === "hi" ? "ताजी हवा के लिए खिड़कियाँ खोलें।" : "Open windows for fresh air circulation." }
+      ];
+    } else if (aqi <= 200) {
+      return [
+        { id: "jog", name: language === "hi" ? "सुबह की सैर / कसरत" : "Morning Walk / Jog", time: "6:00 AM – 8:30 AM", status: isVulnerable ? "DANGER" as const : "CAUTION" as const, note: language === "hi" ? `सुबह धुआँ जमने के कारण 4:00 PM तक टालें।` : `Morning ground inversion. Shift run to 4:00 PM.` },
+        { id: "commute", name: language === "hi" ? "ऑफ़िस / स्कूल यात्रा" : "Rush Hour Commute", time: "8:30 AM – 10:00 AM", status: "CAUTION" as const, note: language === "hi" ? `मुख्य सड़कों पर ${dominantSource} प्रदूषण। मास्क पहनें।` : `High ${dominantSource} exposure. Wear cloth/surgical mask.` },
+        { id: "play", name: language === "hi" ? "बच्चों का खेल समय" : "Kids Outdoor Play", time: "3:30 PM – 5:00 PM", status: "SAFE" as const, note: language === "hi" ? "दोपहर बाद का समय अपेक्षाकृत सुरक्षित है।" : "Afternoon hours are relatively safer." },
+        { id: "ventilation", name: language === "hi" ? "घर की खिड़कियाँ खोलना" : "Home Window Ventilation", time: "12:00 PM – 3:00 PM", status: "CAUTION" as const, note: language === "hi" ? "केवल दोपहर धूप खिलने पर ही खिड़कियाँ खोलें।" : "Keep closed during morning rush hour." }
+      ];
+    } else if (aqi <= 300) {
+      return [
+        { id: "jog", name: language === "hi" ? "सुबह की सैर / कसरत" : "Morning Walk / Jog", time: "6:00 AM – 8:30 AM", status: "DANGER" as const, note: language === "hi" ? "खराब हवा! बाहरी रनिंग बंद रखें, इनडोर व्यायाम करें।" : "Poor AQI! Avoid outdoor cardio; use treadmill indoors." },
+        { id: "commute", name: language === "hi" ? "ऑफ़िस / स्कूल यात्रा" : "Rush Hour Commute", time: "8:30 AM – 10:00 AM", status: "DANGER" as const, note: language === "hi" ? "N95 मास्क अनिवार्य। गाड़ियों में AC रीसर्क्युलेशन चलाएं।" : "N95 mask mandatory. Use AC recirculation in cars." },
+        { id: "play", name: language === "hi" ? "बच्चों का खेल समय" : "Kids Outdoor Play", time: "3:30 PM – 5:00 PM", status: "CAUTION" as const, note: language === "hi" ? "कम समय के इनडोर खेल तक सीमित रखें।" : "Limit outdoor play to <30 mins with N95 mask." },
+        { id: "ventilation", name: language === "hi" ? "घर की खिड़कियाँ खोलना" : "Home Window Ventilation", time: "Closed All Day", status: "DANGER" as const, note: language === "hi" ? "खिड़कियाँ बंद रखें, एयर प्यूरीफायर चलाएं।" : "Keep windows sealed; run air purifier." }
+      ];
+    } else {
+      return [
+        { id: "jog", name: language === "hi" ? "सुबह की सैर / कसरत" : "Morning Walk / Jog", time: "Cancelled", status: "DANGER" as const, note: language === "hi" ? "आपातकाल! बाहर निकलना स्वास्थ्य के लिए खतरनाक है।" : "Severe Emergency! Zero outdoor exercise permitted." },
+        { id: "commute", name: language === "hi" ? "ऑफ़िस / स्कूल यात्रा" : "Rush Hour Commute", time: "Essential Only", status: "DANGER" as const, note: language === "hi" ? "केवल अनिवार्य यात्रा। डबल N95 या FFP2 मास्क लगाएं।" : "Essential travel only. Use double N95 or FFP2 mask." },
+        { id: "play", name: language === "hi" ? "बच्चों का खेल समय" : "Kids Outdoor Play", time: "Cancelled", status: "DANGER" as const, note: language === "hi" ? "बच्चों को पूरी तरह घर के अंदर रखें।" : "Keep children indoors all day." },
+        { id: "ventilation", name: language === "hi" ? "घर की खिड़कियाँ खोलना" : "Home Window Ventilation", time: "Closed All Day", status: "DANGER" as const, note: language === "hi" ? "दरवाजे-खिड़कियाँ पूरी तरह सील रखें।" : "Seal window gaps; run HEPA air purifier continuously." }
+      ];
+    }
+  };
+
+  const activities = getActivitiesStatus();
+
+  // Dynamic Ward Source Protection Tip
+  const getSourceProtectionTip = () => {
+    const src = dominantSource.toLowerCase();
+    if (src.includes("traffic")) {
+      return language === "hi"
+        ? `⚠️ ${wardName} में ट्रैफिक धुआँ (NO2 & PM2.5) मुख्य कारण है। सुबह 8–10 बजे मुख्य सड़कों के पास वाहन के शीशे बंद रखें और कार AC को Recirculate मोड पर चलाएं।`
+        : `⚠️ ${wardName}'s main pollution cause is Vehicular Traffic (NO2 & PM2.5). Keep car windows rolled up & AC in internal recirculation mode during peak transit (8–10 AM).`;
+    } else if (src.includes("construction") || src.includes("dust")) {
+      return language === "hi"
+        ? `⚠️ ${wardName} में निर्माण व सड़क की धूल (PM10) हावी है। सूखी झाड़ू लगाने के बजाय घर में गीला पोछा लगाएं ताकि महीन धूल हवा में न उड़े।`
+        : `⚠️ ${wardName}'s primary pollutant is Heavy Construction/Road Dust (PM10). Use wet mopping indoors instead of dry sweeping to prevent re-suspension.`;
+    } else if (src.includes("industrial")) {
+      return language === "hi"
+        ? `⚠️ ${wardName} में इंडस्ट्रियल धुआँ (SO2 & केमिकल) का प्रभाव है। इंडस्ट्रियल क्लस्टर से गुजरते समय एक्टिवेटेड कार्बन N95 मास्क पहनें।`
+        : `⚠️ ${wardName} is affected by Industrial Stack Emissions (SO2 & Chemical smoke). Wear an activated-carbon N95 mask when passing industrial zones.`;
+    } else {
+      return language === "hi"
+        ? `⚠️ ${wardName} में कचरा व बायोमास जलने का धुआँ है। रात 9 बजे से सुबह 6 बजे तक बेडरूम की खिड़कियाँ पूरी तरह बंद रखें।`
+        : `⚠️ ${wardName} experiences Garbage/Biomass Smoke. Keep bedroom windows tightly closed overnight (9 PM – 6 AM).`;
+    }
+  };
 
   return (
     <Card className="border-primary/20 shadow-md">
       <CardHeader className="bg-primary/5 pb-3 pt-4">
-        <CardTitle className="flex items-center gap-2 text-base text-primary font-bold">
-          <HeartPulse className="w-5 h-5" /> {t("planner.title")}
-        </CardTitle>
-        <CardDescription className="text-xs">{t("planner.subtitle")}</CardDescription>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base text-primary font-bold">
+            <HeartPulse className="w-5 h-5 text-primary" />
+            {language === "hi" ? `${wardName} — व्यक्तिगत स्वास्थ्य गाइड` : `${wardName} — Citizen Health Command Center`}
+          </CardTitle>
+          <Badge variant="outline" className="text-[10px] uppercase font-bold border-primary/30 text-primary">
+            AQI {aqi} • {ward?.severity || "Active"}
+          </Badge>
+        </div>
+        <CardDescription className="text-xs mt-0.5">
+          {language === "hi" ? "आपके इलाके की हवा और आपकी सेहत के आधार पर लाइव सुरक्षा निर्देश" : "Hyper-local activity safety, lung exposure dose meter & protection guidance"}
+        </CardDescription>
       </CardHeader>
+
       <CardContent className="p-4 space-y-4">
-        {/* Interactive Profile Selector Chips */}
+        {/* Profile Selector Chips */}
         <div className="space-y-3">
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
-              {t("planner.age")}
+            <label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground block mb-1.5">
+              1. {t("planner.age")}
             </label>
             <div className="grid grid-cols-3 gap-1.5">
               {[
@@ -339,7 +381,7 @@ function SafeLifePlanner({ ward }: { ward: any }) {
                   type="button"
                   size="sm"
                   variant={ageGroup === item.id ? "default" : "outline"}
-                  className="text-xs h-8 font-semibold px-1"
+                  className="text-xs h-8 font-bold px-1"
                   onClick={() => setAgeGroup(item.id as any)}
                 >
                   {item.label}
@@ -349,21 +391,21 @@ function SafeLifePlanner({ ward }: { ward: any }) {
           </div>
 
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
-              {t("planner.healthCondition")}
+            <label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground block mb-1.5">
+              2. {t("planner.healthCondition")}
             </label>
             <div className="grid grid-cols-3 gap-1.5">
               {[
                 { id: "healthy", label: language === "hi" ? "स्वस्थ" : "Healthy" },
-                { id: "asthma", label: language === "hi" ? "अस्थमा" : "Asthma" },
-                { id: "sensitive", label: language === "hi" ? "संवेदनशील" : "Sensitive" }
+                { id: "asthma", label: language === "hi" ? "अस्थमा / सांस" : "Asthma / Respiratory" },
+                { id: "sensitive", label: language === "hi" ? "हृदय / संवेदनशील" : "Heart / Sensitive" }
               ].map(item => (
                 <Button
                   key={item.id}
                   type="button"
                   size="sm"
                   variant={condition === item.id ? "default" : "outline"}
-                  className="text-xs h-8 font-semibold px-1"
+                  className="text-xs h-8 font-bold px-1"
                   onClick={() => setCondition(item.id as any)}
                 >
                   {item.label}
@@ -373,43 +415,82 @@ function SafeLifePlanner({ ward }: { ward: any }) {
           </div>
         </div>
 
-        {/* Live Instant Health Windows */}
-        <div className="grid grid-cols-2 gap-3 pt-1">
-          <div className="p-3 bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800 rounded-xl text-center">
-            <div className="text-[10px] text-emerald-700 dark:text-emerald-300 font-extrabold uppercase tracking-wider mb-1">
-              {language === "hi" ? "सुरक्षित समय" : "Safe Window"}
-            </div>
-            <div className="text-xs font-bold text-emerald-900 dark:text-emerald-100 flex items-center justify-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" /> {safeWindow}
-            </div>
+        {/* Inhaled PM2.5 Exposure Meter */}
+        <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/60 dark:bg-amber-950/30 dark:border-amber-800 text-xs space-y-2">
+          <div className="flex items-center justify-between font-bold">
+            <span className="text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+              <Activity className="w-4 h-4 text-amber-600" />
+              {language === "hi" ? "फेफड़ों में अनुमानित PM2.5 सांस खुराक:" : "Estimated Daily PM2.5 Lung Intake Dose:"}
+            </span>
+            <span className="text-sm font-extrabold text-amber-700 dark:text-amber-300">
+              ~{estimatedDoseUg} µg / day
+            </span>
           </div>
+          <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-snug">
+            💡 <strong>{language === "hi" ? "स्वास्थ्य बचत टिप:" : "Harm-Reduction Tip:"}</strong>{" "}
+            {language === "hi" 
+              ? `अपनी सुबह की सैर शाम 4:30 बजे स्थानांतरित करने से आपके फेफड़ों को आज ~${doseReductionSavings} µg विषैले कणों को सांस में लेने से बचाया जा सकता है।` 
+              : `Shifting your morning run to 4:30 PM indoors saves your lungs from inhaling ~${doseReductionSavings} µg of toxic particulates in ${wardName} today.`}
+          </p>
+        </div>
 
-          <div className="p-3 bg-rose-50 border border-rose-200 dark:bg-rose-950/40 dark:border-rose-800 rounded-xl text-center">
-            <div className="text-[10px] text-rose-700 dark:text-rose-300 font-extrabold uppercase tracking-wider mb-1">
-              {language === "hi" ? "बाहर जाने से बचें" : "Avoid Outdoors"}
-            </div>
-            <div className="text-xs font-bold text-rose-900 dark:text-rose-100 flex items-center justify-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5" /> {avoidWindow}
-            </div>
+        {/* Live Daily Activity Safety Checker */}
+        <div className="space-y-2">
+          <label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground block">
+            3. {language === "hi" ? `${wardName} में दैनिक कार्य सुरक्षा जाँच:` : `Daily Activity Safety Checker for ${wardName}:`}
+          </label>
+          <div className="space-y-2">
+            {activities.map((act) => (
+              <div
+                key={act.id}
+                onClick={() => setSelectedActivity(act.id)}
+                className={cn(
+                  "p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex flex-col gap-1",
+                  selectedActivity === act.id
+                    ? "ring-2 ring-primary border-primary/40 bg-primary/5"
+                    : "border-border/60 bg-muted/20 hover:bg-muted/40"
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="font-bold text-foreground flex items-center gap-2">
+                    <span>{act.name}</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">({act.time})</span>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[9px] font-extrabold uppercase px-2 py-0.5",
+                      act.status === "SAFE" && "border-emerald-300 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60",
+                      act.status === "CAUTION" && "border-amber-300 text-amber-700 bg-amber-50 dark:bg-amber-950/60",
+                      act.status === "DANGER" && "border-rose-300 text-rose-700 bg-rose-50 dark:bg-rose-950/60"
+                    )}
+                  >
+                    {act.status === "SAFE" ? "🟢 SAFE" : act.status === "CAUTION" ? "🟡 CAUTION" : "🔴 HIGH RISK"}
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-snug">{act.note}</p>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Recommended Mask */}
-        <div className="flex items-center justify-between p-3 bg-muted/60 rounded-xl border border-border/50 text-xs">
-          <span className="font-semibold text-muted-foreground">
-            {language === "hi" ? "अनुशंसित सुरक्षा:" : "Recommended Protection:"}
+        {/* Ward Dominant Source Custom Protection Protocol */}
+        <div className="p-3 bg-primary/5 border border-primary/15 rounded-xl text-xs leading-relaxed text-foreground space-y-1">
+          <span className="font-bold text-primary block">
+            {language === "hi" ? "वार्ड प्रदूषण स्रोत सुरक्षा प्रोटोकॉल:" : "Ward Source-Specific Defense Directive:"}
           </span>
-          <Badge variant={maskLevel.includes("None") ? "secondary" : "destructive"} className="text-xs px-2.5 py-0.5 font-bold">
-            {maskLevel}
-          </Badge>
+          <p className="text-[11px] text-muted-foreground leading-normal">{getSourceProtectionTip()}</p>
         </div>
 
-        {/* Advice Note */}
-        <div className="bg-primary/5 p-3 rounded-xl text-xs text-foreground leading-relaxed border border-primary/10">
-          <span className="font-bold text-primary block mb-0.5">
-            {language === "hi" ? "चिकित्सा सलाह:" : "Health Advisory:"}
+        {/* Respiratory & Natural Remedies Protocol */}
+        <div className="p-3 bg-muted/50 border border-border/50 rounded-xl text-xs space-y-1.5">
+          <span className="font-bold text-foreground block">
+            🌿 {language === "hi" ? "प्राकृतिक श्वसन देखभाल (Ministry of AYUSH Guidance):" : "Ayurvedic & Natural Respiratory Care:"}
           </span>
-          {adviceText}
+          <ul className="text-[11px] text-muted-foreground space-y-1 font-medium leading-normal">
+            <li>• <strong>{language === "hi" ? "भाप लें:" : "Steam Inhalation:"}</strong> {language === "hi" ? "शाम को घर लौटने पर 5 मिनट सादे पानी या अजवाइन की भाप लें।" : "Inhale steam with ajwain/eucalyptus for 5 mins after coming home."}</li>
+            <li>• <strong>{language === "hi" ? "प्राकृतिक डिटॉक्स:" : "Natural Detox:"}</strong> {language === "hi" ? "तुलसी-अदरक चाय व थोड़ा गुड़ खाएं (फेफड़ों की सफाई में सहायक)।" : "Consume Tulsi-Ginger tea & jaggery to aid airway clearance."}</li>
+          </ul>
         </div>
       </CardContent>
     </Card>

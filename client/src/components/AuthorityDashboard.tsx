@@ -186,14 +186,14 @@ export function AuthorityDashboard() {
             <div className="space-y-10 pt-2">
               {/* Feature 1: AI Intelligence & GRAP Enforcement Plan */}
               <div className="space-y-4 pt-2">
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white shadow-md flex items-center justify-between">
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm text-white flex items-center justify-center font-bold shrink-0">
-                      <BrainCircuit className="w-6 h-6" />
+                <div className="p-4 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/60 border-l-4 border-l-blue-600 flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold shrink-0">
+                      <BrainCircuit className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-base font-black tracking-tight text-white">AI Intelligence & GRAP Enforcement Plan</h3>
-                      <p className="text-xs text-blue-100 font-medium mt-0.5">ML pollutant diagnosis, 7-day operational schedule & mandatory GRAP actions</p>
+                      <h3 className="text-sm font-bold tracking-tight text-foreground">AI Intelligence & GRAP Enforcement Plan</h3>
+                      <p className="text-xs text-muted-foreground font-medium">ML pollutant diagnosis, 7-day operational schedule & mandatory GRAP actions</p>
                     </div>
                   </div>
                 </div>
@@ -202,14 +202,14 @@ export function AuthorityDashboard() {
 
               {/* Feature 2: Interactive Policy Impact Simulator Sandbox */}
               <div className="space-y-4 pt-6 border-t border-border/60">
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-violet-600 via-purple-700 to-indigo-800 text-white shadow-md flex items-center justify-between">
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm text-white flex items-center justify-center font-bold shrink-0">
-                      <BarChart3 className="w-6 h-6" />
+                <div className="p-4 rounded-xl bg-violet-50/80 dark:bg-violet-950/30 border border-violet-200/80 dark:border-violet-800/60 border-l-4 border-l-violet-600 flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-violet-600/10 text-violet-600 dark:text-violet-400 flex items-center justify-center font-bold shrink-0">
+                      <BarChart3 className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-base font-black tracking-tight text-white">Interactive Policy Impact Simulator</h3>
-                      <p className="text-xs text-violet-100 font-medium mt-0.5">Test traffic rationing, misting & construction halts with instant projected AQI</p>
+                      <h3 className="text-sm font-bold tracking-tight text-foreground">Interactive Policy Impact Simulator</h3>
+                      <p className="text-xs text-muted-foreground font-medium">Test traffic rationing, misting & construction halts with instant projected AQI</p>
                     </div>
                   </div>
                 </div>
@@ -218,14 +218,14 @@ export function AuthorityDashboard() {
 
               {/* Feature 3: Citizen Pollution Reports & Action Feed */}
               <div className="space-y-4 pt-6 border-t border-border/60">
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-700 to-cyan-800 text-white shadow-md flex items-center justify-between">
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm text-white flex items-center justify-center font-bold shrink-0">
-                      <Clock className="w-6 h-6" />
+                <div className="p-4 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 border-l-4 border-l-emerald-600 flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
+                      <Clock className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-base font-black tracking-tight text-white">Citizen Reports & Verified Field Audit</h3>
-                      <p className="text-xs text-emerald-100 font-medium mt-0.5">Live photo submissions with AI classification & location-based action tracking</p>
+                      <h3 className="text-sm font-bold tracking-tight text-foreground">Citizen Reports & Verified Field Audit</h3>
+                      <p className="text-xs text-muted-foreground font-medium">Live photo submissions with AI classification & location-based action tracking</p>
                     </div>
                   </div>
                 </div>

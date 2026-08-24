@@ -476,14 +476,10 @@ function IntelligencePanel({ wardId }: { wardId: number }) {
 function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
   const { t, language } = useLanguage();
   const { data: dbReports, isLoading: loadingDb } = useAllReports();
-  const { data: chainReports, isLoading: loadingChain } = useBlockchainLedger();
   const actionMutation = useUpdateReportAction();
-  const deleteMutation = useDeleteReportLocal();
-  const restoreMutation = useRestoreReport();
   const { toast } = useToast();
 
-  // Only show spinner on very first load (no data yet), not on background refetches
-  if ((loadingDb && !dbReports) || (loadingChain && !chainReports)) {
+  if (loadingDb && !dbReports) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -493,12 +489,6 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
   }
 
   const reports = dbReports || [];
-  const ledger = chainReports || [];
-
-  const dbHashes = new Set(reports.map(r => r.mediaHash));
-  const missingReports = ledger.filter(ledgerItem => {
-    return !dbHashes.has(ledgerItem.hash) && ledgerItem.metadata;
-  });
 
   const handleAction = (id: number, status: string) => {
     actionMutation.mutate(
@@ -512,30 +502,6 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
         }
       }
     );
-  };
-
-  const handleSimulateTampering = (id: number) => {
-    deleteMutation.mutate(id, {
-      onSuccess: () => {
-        toast({
-          title: "Mediator Deletion Simulated",
-          description: "The report has been deleted from the database. View the blockchain audit alert below.",
-          variant: "destructive"
-        });
-      }
-    });
-  };
-
-  const handleRestore = (ledgerItem: any) => {
-    if (!ledgerItem.metadata) return;
-    restoreMutation.mutate(ledgerItem.metadata, {
-      onSuccess: () => {
-        toast({
-          title: "Database Record Restored",
-          description: "The report record has been successfully recovered from the immutable blockchain ledger.",
-        });
-      }
-    });
   };
 
   return (
@@ -651,17 +617,7 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
                 </CardContent>
 
                 {/* Footer Action Buttons */}
-                <div className="p-4 pt-0 border-t border-border/40 mt-auto flex flex-wrap gap-2 justify-between bg-muted/10">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleSimulateTampering(report.id)}
-                    disabled={deleteMutation.isPending}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 font-semibold text-xs flex items-center gap-1 px-2.5 h-8 border-red-200"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    {language === "hi" ? "छेड़छाड़ सिमुलेट करें" : "Simulate Deletion"}
-                  </Button>
+                <div className="p-4 pt-0 border-t border-border/40 mt-auto flex flex-wrap gap-2 justify-end bg-muted/10">
 
                   {report.status !== "resolved" && (
                     <div className="flex gap-2">

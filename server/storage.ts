@@ -504,10 +504,10 @@ export class MemStorage implements IStorage {
       const center = turf.centroid(feature);
       const [lng, lat] = center.geometry.coordinates;
  
-      // Deterministic realistic pollution values based on ward ID
-      const aqi = 150 + ((id * 31) % 200); // 150 to 350
-      const pm25 = Math.round(aqi * 0.6);
-      const pm10 = Math.round(aqi * 0.8);
+      // Calibrated initial seed pollution values (145 to 165) until live API fetch completes
+      const aqi = 145 + ((id * 7) % 20); // 145 to 165 baseline
+      const pm25 = Math.round(aqi * 0.55);
+      const pm10 = Math.round(aqi * 0.75);
       const no2 = Math.round(aqi * 0.1);
       const so2 = Math.round(aqi * 0.05);
       const co = Math.round(aqi * 0.02 * 10) / 10;

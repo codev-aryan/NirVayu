@@ -182,6 +182,19 @@ Return ONLY a JSON object:
             classification = parsed.classification || "other";
             confidence = typeof parsed.confidence === "number" ? parsed.confidence : parseInt(parsed.confidence) || 75;
             explanation = parsed.explanation || "AI analyzed the image.";
+
+            // Refine generic "other" into specific human-readable pollution source names
+            if (classification === "other") {
+              const expLower = (explanation + " " + (data.description || "")).toLowerCase();
+              if (expLower.includes("garbage") || expLower.includes("trash") || expLower.includes("waste") || expLower.includes("plastic") || expLower.includes("burning") || expLower.includes("fire") || expLower.includes("bonfire")) {
+                classification = "Waste & Garbage Burning";
+              } else if (expLower.includes("factory") || expLower.includes("industrial") || expLower.includes("chimney") || expLower.includes("kiln") || expLower.includes("smoke") || expLower.includes("power plant")) {
+                classification = "Industrial & Factory Smoke";
+              } else {
+                classification = "Industrial / Waste Burning";
+              }
+            }
+
             aiAnalysisStatus = "ai";
             geminiSuccess = true;
             console.log(`[Gemini AI] Model: ${modelName} | Classification: ${classification}, Confidence: ${confidence}%`);

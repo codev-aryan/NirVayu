@@ -430,7 +430,7 @@ function IntelligencePanel({ wardId }: { wardId: number }) {
                 {officialGrap.stage === "No GRAP Required"
                   ? <ShieldCheck className="w-5 h-5 text-emerald-500" />
                   : <AlertOctagon className="w-5 h-5 text-red-500" />}
-                GRAP Enforcement Actions (CAQM Revision: 21.11.2025)
+                GRAP Enforcement Actions
               </CardTitle>
               <CardDescription className="text-xs mt-1">
                 Official CAQM Graded Response Action Plan for {ward.name} (AQI: {ward.aqi})

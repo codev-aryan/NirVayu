@@ -61,19 +61,19 @@ export function AuthorityDashboard() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0">
-      {/* LEFT: Ward List & Map */}
-      <div className="lg:col-span-4 flex flex-col gap-6 min-h-0 overflow-y-auto">
+      {/* LEFT: Ward List & Map (Compact & Sticky) */}
+      <div className="lg:col-span-4 flex flex-col gap-4 self-start lg:sticky lg:top-20">
         <div className="flex items-center justify-between px-1">
           <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider flex items-center gap-1">
             <Activity className="w-3 h-3" /> {t("authority.lastUpdated")}: {new Date(lastUpdated).toLocaleTimeString()}
           </div>
         </div>
 
-        <Card className="flex-1 flex flex-col border-border/50 shadow-lg bg-card/50 backdrop-blur-sm">
+        <Card className="flex flex-col border-border/50 shadow-md bg-card/60 backdrop-blur-sm overflow-hidden">
           <CardHeader className="pb-3 space-y-2">
             <CardTitle className="flex items-center justify-between">
               <span>{t("authority.wardMonitor")}</span>
-              <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">
+              <span className="text-xs font-normal text-muted-foreground bg-muted px-2.5 py-0.5 rounded-full">
                 {filteredWards.length} {t("common.active")}
               </span>
             </CardTitle>
@@ -91,16 +91,18 @@ export function AuthorityDashboard() {
             </div>
           </CardHeader>
 
-          <div className="flex-1 relative min-h-[260px]">
+          {/* Map with fixed compact height */}
+          <div className="h-[220px] relative px-3 pb-1">
             <WardMap 
               wards={wards} 
               selectedWardId={selectedWard?.id} 
               onSelectWard={setSelectedWardId}
-              className="absolute inset-0 m-4 rounded-xl border border-border"
+              className="w-full h-full rounded-xl border border-border"
             />
           </div>
 
-          <div className="h-[280px] overflow-y-auto border-t border-border/50 p-2 space-y-1.5">
+          {/* Ward List */}
+          <div className="h-[260px] overflow-y-auto border-t border-border/50 p-2 space-y-1.5">
             {filteredWards.length === 0 ? (
               <div className="p-6 text-center text-xs text-muted-foreground italic">
                 {language === "hi" ? "कोई वर्ड नहीं मिला" : "No matching ward found"}
@@ -195,61 +197,52 @@ export function AuthorityDashboard() {
               </div>
             </div>
 
-            {/* UNIFIED ALL-IN-ONE OPERATIONS DASHBOARD (ALL MODULES VISIBLE SIMULTANEOUSLY) */}
+            {/* UNIFIED CONTINUOUS OPERATIONS DASHBOARD */}
             <div className="space-y-10 pt-2">
-              {/* MODULE 1: AI Intelligence & GRAP Protocol Plan */}
-              <div className="space-y-4 pt-2 border-t border-border/40">
-                <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                      <BrainCircuit className="w-4 h-4" />
+              {/* Feature 1: AI Intelligence & GRAP Enforcement Plan */}
+              <div className="space-y-4 pt-2">
+                <div className="p-4 rounded-xl bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-transparent border-l-4 border-l-blue-500 flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+                      <BrainCircuit className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-foreground">AI Intelligence & GRAP Enforcement Plan</h3>
-                      <p className="text-xs text-muted-foreground">ML pollutant diagnosis, 7-day schedule & mandatory GRAP enforcement actions</p>
+                      <h3 className="text-base font-bold text-foreground tracking-tight">AI Intelligence & GRAP Enforcement Plan</h3>
+                      <p className="text-xs text-muted-foreground font-medium">ML pollutant diagnosis, 7-day operational schedule & mandatory GRAP actions</p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-[10px] uppercase font-bold border-blue-500/30 text-blue-600 dark:text-blue-400">
-                    MODULE 1 • LIVE DIAGNOSIS
-                  </Badge>
                 </div>
                 <IntelligencePanel wardId={selectedWard.id} />
               </div>
 
-              {/* MODULE 2: Policy Impact Simulator Sandbox */}
+              {/* Feature 2: Interactive Policy Impact Simulator Sandbox */}
               <div className="space-y-4 pt-4 border-t border-border/60">
-                <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center">
-                      <BarChart3 className="w-4 h-4" />
+                <div className="p-4 rounded-xl bg-gradient-to-r from-violet-500/10 via-violet-500/5 to-transparent border-l-4 border-l-violet-500 flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-violet-500/15 text-violet-600 dark:text-violet-400 flex items-center justify-center font-bold">
+                      <BarChart3 className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-foreground">Interactive Policy Impact Simulator</h3>
-                      <p className="text-xs text-muted-foreground">Test traffic rationing, misting & construction halts with instant projected AQI</p>
+                      <h3 className="text-base font-bold text-foreground tracking-tight">Interactive Policy Impact Simulator</h3>
+                      <p className="text-xs text-muted-foreground font-medium">Test traffic rationing, misting & construction halts with instant projected AQI</p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-[10px] uppercase font-bold border-violet-500/30 text-violet-600 dark:text-violet-400">
-                    MODULE 2 • LIVE SANDBOX
-                  </Badge>
                 </div>
                 <SimulationPanel wardId={selectedWard.id} currentAqi={selectedWard.aqi} />
               </div>
 
-              {/* MODULE 3: Citizen Pollution Reports & Action Feed */}
+              {/* Feature 3: Citizen Pollution Reports & Action Feed */}
               <div className="space-y-4 pt-4 border-t border-border/60">
-                <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                      <Clock className="w-4 h-4" />
+                <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border-l-4 border-l-emerald-500 flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                      <Clock className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-foreground">Citizen Reports & Verified Record</h3>
-                      <p className="text-xs text-muted-foreground">Live photo submissions with AI classification & location-based action tracking</p>
+                      <h3 className="text-base font-bold text-foreground tracking-tight">Citizen Reports & Verified Field Audit</h3>
+                      <p className="text-xs text-muted-foreground font-medium">Live photo submissions with AI classification & location-based action tracking</p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-[10px] uppercase font-bold border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
-                    MODULE 3 • FIELD REPORTS
-                  </Badge>
                 </div>
                 <CitizenReportsPanel selectedWard={selectedWard} />
               </div>

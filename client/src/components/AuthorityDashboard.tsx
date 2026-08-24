@@ -28,7 +28,6 @@ export function AuthorityDashboard() {
   const { t, language } = useLanguage();
   const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFeature, setActiveFeature] = useState<"intelligence" | "simulation" | "reports">("intelligence");
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-screen bg-background">
@@ -196,104 +195,64 @@ export function AuthorityDashboard() {
               </div>
             </div>
 
-            {/* FEATURE MENU CONTROL DECK */}
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between px-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <BrainCircuit className="w-4 h-4 text-primary" /> Feature Operations & Command Modules
-                </span>
-                <span className="text-[11px] text-muted-foreground font-medium">Select a feature module below</span>
+            {/* UNIFIED ALL-IN-ONE OPERATIONS DASHBOARD (ALL MODULES VISIBLE SIMULTANEOUSLY) */}
+            <div className="space-y-10 pt-2">
+              {/* MODULE 1: AI Intelligence & GRAP Protocol Plan */}
+              <div className="space-y-4 pt-2 border-t border-border/40">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                      <BrainCircuit className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-foreground">AI Intelligence & GRAP Enforcement Plan</h3>
+                      <p className="text-xs text-muted-foreground">ML pollutant diagnosis, 7-day schedule & mandatory GRAP enforcement actions</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] uppercase font-bold border-blue-500/30 text-blue-600 dark:text-blue-400">
+                    MODULE 1 • LIVE DIAGNOSIS
+                  </Badge>
+                </div>
+                <IntelligencePanel wardId={selectedWard.id} />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Feature 1: AI Intelligence & GRAP */}
-                <div
-                  onClick={() => setActiveFeature("intelligence")}
-                  className={cn(
-                    "p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 bg-card shadow-sm hover:shadow-md",
-                    activeFeature === "intelligence" 
-                      ? "border-primary ring-2 ring-primary/20 bg-primary/5" 
-                      : "border-border/60 hover:border-primary/40"
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                      <BrainCircuit className="w-5 h-5" />
+              {/* MODULE 2: Policy Impact Simulator Sandbox */}
+              <div className="space-y-4 pt-4 border-t border-border/60">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center">
+                      <BarChart3 className="w-4 h-4" />
                     </div>
-                    <Badge variant={activeFeature === "intelligence" ? "default" : "secondary"} className="text-[10px] font-bold">
-                      {activeFeature === "intelligence" ? "ACTIVE VIEW" : "MODULE 1"}
-                    </Badge>
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold text-sm text-foreground">AI Intelligence & GRAP Plan</h4>
-                    <p className="text-xs text-muted-foreground leading-normal mt-0.5">
-                      ML pollutant diagnosis, 7-day schedule & mandatory GRAP enforcement actions
-                    </p>
-                  </div>
-                </div>
-
-                {/* Feature 2: Policy Simulator */}
-                <div
-                  onClick={() => setActiveFeature("simulation")}
-                  className={cn(
-                    "p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 bg-card shadow-sm hover:shadow-md",
-                    activeFeature === "simulation" 
-                      ? "border-primary ring-2 ring-primary/20 bg-primary/5" 
-                      : "border-border/60 hover:border-primary/40"
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="w-9 h-9 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center">
-                      <BarChart3 className="w-5 h-5" />
+                    <div>
+                      <h3 className="text-base font-bold text-foreground">Interactive Policy Impact Simulator</h3>
+                      <p className="text-xs text-muted-foreground">Test traffic rationing, misting & construction halts with instant projected AQI</p>
                     </div>
-                    <Badge variant={activeFeature === "simulation" ? "default" : "secondary"} className="text-[10px] font-bold">
-                      {activeFeature === "simulation" ? "ACTIVE VIEW" : "SANDBOX"}
-                    </Badge>
                   </div>
-
-                  <div>
-                    <h4 className="font-bold text-sm text-foreground">Policy Impact Simulator</h4>
-                    <p className="text-xs text-muted-foreground leading-normal mt-0.5">
-                      Test traffic rationing, misting & construction halts with instant AQI projection
-                    </p>
-                  </div>
+                  <Badge variant="outline" className="text-[10px] uppercase font-bold border-violet-500/30 text-violet-600 dark:text-violet-400">
+                    MODULE 2 • LIVE SANDBOX
+                  </Badge>
                 </div>
-
-                {/* Feature 3: Citizen Reports */}
-                <div
-                  onClick={() => setActiveFeature("reports")}
-                  className={cn(
-                    "p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 bg-card shadow-sm hover:shadow-md",
-                    activeFeature === "reports" 
-                      ? "border-primary ring-2 ring-primary/20 bg-primary/5" 
-                      : "border-border/60 hover:border-primary/40"
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                      <Clock className="w-5 h-5" />
-                    </div>
-                    <Badge variant={activeFeature === "reports" ? "default" : "secondary"} className="text-[10px] font-bold">
-                      {activeFeature === "reports" ? "ACTIVE VIEW" : "LIVE FEED"}
-                    </Badge>
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold text-sm text-foreground">Citizen Reports & Audit</h4>
-                    <p className="text-xs text-muted-foreground leading-normal mt-0.5">
-                      Live photo submissions with AI classification & location-based action tracking
-                    </p>
-                  </div>
-                </div>
+                <SimulationPanel wardId={selectedWard.id} currentAqi={selectedWard.aqi} />
               </div>
-            </div>
 
-            {/* ACTIVE FEATURE MODULE CONTENT */}
-            <div className="pt-2">
-              {activeFeature === "intelligence" && <IntelligencePanel wardId={selectedWard.id} />}
-              {activeFeature === "simulation" && <SimulationPanel wardId={selectedWard.id} currentAqi={selectedWard.aqi} />}
-              {activeFeature === "reports" && <CitizenReportsPanel selectedWard={selectedWard} />}
+              {/* MODULE 3: Citizen Pollution Reports & Action Feed */}
+              <div className="space-y-4 pt-4 border-t border-border/60">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-foreground">Citizen Reports & Verified Record</h3>
+                      <p className="text-xs text-muted-foreground">Live photo submissions with AI classification & location-based action tracking</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] uppercase font-bold border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
+                    MODULE 3 • FIELD REPORTS
+                  </Badge>
+                </div>
+                <CitizenReportsPanel selectedWard={selectedWard} />
+              </div>
             </div>
           </motion.div>
         )}

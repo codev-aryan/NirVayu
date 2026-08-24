@@ -19,6 +19,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { NewsBulletin } from "./NewsBulletin";
 import { WardMeasures } from "./WardMeasures";
 import { useLanguage } from "@/lib/i18n";
+import { AqiScoreCard } from "./AqiScoreCard";
 
 // Map ward coordinates to Delhi zone for zone-based news
 function getZone(lat: number, lng: number): string {
@@ -92,36 +93,15 @@ export function CitizenDashboard() {
       {/* News Ticker */}
       <NewsBulletin zone={zone} />
 
-      {/* Row 1: Key Cards Section */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <MetricCard
-          label={selectedWard ? t("metric.aqi") : t("metric.delhiAvgAqi")}
-          value={selectedWard ? selectedWard.aqi : avgAqi}
-          unit=""
-          color={selectedWard ? (selectedWard.aqi > 200 ? "text-red-500" : "text-primary") : (avgAqi > 200 ? "text-red-500" : "text-primary")}
-        />
-        <MetricCard
-          label={selectedWard ? t("metric.pm25") : t("metric.delhiAvgPm25")}
-          value={selectedWard ? selectedWard.pm25 : avgPm25}
-          unit="µg/m³"
-        />
-        <MetricCard
-          label={selectedWard ? t("metric.pm10") : t("metric.delhiAvgPm10")}
-          value={selectedWard ? selectedWard.pm10 : avgPm10}
-          unit="µg/m³"
-        />
-        <MetricCard
-          label={selectedWard ? t("metric.no2") : t("metric.delhiAvgNo2")}
-          value={selectedWard ? selectedWard.no2 : avgNo2}
-          unit="ppb"
-        />
-        <MetricCard
-          label={selectedWard ? t("metric.co2Budget") : t("metric.delhiAvgCo2Budget")}
-          value={selectedWard ? selectedWard.co2_budget_remaining : avgCo2Budget}
-          unit={t("common.tons")}
-          color="text-green-600"
-        />
-      </div>
+      {/* Row 1: Colorful AQI Score & Core Metrics Card (NO CO2 BUDGET) */}
+      <AqiScoreCard
+        title={selectedWard ? `${selectedWard.name} — ${t("metric.aqi")}` : t("metric.delhiAvgAqi")}
+        aqi={selectedWard ? selectedWard.aqi : avgAqi}
+        pm25={selectedWard ? selectedWard.pm25 : avgPm25}
+        pm10={selectedWard ? selectedWard.pm10 : avgPm10}
+        no2={selectedWard ? selectedWard.no2 : avgNo2}
+        o3={selectedWard ? selectedWard.o3 : 45}
+      />
 
       {/* Row 2: Map + Report Side-by-Side */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

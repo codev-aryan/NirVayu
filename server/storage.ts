@@ -14,6 +14,8 @@ const _dirname = typeof __dirname !== "undefined" ? __dirname : path.dirname(_fi
 const MemoryStore = createMemoryStore(session);
 const execFilePromise = promisify(execFile);
 
+import os from "os";
+
 // ─── Serverless-safe global AQI cache (survives warm Vercel invocations) ───
 interface AqiCacheEntry {
   wardId: number;
@@ -38,8 +40,42 @@ declare global {
   var __aqiCache: AqiCache | undefined;
   // eslint-disable-next-line no-var
   var __stationMap: Record<string, number> | undefined;
+  // eslint-disable-next-line no-var
+  var __globalReportsMap: Map<number, Report> | undefined;
 }
 const AQI_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+const TMP_REPORTS_FILE = path.join(os.tmpdir(), "nirvayu_reports.json");
+
+function loadReportsFromTmp(): Map<number, Report> {
+  if (global.__globalReportsMap && global.__globalReportsMap.size > 0) {
+    return global.__globalReportsMap;
+  }
+  const map = new Map<number, Report>();
+  try {
+    if (fs.existsSync(TMP_REPORTS_FILE)) {
+      const raw = fs.readFileSync(TMP_REPORTS_FILE, "utf-8");
+      const list: Report[] = JSON.parse(raw);
+      for (const r of list) {
+        map.set(r.id, { ...r, timestamp: new Date(r.timestamp) });
+      }
+    }
+  } catch (e) {
+    console.error("[Storage] Failed to read /tmp/nirvayu_reports.json", e);
+  }
+  global.__globalReportsMap = map;
+  return map;
+}
+
+function saveReportsToTmp(map: Map<number, Report>) {
+  global.__globalReportsMap = map;
+  try {
+    const list = Array.from(map.values());
+    fs.writeFileSync(TMP_REPORTS_FILE, JSON.stringify(list, null, 2), "utf-8");
+  } catch (e) {
+    console.error("[Storage] Failed to write /tmp/nirvayu_reports.json", e);
+  }
+}
 
 export function buildGrapInfo(aqi: number, primarySource: string) {
   if (aqi > 450) {
@@ -697,58 +733,74 @@ export class MemStorage implements IStorage {
   }
 
   async createReport(insertReport: Omit<Report, "id" | "timestamp" | "verified">) {
-    const id = this.reportIdCounter++;
+    const reportsMap = loadReportsFromTmp();
+    let maxId = 0;
+    for (const k of Array.from(reportsMap.keys())) {
+      if (k > maxId) maxId = k;
+    }
+    const id = maxId + 1;
     const report: Report = {
       ...insertReport,
       id,
       timestamp: new Date(),
       verified: false,
     };
-    this.reports.set(id, report);
+    reportsMap.set(id, report);
+    saveReportsToTmp(reportsMap);
     return report;
   }
 
   async getReportsByWard(wardId: number) {
-    return Array.from(this.reports.values()).filter(r => r.wardId === wardId);
+    const reportsMap = loadReportsFromTmp();
+    return Array.from(reportsMap.values()).filter(r => r.wardId === wardId);
   }
 
   async getReports() {
-    return Array.from(this.reports.values());
+    const reportsMap = loadReportsFromTmp();
+    return Array.from(reportsMap.values());
   }
 
   async updateReportVerification(id: number, verified: boolean) {
-    const report = this.reports.get(id);
+    const reportsMap = loadReportsFromTmp();
+    const report = reportsMap.get(id);
     if (!report) throw new Error("Report not found");
     const updated = { ...report, verified };
-    this.reports.set(id, updated);
+    reportsMap.set(id, updated);
+    saveReportsToTmp(reportsMap);
     return updated;
   }
 
   async updateReportStatus(id: number, status: string) {
-    const report = this.reports.get(id);
+    const reportsMap = loadReportsFromTmp();
+    const report = reportsMap.get(id);
     if (!report) throw new Error("Report not found");
     const updated = { ...report, status };
-    this.reports.set(id, updated);
+    reportsMap.set(id, updated);
+    saveReportsToTmp(reportsMap);
     return updated;
   }
 
   async deleteReport(id: number) {
-    return this.reports.delete(id);
+    const reportsMap = loadReportsFromTmp();
+    const res = reportsMap.delete(id);
+    saveReportsToTmp(reportsMap);
+    return res;
   }
 
   async restoreReport(report: Report) {
-    this.reports.set(report.id, report);
-    if (report.id >= this.reportIdCounter) {
-      this.reportIdCounter = report.id + 1;
-    }
+    const reportsMap = loadReportsFromTmp();
+    reportsMap.set(report.id, report);
+    saveReportsToTmp(reportsMap);
     return report;
   }
 
   async updateReportBlockchain(id: number, mediaHash: string, txHash: string | null) {
-    const report = this.reports.get(id);
+    const reportsMap = loadReportsFromTmp();
+    const report = reportsMap.get(id);
     if (!report) throw new Error("Report not found");
     const updated = { ...report, mediaHash, txHash };
-    this.reports.set(id, updated);
+    reportsMap.set(id, updated);
+    saveReportsToTmp(reportsMap);
     return updated;
   }
 

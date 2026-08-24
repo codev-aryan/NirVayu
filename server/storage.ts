@@ -183,6 +183,36 @@ export function predictFutureAqi(aqi: number, pm25: number, pm10: number) {
   };
 }
 
+export function buildHistoricAqi(aqi: number, pm25: number, pm10: number, wardId: number) {
+  const result: { day: string; date: string; aqi: number; pm25: number; pm10: number }[] = [];
+  const now = new Date();
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dayName = i === 0 ? "Today" : d.toLocaleDateString("en-US", { weekday: "short" });
+    const fullDate = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    
+    // Ward-specific deterministic historical variance based on wardId and day index
+    const wardPhase = (wardId * 13 + i * 17) % 31;
+    const factor = 1 + (Math.sin((i + wardPhase) * 0.9) * 0.14);
+
+    const histAqi = Math.max(30, Math.min(500, Math.round(aqi * factor)));
+    const histPm25 = Math.round(pm25 * factor);
+    const histPm10 = Math.round(pm10 * factor);
+
+    result.push({
+      day: `${dayName} (${fullDate})`,
+      date: fullDate,
+      aqi: histAqi,
+      pm25: histPm25,
+      pm10: histPm10
+    });
+  }
+
+  return result;
+}
+
 export function buildWeeklyPlan(aqi: number, dominantSource: string) {
   const src = (dominantSource || "").toLowerCase();
   const isTraffic      = src.includes("traffic");
@@ -555,7 +585,8 @@ export class MemStorage implements IStorage {
         allowed_controls: allowedControls,
         predicted_aqi: prediction.predictedAqi,
         prediction_horizon: prediction.horizon,
-        prediction_confidence: prediction.confidence
+        prediction_confidence: prediction.confidence,
+        aqi_history: buildHistoricAqi(aqi, pm25, pm10, id)
       };
  
       this.wards.set(id, {
@@ -744,7 +775,8 @@ export class MemStorage implements IStorage {
         allowed_controls: allowedControls,
         predicted_aqi: prediction.predictedAqi,
         prediction_horizon: prediction.horizon,
-        prediction_confidence: prediction.confidence
+        prediction_confidence: prediction.confidence,
+        aqi_history: buildHistoricAqi(aqi, pm25, pm10, ward.id)
       } as any;
 
       return {

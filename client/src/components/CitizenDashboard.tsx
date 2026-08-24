@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useWards, useGeneratePlan, useAddCredit, useSubmitReport } from "@/hooks/use-wards";
-import { MapPin, Clock, AlertTriangle, Leaf, ShieldCheck, HeartPulse, Activity, Camera, Trash2, ShieldAlert, CheckCircle2, Upload, Car, Construction, Factory, Wind, Trees, Loader2, Search, Footprints } from "lucide-react";
+import { MapPin, Clock, AlertTriangle, Leaf, ShieldCheck, HeartPulse, Activity, Camera, Trash2, ShieldAlert, CheckCircle2, Upload, Car, Construction, Factory, Wind, Trees, Loader2, Search, Footprints, Compass } from "lucide-react";
 import { pollutionBlockchain } from "@/lib/blockchain";
 import { motion } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -21,6 +21,7 @@ import { WardMeasures } from "./WardMeasures";
 import { useLanguage } from "@/lib/i18n";
 import { AqiScoreCard } from "./AqiScoreCard";
 import { CigaretteHealthRiskCard } from "./CigaretteHealthRiskCard";
+import { HistoricAqiChart } from "./HistoricAqiChart";
 
 // Map ward coordinates to Delhi zone for zone-based news
 function getZone(lat: number, lng: number): string {
@@ -228,8 +229,9 @@ export function CitizenDashboard() {
                 </motion.div>
               )}
 
-              <div className="pt-4 border-t">
+              <div className="pt-4 border-t space-y-6">
                 <SafeLifePlanner ward={selectedWard} />
+                <HistoricAqiChart ward={selectedWard} />
               </div>
             </div>
           ) : (
@@ -271,148 +273,168 @@ function MetricCard({ label, value, unit, color = "text-foreground" }: { label: 
 
 function SafeLifePlanner({ ward }: { ward: any }) {
   const { language } = useLanguage();
-  const [transitMode, setTransitMode] = useState<"metro" | "car" | "walk" | "two_wheeler">("car");
+  const [tripType, setTripType] = useState<"office" | "school" | "market" | "park">("office");
 
   const aqi = ward?.aqi || 150;
-  const dominantSource = ward?.dominant_source || "Traffic";
+  const pm25 = ward?.pm25 || Math.round(aqi * 0.6);
   const wardName = ward?.name || "Selected Ward";
 
-  // Transit Safety Rating
-  const getTransitAdvice = () => {
-    switch (transitMode) {
-      case "walk":
-        if (aqi > 300) return { status: "DANGER", text: language === "hi" ? "पैदल चलना असुरक्षित है। गहरे सांस लेने से पीएम2.5 का सांस में जाना 3 गुना बढ़ जाता है।" : "Walking/Running outdoors is UNSAFE today. Heavy breathing increases PM2.5 inhalation by 3x." };
-        if (aqi > 200) return { status: "CAUTION", text: language === "hi" ? "N95 मास्क के साथ <30 मिनट तक सीमित रखें।" : "Limit walking to <30 mins with an N95 mask." };
-        return { status: "SAFE", text: language === "hi" ? "पैदल यात्रा के लिए सुरक्षित।" : "Safe for walking & outdoor exercise." };
-      case "two_wheeler":
-        if (aqi > 200) return { status: "DANGER", text: language === "hi" ? "द्विपहिया वाहनों पर सीधे धुआं व धूल का सामना होता है। फुल-फेस हेलमेट व N95 मास्क पहनें।" : "Direct exposure to exhaust fumes & road dust. Wear a full-face helmet visor & N95 mask." };
-        return { status: "CAUTION", text: language === "hi" ? "मुख्य सड़कों पर मास्क पहनें।" : "Wear a mask on high-density traffic corridors." };
-      case "car":
-        return { status: "SAFE", text: language === "hi" ? "शीशे पूरी तरह बंद रखें और कार AC को internal recirculation मोड पर चलाएं।" : "Keep windows rolled up & set car AC to Internal Recirculation Mode to block toxic gases." };
-      case "metro":
-        return { status: "SAFE", text: language === "hi" ? "सबसे सुरक्षित माध्यम। दिल्ली मेट्रो स्टेशन व ट्रेनें HEPA एयर फिल्टर्ड हैं।" : "Safest commute mode. Delhi Metro stations & coaches feature HEPA air filtration." };
+  // Dynamic Route Exposure Calculation
+  const getRouteMetrics = () => {
+    switch (tripType) {
+      case "office":
+        return {
+          dest: language === "hi" ? "ऑफ़िस / कार्यस्थल" : "Office Commute",
+          directAqi: Math.round(aqi * 1.25),
+          greenAqi: Math.round(aqi * 0.75),
+          savingsPercent: "40%",
+          greenRouteName: language === "hi" ? "ग्रीन एक्सप्रेस / मेट्रो कॉरिडोर" : "Metro / Green Park Corridor",
+          directRouteName: language === "hi" ? "मुख्य रिंग रोड (ट्रैफिक जाम)" : "Arterial Ring Road (Congested)"
+        };
+      case "school":
+        return {
+          dest: language === "hi" ? "स्कूल / कॉलेज ड्रॉप" : "School Drop-off",
+          directAqi: Math.round(aqi * 1.35),
+          greenAqi: Math.round(aqi * 0.65),
+          savingsPercent: "52%",
+          greenRouteName: language === "hi" ? "सेक्टर सर्विस रोड (कम धुआँ)" : "Inner Sector Service Road",
+          directRouteName: language === "hi" ? "बस स्टैंड / बस लेन कॉरिडोर" : "Main Bus Transit Corridor"
+        };
+      case "market":
+        return {
+          dest: language === "hi" ? "स्थानीय बाज़ार / खरीदारी" : "Market / Shopping",
+          directAqi: Math.round(aqi * 1.2),
+          greenAqi: Math.round(aqi * 0.7),
+          savingsPercent: "42%",
+          greenRouteName: language === "hi" ? "पैदल मॉल कॉम्प्लेक्स / ढकी लेन" : "Covered Pedestrian Arcade",
+          directRouteName: language === "hi" ? "खुला बाज़ार (डीजल ऑटो धुआँ)" : "Open Street Market (Diesel Autos)"
+        };
+      case "park":
+        return {
+          dest: language === "hi" ? "पार्क / वॉकिंग ट्रैक" : "Park / Fitness Walk",
+          directAqi: Math.round(aqi * 1.4),
+          greenAqi: Math.round(aqi * 0.6),
+          savingsPercent: "57%",
+          greenRouteName: language === "hi" ? "वृक्षच्छादित आंतरिक पार्क ट्रेल" : "Tree-Dense Inner Bio-Park",
+          directRouteName: language === "hi" ? "सड़क के किनारे का ओपन ट्रैक" : "Roadside Open Footpath"
+        };
     }
   };
 
-  const transitInfo = getTransitAdvice();
+  const route = getRouteMetrics();
 
-  // Hourly Best Outdoor Windows
-  const getOutdoorWindows = () => {
+  // Hourly Window Ventilation Index
+  const getWindowRadar = () => {
     if (aqi <= 100) {
-      return { best: "All Day (Clean Air)", worst: "None", mask: "Optional" };
+      return { status: "OPEN", text: language === "hi" ? "ताजी हवा के लिए खिड़कियाँ खुली रखें।" : "Fresh Air! Windows can remain open all day.", color: "border-emerald-300 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" };
     } else if (aqi <= 200) {
-      return { best: "11:30 AM – 4:30 PM", worst: "6:00 AM – 9:00 AM", mask: "Surgical / N95" };
-    } else if (aqi <= 300) {
-      return { best: "12:00 PM – 3:30 PM", worst: "6:00 AM – 10:00 AM & Evening Rush", mask: "N95 Mask Mandatory" };
+      return { status: "TIMED", text: language === "hi" ? "केवल 12:00 PM – 4:00 PM के बीच खिड़कियाँ खोलें (धूप से धुआँ छंटता है)।" : "Open windows ONLY from 12:00 PM – 4:00 PM (sunlight disperses inversion).", color: "border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200" };
     } else {
-      return { best: "Avoid Outdoors", worst: "All Day (Severe Emergency)", mask: "Double N95 / FFP2" };
+      return { status: "SEAL", text: language === "hi" ? "खिड़कियाँ पूरी तरह सील रखें! ज़हरीला धुआँ घर के अंदर घुस सकता है।" : "SEAL WINDOWS! Toxic inversion will compromise indoor air quality.", color: "border-rose-300 bg-rose-50 text-rose-900 dark:bg-rose-950/40 dark:text-rose-200" };
     }
   };
 
-  const windows = getOutdoorWindows();
+  const windowStatus = getWindowRadar();
 
   return (
     <Card className="border-primary/20 shadow-md">
       <CardHeader className="bg-primary/5 pb-3 pt-4">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base text-primary font-bold">
-            <Clock className="w-5 h-5 text-primary" />
-            {language === "hi" ? `${wardName} — दैनिक आउटडोर व यात्रा गाइड` : `${wardName} — Outdoor & Travel Planner`}
+            <Compass className="w-5 h-5 text-primary" />
+            {language === "hi" ? `${wardName} — एयर नेविगेटर व होम सेन्चुरी` : `${wardName} — Clean Air Navigator & Home Sanctuary`}
           </CardTitle>
           <Badge variant="outline" className="text-[10px] uppercase font-bold border-primary/30 text-primary">
             AQI {aqi}
           </Badge>
         </div>
         <CardDescription className="text-xs mt-0.5">
-          {language === "hi" ? "सड़क पर सुरक्षित यात्रा, मास्क चयन और आउटडोर समय प्रबंधन" : "Safe commute modes, optimal outdoor hours & travel protection"}
+          {language === "hi" ? "कम प्रदूषण वाला यात्रा मार्ग और घर के अंदर साफ हवा का प्रबंधन" : "Cleanest route optimizer, window ventilation radar & indoor bio-hacks"}
         </CardDescription>
       </CardHeader>
 
       <CardContent className="p-4 space-y-4">
-        {/* 1. Best & Worst Outdoor Hours Timeline */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800 rounded-xl text-center">
-            <div className="text-[10px] text-emerald-700 dark:text-emerald-300 font-extrabold uppercase tracking-wider mb-1">
-              🟢 {language === "hi" ? "सर्वोत्तम आउटडोर समय" : "Best Outdoor Window"}
-            </div>
-            <div className="text-xs font-bold text-emerald-900 dark:text-emerald-100 flex items-center justify-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" /> {windows.best}
-            </div>
+        {/* 1. Interactive Clean Air Route Minimizer */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground block">
+              🧭 1. {language === "hi" ? "यात्रा का लक्ष्य चुनें:" : "Cleanest Route Optimizer:"}
+            </label>
+            <Badge variant="secondary" className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 dark:bg-emerald-950">
+              Save {route.savingsPercent} PM2.5 Intake
+            </Badge>
           </div>
 
-          <div className="p-3 bg-rose-50 border border-rose-200 dark:bg-rose-950/40 dark:border-rose-800 rounded-xl text-center">
-            <div className="text-[10px] text-rose-700 dark:text-rose-300 font-extrabold uppercase tracking-wider mb-1">
-              🔴 {language === "hi" ? "बाहर जाने से बचें" : "Peak Risk Window"}
-            </div>
-            <div className="text-xs font-bold text-rose-900 dark:text-rose-100 flex items-center justify-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5" /> {windows.worst}
-            </div>
-          </div>
-        </div>
-
-        {/* 2. Smart Commute Mode Advisor */}
-        <div className="space-y-2">
-          <label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground block">
-            {language === "hi" ? "यात्रा का साधन चुनें:" : "Select Your Commute Mode:"}
-          </label>
           <div className="grid grid-cols-4 gap-1.5">
             {[
-              { id: "car", label: language === "hi" ? "कार" : "Car", icon: Car },
-              { id: "metro", label: language === "hi" ? "मेट्रो" : "Metro", icon: ShieldCheck },
-              { id: "two_wheeler", label: language === "hi" ? "बाइक" : "Bike", icon: Wind },
-              { id: "walk", label: language === "hi" ? "पैदल" : "Walk", icon: Footprints }
-            ].map((item) => {
-              const Icon = item.icon || Car;
-              return (
-                <Button
-                  key={item.id}
-                  type="button"
-                  size="sm"
-                  variant={transitMode === item.id ? "default" : "outline"}
-                  className="text-xs h-9 font-bold px-1 flex flex-col gap-0.5"
-                  onClick={() => setTransitMode(item.id as any)}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span className="text-[10px]">{item.label}</span>
-                </Button>
-              );
-            })}
+              { id: "office", label: language === "hi" ? "ऑफ़िस" : "Office" },
+              { id: "school", label: language === "hi" ? "स्कूल" : "School" },
+              { id: "market", label: language === "hi" ? "बाज़ार" : "Market" },
+              { id: "park", label: language === "hi" ? "पार्क" : "Park" }
+            ].map((item) => (
+              <Button
+                key={item.id}
+                type="button"
+                size="sm"
+                variant={tripType === item.id ? "default" : "outline"}
+                className="text-xs h-8 font-bold px-1"
+                onClick={() => setTripType(item.id as any)}
+              >
+                {item.label}
+              </Button>
+            ))}
           </div>
 
-          {/* Commute Status Callout */}
-          <div className={cn(
-            "p-3 rounded-xl border text-xs leading-snug flex items-start gap-2.5",
-            transitInfo.status === "SAFE" && "bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-200",
-            transitInfo.status === "CAUTION" && "bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-200",
-            transitInfo.status === "DANGER" && "bg-rose-50 border-rose-200 text-rose-900 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-200"
-          )}>
-            <Badge variant="outline" className={cn(
-              "text-[9px] font-black uppercase px-2 py-0.5 shrink-0 mt-0.5",
-              transitInfo.status === "SAFE" && "border-emerald-400 text-emerald-700 bg-emerald-100 dark:bg-emerald-900",
-              transitInfo.status === "CAUTION" && "border-amber-400 text-amber-700 bg-amber-100 dark:bg-amber-900",
-              transitInfo.status === "DANGER" && "border-rose-400 text-rose-700 bg-rose-100 dark:bg-rose-900"
-            )}>
-              {transitInfo.status}
-            </Badge>
-            <p className="text-[11px] font-medium">{transitInfo.text}</p>
+          {/* Route Comparison Display */}
+          <div className="space-y-2 pt-1">
+            <div className="p-2.5 rounded-xl border border-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40 dark:border-emerald-800 flex items-center justify-between text-xs">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider block">
+                  🟢 {language === "hi" ? "अनुशंसित कम प्रदूषण मार्ग:" : "Recommended Clean Air Route:"}
+                </span>
+                <span className="font-bold text-emerald-950 dark:text-emerald-100">{route.greenRouteName}</span>
+              </div>
+              <Badge className="bg-emerald-600 text-white font-extrabold text-xs px-2.5 py-1">
+                AQI {route.greenAqi}
+              </Badge>
+            </div>
+
+            <div className="p-2.5 rounded-xl border border-rose-200 bg-rose-50/50 dark:bg-rose-950/30 dark:border-rose-900 flex items-center justify-between text-xs opacity-75">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-extrabold text-rose-700 dark:text-rose-400 uppercase tracking-wider block">
+                  🔴 {language === "hi" ? "भारी प्रदूषण वाला डायरेक्ट मार्ग:" : "High-Exposure Direct Route:"}
+                </span>
+                <span className="font-semibold text-rose-950 dark:text-rose-200">{route.directRouteName}</span>
+              </div>
+              <Badge variant="outline" className="border-rose-300 text-rose-700 font-bold text-xs px-2.5 py-0.5">
+                AQI {route.directAqi}
+              </Badge>
+            </div>
           </div>
         </div>
 
-        {/* 3. Outdoor Checklist before leaving home */}
+        {/* 2. Live Window Ventilation Radar */}
+        <div className="space-y-2">
+          <label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground block">
+            🪟 2. {language === "hi" ? "घर की खिड़की व वेंटिलेशन रडार:" : "Home Window Ventilation Radar:"}
+          </label>
+          <div className={cn("p-3 rounded-xl border text-xs leading-snug flex items-start gap-2.5", windowStatus.color)}>
+            <Badge variant="outline" className="text-[9px] font-black uppercase px-2 py-0.5 shrink-0 mt-0.5 border-current">
+              {windowStatus.status}
+            </Badge>
+            <p className="text-[11px] font-semibold">{windowStatus.text}</p>
+          </div>
+        </div>
+
+        {/* 3. Indoor Air Bio-Hack Checklist */}
         <div className="p-3 bg-muted/40 border border-border/50 rounded-xl text-xs space-y-2">
           <span className="font-extrabold text-foreground block uppercase text-[10px] tracking-wider">
-            🎒 {language === "hi" ? "घर से निकलने से पहले चेकलिस्ट:" : "Outdoor Checklist Before Leaving Home:"}
+            🌿 {language === "hi" ? "कम लागत वाला होम एयर बायो-हैक:" : "Low-Cost Indoor Air Bio-Hacks:"}
           </span>
-          <div className="grid grid-cols-2 gap-2 text-[11px]">
-            <div className="flex items-center gap-1.5 font-semibold text-foreground">
-              <span>😷 {language === "hi" ? "मास्क:" : "Mask:"}</span>
-              <Badge variant="secondary" className="text-[10px] font-bold py-0">{windows.mask}</Badge>
-            </div>
-            <div className="flex items-center gap-1.5 font-semibold text-foreground">
-              <span>🚘 {language === "hi" ? "कार AC:" : "Car AC:"}</span>
-              <span className="text-muted-foreground font-normal">Recirculation ON</span>
-            </div>
-          </div>
+          <ul className="text-[11px] text-muted-foreground space-y-1 font-medium leading-tight">
+            <li>• <strong>{language === "hi" ? "प्राकृतिक पौधे:" : "Natural Air Plants:"}</strong> 2 {language === "hi" ? "अरेका पाम + 1 स्नेक प्लांट प्रति कमरा (35% पीएम2.5 कम करता है)।" : "Areca Palms + 1 Snake Plant per room cuts indoor PM2.5 by ~35%."}</li>
+            <li>• <strong>{language === "hi" ? "गीला पोछा नियम:" : "Microfiber Wet Mop:"}</strong> {language === "hi" ? "सूखी झाड़ू न लगाएं; नम पोछे से महीन धूल रोकें।" : "Never dry-sweep indoors; wet mop prevents dust resuspension."}</li>
+          </ul>
         </div>
       </CardContent>
     </Card>

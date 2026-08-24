@@ -166,81 +166,113 @@ export function buildGrapInfo(aqi: number, primarySource: string) {
 }
 
 export function buildWeeklyPlan(aqi: number, dominantSource: string) {
-  const source = (dominantSource || "").toLowerCase();
+  const src = (dominantSource || "").toLowerCase();
+  const isTraffic      = src.includes("traffic");
+  const isConstruction = src.includes("construction");
+  const isIndustrial   = src.includes("industrial");
+  const isWaste        = src.includes("waste") || src.includes("burning");
+  const isDust         = src.includes("dust");
 
-  // Strictly GRAP-stage-calibrated actions (CAQM Revision 21.11.2025)
+  type Priority = "Critical" | "High" | "Medium";
+  type PlanItem = { day: string; title: string; action: string; priority: Priority; sourceTag: string };
+
+  // ── STAGE IV (AQI > 450) — Emergency. Source order doesn't change mandatory actions
+  //    but the most source-relevant action is surfaced to Day 1.
   if (aqi > 450) {
-    // STAGE IV — Severe+: Only emergency-level interventions
-    return [
-      { day: "Day 1", title: "Emergency: Truck Entry Ban", action: "Enforce complete ban on non-essential truck entry into ward. Deploy checkpoints at all arterial entry points. Only EVs, CNG, BS-VI diesel permitted.", priority: "Critical" as const },
-      { day: "Day 2", title: "Emergency: Education & WFH", action: "Coordinate with district administration to enforce hybrid/online classes for Classes VI–XI. Issue WFH advisory to all non-essential offices.", priority: "Critical" as const },
-      { day: "Day 3", title: "Emergency: All C&D Halt", action: "Halt ALL construction and demolition including linear public projects (highways, flyovers, pipelines). Zero exceptions. Seal non-compliant sites immediately.", priority: "Critical" as const },
-      { day: "Day 4", title: "Odd-Even Assessment", action: "Assess feasibility of odd-even vehicle rationing. Coordinate with traffic police for implementation plan on arterial roads from next day.", priority: "Critical" as const },
-      { day: "Day 5", title: "Non-Essential Commercial Review", action: "Evaluate closure of non-emergency commercial establishments as per CAQM Stage IV powers. Submit proposal to district authority.", priority: "High" as const },
-      { day: "Day 6", title: "AQI Monitoring & Compliance Audit", action: "Intensive 6-hour AQI monitoring cycle. Audit all emergency measure compliance. Document violations for CAQM reporting.", priority: "High" as const },
-      { day: "Day 7", title: "Stage Review & Next-Week Planning", action: "Compile 7-day AQI data and emergency compliance report. Submit to CAQM. Decide continuation or de-escalation of Stage IV measures.", priority: "High" as const }
+    const pool: PlanItem[] = [
+      { day: "", title: "Emergency: Truck Entry Ban", action: "Enforce complete ban on non-essential truck entry. Deploy checkpoints at all arterial entry points. Only EVs, CNG, BS-VI diesel permitted.", priority: "Critical", sourceTag: "traffic" },
+      { day: "", title: "Emergency: All C&D Halt", action: "Halt ALL C&D including linear public projects (highways, flyovers, pipelines). Zero exceptions. Seal non-compliant sites immediately.", priority: "Critical", sourceTag: "construction" },
+      { day: "", title: "Emergency: Industrial Shutdown", action: "Suspend operations of highly polluting industries. Issue emergency notices. Coordinate with DPCC for rapid compliance inspection.", priority: "Critical", sourceTag: "industrial" },
+      { day: "", title: "Emergency: Education & WFH", action: "Enforce hybrid/online classes for Classes VI–XI. Issue WFH advisory to all non-essential offices in coordination with district administration.", priority: "Critical", sourceTag: "general" },
+      { day: "", title: "Odd-Even Vehicle Rationing", action: "Implement odd-even vehicle rationing on arterial roads. Traffic police deployed at all major junctions from 7 AM – 8 PM.", priority: "Critical", sourceTag: "traffic" },
+      { day: "", title: "AQI Compliance Audit", action: "Intensive 6-hour AQI monitoring cycle. Audit all emergency measures. Document violations for CAQM reporting.", priority: "High", sourceTag: "general" },
+      { day: "", title: "Stage IV Review & CAQM Report", action: "Compile 7-day AQI and compliance report. Submit to CAQM. Decide continuation or de-escalation of Stage IV measures.", priority: "High", sourceTag: "general" }
     ];
-  } else if (aqi >= 401) {
-    // STAGE III — Severe (401–450): Strict C&D bans, vehicle restrictions
-    return [
-      { day: "Day 1", title: "C&D Activity Ban", action: "Enforce strict ban on all dust-generating C&D activities: earthwork, piling, demolition, trenching, brickwork, RMC batching, welding, tile grinding.", priority: "Critical" as const },
-      { day: "Day 2", title: "Stone Crushers & Mining Closure", action: "Close down all stone crushers and mining operations across the ward and surrounding NCR jurisdiction. Issue closure notices immediately.", priority: "Critical" as const },
-      { day: "Day 3", title: "BS-III/IV Vehicle Restrictions", action: "Enforce ban on BS-III petrol and BS-IV diesel LMVs (4-wheelers) within ward limits. Deploy traffic personnel at major junctions for checking.", priority: "Critical" as const },
-      { day: "Day 4", title: "School Online Mode Enforcement", action: "Ensure all primary schools (up to Class V) are conducting classes in hybrid/online mode as mandated under GRAP Stage III.", priority: "High" as const },
-      { day: "Day 5", title: "Anti-Smog Gun Deployment", action: "Continuous anti-smog gun operation at all major dust hotspots. Minimum 8-hour daily operation at C&D sites and arterial road intersections.", priority: "High" as const },
-      { day: "Day 6", title: "Heavy Vehicle Compliance Check", action: "Patrol and fine diesel MGVs (BS-IV & below) registered in Delhi. Check non-Delhi BS-IV LCVs. Coordinate with traffic police for border checkpoints.", priority: "High" as const },
-      { day: "Day 7", title: "Stage III Compliance Review", action: "Audit all Stage III enforcement actions. Document compliance rate per activity category. Prepare weekly report for CAQM submission.", priority: "High" as const }
-    ];
-  } else if (aqi >= 301) {
-    // STAGE II — Very Poor (301–400): Enhanced dust & emission controls
-    return [
-      { day: "Day 1", title: "Mechanized Road Sweeping", action: "Daily mechanical/vacuum sweeping and water sprinkling with dust suppressants on all identified major roads before 7 AM peak traffic hour.", priority: "High" as const },
-      { day: "Day 2", title: "C&D Site Inspection Drive", action: "Intensify inspections at all active Construction & Demolition sites for dust control compliance: green netting, anti-smog guns, covered material storage.", priority: "High" as const },
-      { day: "Day 3", title: "DG Set Operation Audit", action: "Strictly implement regulated DG set operation schedules across industrial, commercial, and residential sectors. Issue notices to violators.", priority: "High" as const },
-      { day: "Day 4", title: "Inter-State Bus Restriction", action: "Do not permit inter-state buses from NCR states to enter Delhi from this ward's entry points (except EVs / CNG / BS-VI Diesel).", priority: "High" as const },
-      { day: "Day 5", title: "Parking Fee Enhancement", action: "Coordinate with municipal body to enhance parking fees at commercial hubs to discourage personal vehicle use. Promote public transit.", priority: "Medium" as const },
-      { day: "Day 6", title: "Night Burning Patrol", action: "Zero-tolerance night-time patrol (9 PM – 5 AM) against open garbage, biomass, and plastic burning. Coordinate with local police for enforcement.", priority: "High" as const },
-      { day: "Day 7", title: "Stage II Compliance Review", action: "Evaluate 7-day AQI trend and compliance scores. If AQI crosses 400, prepare immediate Stage III escalation protocol. Submit weekly report.", priority: "Medium" as const }
-    ];
-  } else if (aqi >= 201) {
-    // STAGE I — Poor (201–300): Baseline dust mitigation & routine enforcement
-    return [
-      {
-        day: "Day 1",
-        title: source.includes("traffic") ? "Traffic Emission Enforcement"
-          : source.includes("construction") ? "C&D Site Compliance Check"
-          : source.includes("industrial") ? "Industrial Emission Inspection"
-          : "Waste Burning Prevention",
-        action: source.includes("traffic")
-          ? "Deploy traffic police at heavy corridors & congestion-prone intersections. Impound visibly polluting vehicles. Check PUC certificates."
-          : source.includes("construction")
-          ? "Ensure anti-smog gun operation at C&D sites >500 sqm. Verify web portal registration. Check green netting and covered vehicles."
-          : source.includes("industrial")
-          ? "Conduct stack emission checks at industrial units. Enforce ban on coal/firewood in tandoors at hotels, restaurants & open eateries."
-          : "Strict vigil at landfills and open areas. Deploy anti-burning mobile teams. Issue public advisory for waste disposal.",
-        priority: "High" as const
-      },
-      { day: "Day 2", title: "Road Sweeping & Water Sprinkling", action: "Periodic mechanized sweeping & water sprinkling on all arterial roads. Intensify anti-smog guns at construction & road repair sites.", priority: "High" as const },
-      { day: "Day 3", title: "PUC & Vehicle Pollution Check", action: "Strict vigilance & enforcement of PUC norms. Impound visibly polluting vehicles. Ensure non-destined truck diversion via Peripheral Expressways.", priority: "High" as const },
-      { day: "Day 4", title: "Biomass Burning Vigil", action: "Stringently enforce prohibition on open burning of biomass & municipal solid waste. Strict vigil at landfill sites. Issue on-spot challans.", priority: "Medium" as const },
-      { day: "Day 5", title: "C&D Site Dust Mitigation Audit", action: "Verify proper implementation of dust mitigation guidelines at all C&D sites. Check mandatory web portal registration for plots ≥500 sqm.", priority: "Medium" as const },
-      { day: "Day 6", title: "Fuel Ban Enforcement", action: "Strictly enforce ban on coal/firewood use in tandoors in hotels, restaurants & open eateries in the ward. Issue notices and fines.", priority: "Medium" as const },
-      { day: "Day 7", title: "Stage I Weekly Review", action: "Evaluate AQI trend for the week. If consistent improvement, maintain Stage I. If deteriorating toward 300, activate Stage II readiness protocol.", priority: "Medium" as const }
-    ];
-  } else {
-    // No GRAP stage — routine baseline operations only
-    return [
-      { day: "Day 1", title: "Routine Road Dust Monitoring", action: "Standard water sprinkling on vulnerable dust corridors and unpaved roads. Check for construction sites generating excess dust.", priority: "Medium" as const },
-      { day: "Day 2", title: "Vehicle Emission Spot Check", action: "Routine PUC certificate checks at major intersections. Document any visibly polluting vehicles for follow-up.", priority: "Medium" as const },
-      { day: "Day 3", title: "Industrial Compliance Round", action: "Routine stack emission inspection at registered industrial units. Verify compliance with ambient air quality standards.", priority: "Medium" as const },
-      { day: "Day 4", title: "Citizen Complaint Resolution", action: "Review and act on pending citizen pollution reports. Close resolved complaints and assign field teams to unresolved ones.", priority: "Medium" as const },
-      { day: "Day 5", title: "Green Cover & Dust Barrier Check", action: "Inspect ongoing C&D sites for green netting compliance. Verify material covered during transport. No emergency action needed.", priority: "Medium" as const },
-      { day: "Day 6", title: "Waste Management Coordination", action: "Coordinate with sanitation dept for timely waste collection to prevent open burning. Check landfill fire prevention measures.", priority: "Medium" as const },
-      { day: "Day 7", title: "Weekly AQI Health Check", action: "Review 7-day AQI data. Air quality is satisfactory — document and maintain current baseline. No GRAP escalation warranted.", priority: "Medium" as const }
-    ];
+    // Sort: put dominant-source items first
+    const sorted = [
+      ...pool.filter(p => p.sourceTag === (isTraffic ? "traffic" : isConstruction ? "construction" : isIndustrial ? "industrial" : "general")),
+      ...pool.filter(p => p.sourceTag !== (isTraffic ? "traffic" : isConstruction ? "construction" : isIndustrial ? "industrial" : "general"))
+    ].slice(0, 7);
+    return sorted.map((item, i) => ({ ...item, day: `Day ${i + 1}` }));
   }
-}
 
+  // ── STAGE III (AQI 401–450) — Source-ordered within mandatory pool
+  if (aqi >= 401) {
+    const pool: PlanItem[] = [
+      { day: "", title: "BS-III/IV Vehicle Restrictions", action: "Enforce ban on BS-III petrol and BS-IV diesel LMVs (4-wheelers) in ward. Traffic personnel at all major junctions for vehicle checking.", priority: "Critical", sourceTag: "traffic" },
+      { day: "", title: "Heavy Vehicle Diversion", action: "Patrol and fine diesel MGVs (BS-IV & below). Check non-Delhi BS-IV LCVs. Enforce Peripheral Expressway diversion for non-destined trucks.", priority: "Critical", sourceTag: "traffic" },
+      { day: "", title: "C&D Activity Ban", action: "Enforce strict ban on all dust-generating C&D: earthwork, piling, demolition, trenching, brickwork, RMC batching, welding, tile grinding.", priority: "Critical", sourceTag: "construction" },
+      { day: "", title: "Stone Crushers & Mining Closure", action: "Close all stone crushers and mining operations. Issue closure notices. Coordinate with NCR district authorities for compliance.", priority: "Critical", sourceTag: "construction" },
+      { day: "", title: "Industrial Stack Emission Check", action: "Emergency inspections of high-polluting industrial stacks. Issue stop-work notices to non-compliant units. Report to DPCC.", priority: "High", sourceTag: "industrial" },
+      { day: "", title: "School Online Mode Enforcement", action: "Ensure all primary schools (up to Class V) are in hybrid/online mode as mandated under GRAP Stage III. Verify compliance with education dept.", priority: "High", sourceTag: "general" },
+      { day: "", title: "Stage III Compliance Review", action: "Audit all Stage III actions. Document compliance rate by category. Prepare weekly report for CAQM submission. Assess de-escalation feasibility.", priority: "High", sourceTag: "general" }
+    ];
+    const dominant = isTraffic ? "traffic" : isConstruction ? "construction" : isIndustrial ? "industrial" : "general";
+    const sorted = [
+      ...pool.filter(p => p.sourceTag === dominant),
+      ...pool.filter(p => p.sourceTag !== dominant)
+    ].slice(0, 7);
+    return sorted.map((item, i) => ({ ...item, day: `Day ${i + 1}` }));
+  }
+
+  // ── STAGE II (AQI 301–400) — Source-reordered mandatory pool
+  if (aqi >= 301) {
+    const pool: PlanItem[] = [
+      { day: "", title: "Traffic Signal Optimisation & Idling Reduction", action: "Synchronise traffic signals at congested bottlenecks. Deploy traffic police to reduce idling. Enhance parking fees to discourage personal vehicles.", priority: "High", sourceTag: "traffic" },
+      { day: "", title: "Inter-State Bus Restriction", action: "Do not permit inter-state buses from NCR states to enter Delhi via this ward (except EVs / CNG / BS-VI diesel). Set up entry point checks.", priority: "High", sourceTag: "traffic" },
+      { day: "", title: "C&D Site Intensive Inspection", action: "Intensify inspections at all active C&D sites: green netting height, anti-smog gun operation logs, covered material storage, vehicle wheel wash.", priority: "High", sourceTag: "construction" },
+      { day: "", title: "Mechanized Road Sweeping & Dust Suppression", action: "Daily vacuum sweeping and chemical dust suppressant application on all major roads before 7 AM. Cover all arterial and high-traffic corridors.", priority: "High", sourceTag: "construction" },
+      { day: "", title: "DG Set Operation Audit", action: "Strictly enforce regulated DG set operation schedules across industrial, commercial, and residential sectors. Issue show-cause notices to violators.", priority: "High", sourceTag: "industrial" },
+      { day: "", title: "Night Burning Patrol", action: "Zero-tolerance night-time patrol (9 PM – 5 AM) against open garbage, biomass, and plastic burning. Coordinate with local police for enforcement.", priority: "High", sourceTag: "waste" },
+      { day: "", title: "Stage II Compliance Review", action: "Evaluate AQI trend and compliance scores. If AQI crosses 400, activate Stage III escalation protocol immediately. Submit weekly report to CAQM.", priority: "Medium", sourceTag: "general" }
+    ];
+    const dominant = isTraffic ? "traffic" : isConstruction ? "construction" : isIndustrial ? "industrial" : (isWaste || isDust) ? "waste" : "construction";
+    const sorted = [
+      ...pool.filter(p => p.sourceTag === dominant),
+      ...pool.filter(p => p.sourceTag !== dominant && p.sourceTag !== "general"),
+      ...pool.filter(p => p.sourceTag === "general")
+    ].slice(0, 7);
+    return sorted.map((item, i) => ({ ...item, day: `Day ${i + 1}` }));
+  }
+
+  // ── STAGE I (AQI 201–300) — Source-reordered mandatory pool
+  if (aqi >= 201) {
+    const pool: PlanItem[] = [
+      { day: "", title: "Traffic Emission Enforcement", action: "Deploy traffic police at heavy corridors & congestion-prone intersections. Impound visibly polluting vehicles. Enforce PUC certificate checks on all vehicles.", priority: "High", sourceTag: "traffic" },
+      { day: "", title: "Peripheral Expressway Truck Diversion", action: "Enforce non-destined truck diversion via Peripheral Expressways. Checkpoints at ward entry points for commercial vehicle routing compliance.", priority: "High", sourceTag: "traffic" },
+      { day: "", title: "C&D Site Anti-Smog Gun Check", action: "Ensure anti-smog gun operation at all C&D sites >500 sqm. Verify web portal registration. Check green netting compliance and covered material transport.", priority: "High", sourceTag: "construction" },
+      { day: "", title: "Road Sweeping & Water Sprinkling", action: "Periodic mechanized sweeping & water sprinkling on arterial roads. Intensify anti-smog guns at construction & road repair sites.", priority: "High", sourceTag: "construction" },
+      { day: "", title: "Industrial Fuel & Stack Inspection", action: "Conduct stack emission checks. Enforce strict ban on coal/firewood in tandoors at hotels, restaurants & open eateries across the ward.", priority: "High", sourceTag: "industrial" },
+      { day: "", title: "Biomass & Waste Burning Vigil", action: "Stringently enforce prohibition on open biomass & solid waste burning. Strict vigil at landfill sites. Deploy anti-burning teams. Issue on-spot challans.", priority: "High", sourceTag: "waste" },
+      { day: "", title: "Stage I Weekly Review", action: "Evaluate 7-day AQI trend. If consistently improving → maintain Stage I. If deteriorating toward AQI 300 → activate Stage II readiness protocol.", priority: "Medium", sourceTag: "general" }
+    ];
+    const dominant = isTraffic ? "traffic" : isConstruction ? "construction" : isIndustrial ? "industrial" : (isWaste || isDust) ? "waste" : "traffic";
+    const sorted = [
+      ...pool.filter(p => p.sourceTag === dominant),
+      ...pool.filter(p => p.sourceTag !== dominant && p.sourceTag !== "general"),
+      ...pool.filter(p => p.sourceTag === "general")
+    ].slice(0, 7);
+    return sorted.map((item, i) => ({ ...item, day: `Day ${i + 1}` }));
+  }
+
+  // ── No GRAP (AQI ≤ 200) — Routine baseline, source-aware
+  const pool: PlanItem[] = [
+    { day: "", title: "Traffic & PUC Spot Check", action: "Routine PUC certificate checks at major intersections. Note visibly polluting vehicles. No emergency action — standard monitoring only.", priority: "Medium", sourceTag: "traffic" },
+    { day: "", title: "Road Dust & Sweeping Check", action: "Standard water sprinkling on dust corridors and unpaved roads. Check for construction sites generating excess fugitive dust.", priority: "Medium", sourceTag: "construction" },
+    { day: "", title: "C&D Green Netting Compliance", action: "Inspect ongoing C&D sites for green netting and material covering compliance. No emergency action — routine verification only.", priority: "Medium", sourceTag: "construction" },
+    { day: "", title: "Industrial Stack Compliance Round", action: "Routine stack emission inspection at registered industrial units. Verify compliance with ambient air quality standards.", priority: "Medium", sourceTag: "industrial" },
+    { day: "", title: "Waste Management Coordination", action: "Coordinate with sanitation dept for timely waste collection to prevent open burning. Check landfill fire prevention measures.", priority: "Medium", sourceTag: "waste" },
+    { day: "", title: "Citizen Complaint Resolution", action: "Review and act on all pending citizen pollution reports. Close resolved cases. Assign field teams to unresolved complaints.", priority: "Medium", sourceTag: "general" },
+    { day: "", title: "Weekly AQI Health Check", action: "Review 7-day AQI data. Air quality is satisfactory — maintain current baseline monitoring. No GRAP escalation warranted this week.", priority: "Medium", sourceTag: "general" }
+  ];
+  const dominant = isTraffic ? "traffic" : isConstruction ? "construction" : isIndustrial ? "industrial" : (isWaste || isDust) ? "waste" : "general";
+  const sorted = [
+    ...pool.filter(p => p.sourceTag === dominant),
+    ...pool.filter(p => p.sourceTag !== dominant && p.sourceTag !== "general"),
+    ...pool.filter(p => p.sourceTag === "general")
+  ].slice(0, 7);
+  return sorted.map((item, i) => ({ ...item, day: `Day ${i + 1}` }));
+}
 
 // ─── Known active AQICN Delhi monitoring stations (hardcoded fallback) ───────
 // These are fetched once to bootstrap the station-map; they rarely change.

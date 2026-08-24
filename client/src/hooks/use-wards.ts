@@ -216,7 +216,9 @@ export function useAllReports() {
       if (!res.ok) throw new Error("Failed to fetch reports");
       return await res.json() as any[];
     },
-    refetchInterval: 3000,
+    refetchInterval: 5000,
+    staleTime: 4000,          // treat data as fresh for 4s so no flicker
+    placeholderData: (prev) => prev, // keep showing old data while refetching
   });
 }
 
@@ -287,6 +289,8 @@ export function useBlockchainLedger() {
       if (!res.ok) throw new Error("Failed to fetch blockchain ledger");
       return await res.json() as any[];
     },
-    refetchInterval: 3000,
+    refetchInterval: 5000,
+    staleTime: 4000,
+    placeholderData: (prev) => prev,
   });
 }

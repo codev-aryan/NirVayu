@@ -495,7 +495,8 @@ function CitizenReportsPanel({ selectedWard }: { selectedWard: any }) {
   const restoreMutation = useRestoreReport();
   const { toast } = useToast();
 
-  if (loadingDb || loadingChain) {
+  // Only show spinner on very first load (no data yet), not on background refetches
+  if ((loadingDb && !dbReports) || (loadingChain && !chainReports)) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

@@ -223,11 +223,8 @@ Return ONLY a JSON object (no markdown, no extra text):
         }
       }
 
-      // Write base64 image to local uploads folder
-      const filename = `report_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.jpg`;
-      const filepath = path.join(uploadsDir, filename);
-      fs.writeFileSync(filepath, Buffer.from(base64Data, "base64"));
-      const imageUrl = `/uploads/${filename}`;
+      // Store image as base64 data URL directly in DB (Vercel filesystem is ephemeral)
+      const imageUrl = `data:${mimeType};base64,${base64Data}`;
 
       // 1. Write the initial report details to database storage to get a unique report ID
       const report = await storage.createReport({

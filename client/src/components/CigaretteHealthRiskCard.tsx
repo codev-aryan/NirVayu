@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Cigarette, AlertCircle, ShieldAlert, HeartPulse, Info } from "lucide-react";
+import { CheckCircle2, XCircle, Cigarette, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CigaretteHealthRiskCardProps {
@@ -17,7 +17,7 @@ interface HealthCondition {
   minAqi: number; // Only show this tab if current AQI >= minAqi
   getRiskLevel: (aqi: number) => {
     label: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
-    colorClass: string;
+    badgeClass: string;
     bgBoxClass: string;
     borderClass: string;
   };
@@ -32,10 +32,10 @@ const HEALTH_CONDITIONS: HealthCondition[] = [
     name: "Headaches",
     minAqi: 0,
     getRiskLevel: (aqi) => {
-      if (aqi <= 50) return { label: "LOW", colorClass: "bg-emerald-600 text-white", bgBoxClass: "bg-emerald-50 dark:bg-emerald-950/20", borderClass: "border-emerald-200 dark:border-emerald-900/40" };
-      if (aqi <= 100) return { label: "MODERATE", colorClass: "bg-amber-600 text-white", bgBoxClass: "bg-amber-50 dark:bg-amber-950/20", borderClass: "border-amber-200 dark:border-amber-900/40" };
-      if (aqi <= 200) return { label: "HIGH", colorClass: "bg-red-600 text-white", bgBoxClass: "bg-rose-50 dark:bg-rose-950/30", borderClass: "border-rose-200 dark:border-rose-900/50" };
-      return { label: "CRITICAL", colorClass: "bg-purple-700 text-white", bgBoxClass: "bg-purple-50 dark:bg-purple-950/30", borderClass: "border-purple-200 dark:border-purple-900/50" };
+      if (aqi <= 50) return { label: "LOW", badgeClass: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300", bgBoxClass: "bg-emerald-50/60 dark:bg-emerald-950/20", borderClass: "border-emerald-200 dark:border-emerald-900/40" };
+      if (aqi <= 100) return { label: "MODERATE", badgeClass: "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300", bgBoxClass: "bg-amber-50/60 dark:bg-amber-950/20", borderClass: "border-amber-200 dark:border-amber-900/40" };
+      if (aqi <= 200) return { label: "HIGH", badgeClass: "bg-rose-200 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200", bgBoxClass: "bg-rose-50/60 dark:bg-rose-950/20", borderClass: "border-rose-200 dark:border-rose-900/40" };
+      return { label: "CRITICAL", badgeClass: "bg-purple-200 text-purple-900 dark:bg-purple-900/60 dark:text-purple-200", bgBoxClass: "bg-purple-50/60 dark:bg-purple-950/20", borderClass: "border-purple-200 dark:border-purple-900/40" };
     },
     symptoms: "Tight, band-like pressure across the forehead and temples, Extra sensitivity to light, noise, or strong smells, Sluggishness and trouble staying focused.",
     dos: [
@@ -53,9 +53,9 @@ const HEALTH_CONDITIONS: HealthCondition[] = [
     name: "Eye Irritation",
     minAqi: 40,
     getRiskLevel: (aqi) => {
-      if (aqi <= 100) return { label: "MODERATE", colorClass: "bg-amber-600 text-white", bgBoxClass: "bg-amber-50 dark:bg-amber-950/20", borderClass: "border-amber-200 dark:border-amber-900/40" };
-      if (aqi <= 200) return { label: "HIGH", colorClass: "bg-red-600 text-white", bgBoxClass: "bg-rose-50 dark:bg-rose-950/30", borderClass: "border-rose-200 dark:border-rose-900/50" };
-      return { label: "CRITICAL", colorClass: "bg-purple-700 text-white", bgBoxClass: "bg-purple-50 dark:bg-purple-950/30", borderClass: "border-purple-200 dark:border-purple-900/50" };
+      if (aqi <= 100) return { label: "MODERATE", badgeClass: "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300", bgBoxClass: "bg-amber-50/60 dark:bg-amber-950/20", borderClass: "border-amber-200 dark:border-amber-900/40" };
+      if (aqi <= 200) return { label: "HIGH", badgeClass: "bg-rose-200 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200", bgBoxClass: "bg-rose-50/60 dark:bg-rose-950/20", borderClass: "border-rose-200 dark:border-rose-900/40" };
+      return { label: "CRITICAL", badgeClass: "bg-purple-200 text-purple-900 dark:bg-purple-900/60 dark:text-purple-200", bgBoxClass: "bg-purple-50/60 dark:bg-purple-950/20", borderClass: "border-purple-200 dark:border-purple-900/40" };
     },
     symptoms: "Burning sensation, redness, watery eyes, dryness, and itchiness caused by airborne particulate friction and chemical irritants.",
     dos: [
@@ -73,9 +73,9 @@ const HEALTH_CONDITIONS: HealthCondition[] = [
     name: "Asthma",
     minAqi: 50,
     getRiskLevel: (aqi) => {
-      if (aqi <= 80) return { label: "MODERATE", colorClass: "bg-amber-600 text-white", bgBoxClass: "bg-amber-50 dark:bg-amber-950/20", borderClass: "border-amber-200 dark:border-amber-900/40" };
-      if (aqi <= 180) return { label: "HIGH", colorClass: "bg-red-600 text-white", bgBoxClass: "bg-rose-50 dark:bg-rose-950/30", borderClass: "border-rose-200 dark:border-rose-900/50" };
-      return { label: "CRITICAL", colorClass: "bg-purple-700 text-white", bgBoxClass: "bg-purple-50 dark:bg-purple-950/30", borderClass: "border-purple-200 dark:border-purple-900/50" };
+      if (aqi <= 80) return { label: "MODERATE", badgeClass: "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300", bgBoxClass: "bg-amber-50/60 dark:bg-amber-950/20", borderClass: "border-amber-200 dark:border-amber-900/40" };
+      if (aqi <= 180) return { label: "HIGH", badgeClass: "bg-rose-200 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200", bgBoxClass: "bg-rose-50/60 dark:bg-rose-950/20", borderClass: "border-rose-200 dark:border-rose-900/40" };
+      return { label: "CRITICAL", badgeClass: "bg-purple-200 text-purple-900 dark:bg-purple-900/60 dark:text-purple-200", bgBoxClass: "bg-purple-50/60 dark:bg-purple-950/20", borderClass: "border-purple-200 dark:border-purple-900/40" };
     },
     symptoms: "Wheezing, chest tightness, shortness of breath, persistent dry cough, and rapid shallow breathing triggered by fine particles.",
     dos: [
@@ -93,8 +93,8 @@ const HEALTH_CONDITIONS: HealthCondition[] = [
     name: "Allergies & Sinus",
     minAqi: 45,
     getRiskLevel: (aqi) => {
-      if (aqi <= 100) return { label: "MODERATE", colorClass: "bg-amber-600 text-white", bgBoxClass: "bg-amber-50 dark:bg-amber-950/20", borderClass: "border-amber-200 dark:border-amber-900/40" };
-      return { label: "HIGH", colorClass: "bg-red-600 text-white", bgBoxClass: "bg-rose-50 dark:bg-rose-950/30", borderClass: "border-rose-200 dark:border-rose-900/50" };
+      if (aqi <= 100) return { label: "MODERATE", badgeClass: "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300", bgBoxClass: "bg-amber-50/60 dark:bg-amber-950/20", borderClass: "border-amber-200 dark:border-amber-900/40" };
+      return { label: "HIGH", badgeClass: "bg-rose-200 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200", bgBoxClass: "bg-rose-50/60 dark:bg-rose-950/20", borderClass: "border-rose-200 dark:border-rose-900/40" };
     },
     symptoms: "Frequent sneezing, nasal congestion, post-nasal drip, sinus head pressure, and throat tickle from airborne soot.",
     dos: [
@@ -112,8 +112,8 @@ const HEALTH_CONDITIONS: HealthCondition[] = [
     name: "Pregnancy",
     minAqi: 75,
     getRiskLevel: (aqi) => {
-      if (aqi <= 140) return { label: "MODERATE", colorClass: "bg-amber-600 text-white", bgBoxClass: "bg-amber-50 dark:bg-amber-950/20", borderClass: "border-amber-200 dark:border-amber-900/40" };
-      return { label: "HIGH", colorClass: "bg-red-600 text-white", bgBoxClass: "bg-rose-50 dark:bg-rose-950/30", borderClass: "border-rose-200 dark:border-rose-900/50" };
+      if (aqi <= 140) return { label: "MODERATE", badgeClass: "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300", bgBoxClass: "bg-amber-50/60 dark:bg-amber-950/20", borderClass: "border-amber-200 dark:border-amber-900/40" };
+      return { label: "HIGH", badgeClass: "bg-rose-200 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200", bgBoxClass: "bg-rose-50/60 dark:bg-rose-950/20", borderClass: "border-rose-200 dark:border-rose-900/40" };
     },
     symptoms: "Elevated maternal systemic inflammation, potential placental hypoxia, increased fatigue, and heightened blood pressure.",
     dos: [
@@ -131,8 +131,8 @@ const HEALTH_CONDITIONS: HealthCondition[] = [
     name: "Heart Issues",
     minAqi: 110,
     getRiskLevel: (aqi) => {
-      if (aqi <= 200) return { label: "HIGH", colorClass: "bg-red-600 text-white", bgBoxClass: "bg-rose-50 dark:bg-rose-950/30", borderClass: "border-rose-200 dark:border-rose-900/50" };
-      return { label: "CRITICAL", colorClass: "bg-purple-700 text-white", bgBoxClass: "bg-purple-50 dark:bg-purple-950/30", borderClass: "border-purple-200 dark:border-purple-900/50" };
+      if (aqi <= 200) return { label: "HIGH", badgeClass: "bg-rose-200 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200", bgBoxClass: "bg-rose-50/60 dark:bg-rose-950/20", borderClass: "border-rose-200 dark:border-rose-900/40" };
+      return { label: "CRITICAL", badgeClass: "bg-purple-200 text-purple-900 dark:bg-purple-900/60 dark:text-purple-200", bgBoxClass: "bg-purple-50/60 dark:bg-purple-950/20", borderClass: "border-purple-200 dark:border-purple-900/40" };
     },
     symptoms: "Elevated blood pressure, rapid pulse, chest tightness, palpitations, and vascular inflammation caused by ultra-fine PM0.1 absorption.",
     dos: [
@@ -150,8 +150,8 @@ const HEALTH_CONDITIONS: HealthCondition[] = [
     name: "Cold / Flu",
     minAqi: 90,
     getRiskLevel: (aqi) => {
-      if (aqi <= 160) return { label: "MODERATE", colorClass: "bg-amber-600 text-white", bgBoxClass: "bg-amber-50 dark:bg-amber-950/20", borderClass: "border-amber-200 dark:border-amber-900/40" };
-      return { label: "HIGH", colorClass: "bg-red-600 text-white", bgBoxClass: "bg-rose-50 dark:bg-rose-950/30", borderClass: "border-rose-200 dark:border-rose-900/50" };
+      if (aqi <= 160) return { label: "MODERATE", badgeClass: "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300", bgBoxClass: "bg-amber-50/60 dark:bg-amber-950/20", borderClass: "border-amber-200 dark:border-amber-900/40" };
+      return { label: "HIGH", badgeClass: "bg-rose-200 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200", bgBoxClass: "bg-rose-50/60 dark:bg-rose-950/20", borderClass: "border-rose-200 dark:border-rose-900/40" };
     },
     symptoms: "Raw sore throat, persistent dry cough, body aches, hoarseness, and heightened vulnerability to viral respiratory infections.",
     dos: [
@@ -169,7 +169,7 @@ const HEALTH_CONDITIONS: HealthCondition[] = [
     name: "Chronic COPD",
     minAqi: 130,
     getRiskLevel: (aqi) => {
-      return { label: "CRITICAL", colorClass: "bg-purple-700 text-white", bgBoxClass: "bg-purple-50 dark:bg-purple-950/30", borderClass: "border-purple-200 dark:border-purple-900/50" };
+      return { label: "CRITICAL", badgeClass: "bg-purple-200 text-purple-900 dark:bg-purple-900/60 dark:text-purple-200", bgBoxClass: "bg-purple-50/60 dark:bg-purple-950/20", borderClass: "border-purple-200 dark:border-purple-900/40" };
     },
     symptoms: "Severe breathlessness, chronic coughing with phlegm, acute fatigue, low oxygen saturation, and frequent pulmonary flare-ups.",
     dos: [
@@ -218,14 +218,14 @@ export function CigaretteHealthRiskCard({
   };
 
   return (
-    <Card className={cn("p-6 border-border shadow-sm bg-card rounded-2xl space-y-6", className)}>
+    <Card className={cn("p-6 border-border/60 shadow-sm bg-card rounded-2xl space-y-6", className)}>
       {/* ─── TOP SECTION: CIGARETTE EQUIVALENT ─── */}
       <div className="space-y-4 pb-6 border-b border-border/60">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Cigarette className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-            <h3 className="text-sm font-extrabold text-foreground tracking-tight uppercase">
-              Cigarette Smoke Equivalent
+            <h3 className="text-xs font-extrabold text-muted-foreground uppercase tracking-widest">
+              CIGARETTE EQUIVALENT
             </h3>
           </div>
           <Badge variant="outline" className="text-[10px] font-mono border-amber-500/40 text-amber-600 dark:text-amber-400">
@@ -235,8 +235,8 @@ export function CigaretteHealthRiskCard({
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Daily Equivalent */}
-          <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20 space-y-1">
-            <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+          <div className="p-4 rounded-xl border border-amber-200/80 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20 space-y-1">
+            <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">
               CIGARETTE EQUIVALENT
             </div>
             <div className="text-3xl font-black text-amber-700 dark:text-amber-400">
@@ -248,8 +248,8 @@ export function CigaretteHealthRiskCard({
           </div>
 
           {/* Weekly Exposure */}
-          <div className="p-4 rounded-xl border border-border bg-muted/30 space-y-1">
-            <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+          <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-1">
+            <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">
               WEEKLY EXPOSURE
             </div>
             <div className="text-3xl font-bold text-foreground">
@@ -257,13 +257,13 @@ export function CigaretteHealthRiskCard({
             </div>
             <p className="text-xs text-muted-foreground font-medium pt-1 flex items-center gap-1">
               <span>Source Formula</span>
-              <Info className="w-3 h-3 text-muted-foreground inline" />
+              <Info className="w-3 h-3 text-amber-600 dark:text-amber-400 inline" />
             </p>
           </div>
 
           {/* Monthly Exposure */}
-          <div className="p-4 rounded-xl border border-border bg-muted/30 space-y-1">
-            <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+          <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-1">
+            <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">
               MONTHLY EXPOSURE
             </div>
             <div className="text-3xl font-bold text-foreground">
@@ -279,7 +279,7 @@ export function CigaretteHealthRiskCard({
       {/* ─── BOTTOM SECTION: RISK ASSESSMENTS — PREVENT HEALTH PROBLEMS ─── */}
       <div className="space-y-4">
         <div>
-          <div className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-widest">
+          <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">
             RISK ASSESSMENTS
           </div>
           <h2 className="text-xl font-bold font-display text-foreground mt-0.5">
@@ -287,7 +287,7 @@ export function CigaretteHealthRiskCard({
           </h2>
         </div>
 
-        {/* Dynamic Condition Tabs (Filtered ward-wise by current AQI) */}
+        {/* Dynamic Condition Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
           {activeConditions.map((condition) => {
             const isSelected = condition.id === currentCondition.id;
@@ -296,10 +296,10 @@ export function CigaretteHealthRiskCard({
                 key={condition.id}
                 onClick={() => setSelectedConditionId(condition.id)}
                 className={cn(
-                  "px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 border",
+                  "px-4 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 border",
                   isSelected
-                    ? "bg-amber-500 text-white border-amber-600 shadow-sm"
-                    : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                    ? "border-2 border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-bold shadow-sm"
+                    : "border-border/60 bg-background text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
                 )}
               >
                 {condition.name}
@@ -313,22 +313,22 @@ export function CigaretteHealthRiskCard({
           {/* Risk Header */}
           <div className="space-y-1">
             <div className="flex items-center gap-3">
-              <Badge className={cn("px-3 py-1 font-extrabold text-xs tracking-wider", risk.colorClass)}>
+              <Badge className={cn("px-2.5 py-0.5 font-extrabold text-[10px] tracking-wider uppercase rounded-md", risk.badgeClass)}>
                 {risk.label} RISK
               </Badge>
               <h3 className="text-lg font-bold text-foreground">{currentCondition.name}</h3>
             </div>
             <p className="text-xs text-muted-foreground font-medium pt-1">
-              Risk is <strong>{risk.label.toLowerCase()}</strong> for {getAqiStageText(aqi)} conditions (AQI {Math.round(aqi)} {wardName ? `in ${wardName}` : ""}).
+              Risk is <strong>{risk.label}</strong> for {getAqiStageText(aqi)} conditions (AQI {Math.round(aqi)} {wardName ? `in ${wardName}` : ""}).
             </p>
           </div>
 
           {/* Common Symptoms */}
           <div className="space-y-1">
-            <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+            <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">
               COMMON SYMPTOMS
             </div>
-            <p className="text-xs text-foreground/80 leading-relaxed">
+            <p className="text-xs text-foreground/80 leading-relaxed font-normal">
               Some people experience: {currentCondition.symptoms}
             </p>
           </div>
@@ -337,11 +337,10 @@ export function CigaretteHealthRiskCard({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-border/40">
             {/* DO'S Column */}
             <div className="space-y-3">
-              <div className="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <div className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
                 <span>DO'S</span>
               </div>
-              <ul className="space-y-2">
+              <ul className="space-y-2.5">
                 {currentCondition.dos.map((item, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-xs text-foreground/90 leading-normal">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
@@ -353,14 +352,13 @@ export function CigaretteHealthRiskCard({
 
             {/* DON'TS Column */}
             <div className="space-y-3">
-              <div className="text-[11px] font-extrabold text-red-700 dark:text-red-400 uppercase tracking-wider flex items-center gap-1.5">
-                <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+              <div className="text-[11px] font-extrabold text-rose-600 dark:text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
                 <span>DON'TS</span>
               </div>
-              <ul className="space-y-2">
+              <ul className="space-y-2.5">
                 {currentCondition.donts.map((item, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-xs text-foreground/90 leading-normal">
-                    <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                    <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                     <span>{item}</span>
                   </li>
                 ))}

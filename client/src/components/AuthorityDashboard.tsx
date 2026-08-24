@@ -178,21 +178,6 @@ export function AuthorityDashboard() {
                         : `Primary contributor for ${selectedWard.name}. Ward action protocols enforced.`}
                     </p>
                   </div>
-
-                  <div className="pt-4 border-t border-border/60 grid grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase block">Compliance Score</span>
-                      <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
-                        {Math.max(0, 100 - Math.floor(selectedWard.aqi / 5))}/100
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase block">Active Controls</span>
-                      <span className="text-xl font-black text-blue-600 dark:text-blue-400">
-                        {selectedWard.active_controls?.length || 2} Enforced
-                      </span>
-                    </div>
-                  </div>
                 </Card>
               </div>
             </div>
@@ -201,14 +186,14 @@ export function AuthorityDashboard() {
             <div className="space-y-10 pt-2">
               {/* Feature 1: AI Intelligence & GRAP Enforcement Plan */}
               <div className="space-y-4 pt-2">
-                <div className="p-4 rounded-xl bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-transparent border-l-4 border-l-blue-500 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
-                      <BrainCircuit className="w-5 h-5" />
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white shadow-md flex items-center justify-between">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm text-white flex items-center justify-center font-bold shrink-0">
+                      <BrainCircuit className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-foreground tracking-tight">AI Intelligence & GRAP Enforcement Plan</h3>
-                      <p className="text-xs text-muted-foreground font-medium">ML pollutant diagnosis, 7-day operational schedule & mandatory GRAP actions</p>
+                      <h3 className="text-base font-black tracking-tight text-white">AI Intelligence & GRAP Enforcement Plan</h3>
+                      <p className="text-xs text-blue-100 font-medium mt-0.5">ML pollutant diagnosis, 7-day operational schedule & mandatory GRAP actions</p>
                     </div>
                   </div>
                 </div>
@@ -216,15 +201,15 @@ export function AuthorityDashboard() {
               </div>
 
               {/* Feature 2: Interactive Policy Impact Simulator Sandbox */}
-              <div className="space-y-4 pt-4 border-t border-border/60">
-                <div className="p-4 rounded-xl bg-gradient-to-r from-violet-500/10 via-violet-500/5 to-transparent border-l-4 border-l-violet-500 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-violet-500/15 text-violet-600 dark:text-violet-400 flex items-center justify-center font-bold">
-                      <BarChart3 className="w-5 h-5" />
+              <div className="space-y-4 pt-6 border-t border-border/60">
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-violet-600 via-purple-700 to-indigo-800 text-white shadow-md flex items-center justify-between">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm text-white flex items-center justify-center font-bold shrink-0">
+                      <BarChart3 className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-foreground tracking-tight">Interactive Policy Impact Simulator</h3>
-                      <p className="text-xs text-muted-foreground font-medium">Test traffic rationing, misting & construction halts with instant projected AQI</p>
+                      <h3 className="text-base font-black tracking-tight text-white">Interactive Policy Impact Simulator</h3>
+                      <p className="text-xs text-violet-100 font-medium mt-0.5">Test traffic rationing, misting & construction halts with instant projected AQI</p>
                     </div>
                   </div>
                 </div>
@@ -232,15 +217,15 @@ export function AuthorityDashboard() {
               </div>
 
               {/* Feature 3: Citizen Pollution Reports & Action Feed */}
-              <div className="space-y-4 pt-4 border-t border-border/60">
-                <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border-l-4 border-l-emerald-500 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-                      <Clock className="w-5 h-5" />
+              <div className="space-y-4 pt-6 border-t border-border/60">
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-700 to-cyan-800 text-white shadow-md flex items-center justify-between">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm text-white flex items-center justify-center font-bold shrink-0">
+                      <Clock className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-foreground tracking-tight">Citizen Reports & Verified Field Audit</h3>
-                      <p className="text-xs text-muted-foreground font-medium">Live photo submissions with AI classification & location-based action tracking</p>
+                      <h3 className="text-base font-black tracking-tight text-white">Citizen Reports & Verified Field Audit</h3>
+                      <p className="text-xs text-emerald-100 font-medium mt-0.5">Live photo submissions with AI classification & location-based action tracking</p>
                     </div>
                   </div>
                 </div>
@@ -539,23 +524,6 @@ function IntelligencePanel({ wardId }: { wardId: number }) {
           </CardContent>
         </Card>
       </div>
-
-      <Card className="border-primary/20 bg-primary/5">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2 uppercase tracking-tighter">
-            <Activity className="w-4 h-4 text-primary" /> {t("intel.allowedControls")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {(intel.allowed_controls as string[]).map((control: string, i: number) => (
-              <Badge key={i} variant="secondary" className="uppercase text-[10px]">
-                {control.replace(/_/g, ' ')}
-              </Badge>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

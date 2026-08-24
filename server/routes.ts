@@ -121,36 +121,20 @@ Return ONLY a JSON object (no markdown, no extra text):
 
       if (geminiApiKey) {
         const prompt = `
-You are an expert AIR QUALITY monitoring AI. Analyze this image and user description to classify the pollution source into EXACTLY ONE of these categories:
-
-1. "traffic":
-   - Vehicles on roads, traffic congestion, cars, trucks, buses, diesel exhaust, tailpipe smoke, or traffic smog.
-
-2. "construction":
-   - Construction sites, building demolition, unpaved dust, cement dust, earthmoving machinery, or dust clouds.
-
-3. "stubble burning":
-   - Agricultural fields, crop residue burning, stubble fires, or farm fires with visible smoke.
-
-4. "other":
-   - Industrial factory chimneys, power plant smoke, brick kilns, open garbage/trash burning, bonfires, chemical fumes, or general heavy smog.
-
-5. "irrelevant":
-   - Image does NOT show air pollution, smoke, dust, fumes, or fires (e.g. indoor selfies, food, clean sky, clear water).
+You are an expert AIR QUALITY monitoring AI. Look at this image carefully and identify the EXACT pollution source visible.
 
 USER DESCRIPTION: "${data.description || "None provided"}"
 
-DECISION RULE:
-- If cars, trucks, buses, or roads with exhaust/smog are visible $\rightarrow$ "traffic"
-- If construction, building work, or heavy dust clouds are visible $\rightarrow$ "construction"
-- If farm fields or stubble fires are visible $\rightarrow$ "stubble burning"
-- If factory smoke, trash burning, or chemical fumes are visible $\rightarrow$ "other"
+RULES:
+- Describe the pollution source precisely as you see it (e.g. "Vehicle Exhaust", "Construction Dust", "Crop/Stubble Burning", "Factory Chimney Smoke", "Open Garbage Fire", "Brick Kiln Emissions", "Smog/Haze", "Generator Fumes", etc.)
+- If the image clearly shows NO air pollution (selfie, food, clean sky, indoor scene, water pollution, litter), set classification to "irrelevant".
+- Keep the classification label short (2-4 words max), Title Case.
 
-Return ONLY a JSON object:
+Return ONLY a JSON object (no markdown, no extra text):
 {
-  "classification": "traffic" | "construction" | "stubble burning" | "other" | "irrelevant",
+  "classification": "short descriptive label of what you see",
   "confidence": number (integer 0 to 100),
-  "explanation": "Brief 1-sentence reasoning for the classification."
+  "explanation": "One sentence describing what is visibly causing the air pollution in this image."
 }
 `;
 
@@ -179,22 +163,9 @@ Return ONLY a JSON object:
             const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
             if (jsonMatch) jsonText = jsonMatch[0];
             const parsed = JSON.parse(jsonText);
-            classification = parsed.classification || "other";
+            classification = parsed.classification || "Unknown Pollution";
             confidence = typeof parsed.confidence === "number" ? parsed.confidence : parseInt(parsed.confidence) || 75;
             explanation = parsed.explanation || "AI analyzed the image.";
-
-            // Refine generic "other" into specific human-readable pollution source names
-            if (classification === "other") {
-              const expLower = (explanation + " " + (data.description || "")).toLowerCase();
-              if (expLower.includes("garbage") || expLower.includes("trash") || expLower.includes("waste") || expLower.includes("plastic") || expLower.includes("burning") || expLower.includes("fire") || expLower.includes("bonfire")) {
-                classification = "Waste & Garbage Burning";
-              } else if (expLower.includes("factory") || expLower.includes("industrial") || expLower.includes("chimney") || expLower.includes("kiln") || expLower.includes("smoke") || expLower.includes("power plant")) {
-                classification = "Industrial & Factory Smoke";
-              } else {
-                classification = "Industrial / Waste Burning";
-              }
-            }
-
             aiAnalysisStatus = "ai";
             geminiSuccess = true;
             console.log(`[Gemini AI] Model: ${modelName} | Classification: ${classification}, Confidence: ${confidence}%`);

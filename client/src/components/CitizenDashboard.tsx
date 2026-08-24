@@ -537,14 +537,8 @@ function ReportPollutionModule({ selectedWard }: { selectedWard: any }) {
               <div>
                 <span className="font-bold block text-green-800">{language === "hi" ? "वर्गीकरण:" : "Classification:"}</span>
                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                  <span className={cn(
-                    "capitalize font-semibold px-2 py-0.5 rounded text-[11px]",
-                    successData.report.pollutionType === "traffic" && "bg-blue-100 text-blue-800",
-                    successData.report.pollutionType === "construction" && "bg-orange-100 text-orange-800",
-                    successData.report.pollutionType === "stubble burning" && "bg-red-100 text-red-800",
-                    (successData.report.pollutionType === "other" || successData.report.pollutionType.includes("Burning") || successData.report.pollutionType.includes("Industrial")) && "bg-purple-100 text-purple-800",
-                  )}>
-                    {successData.report.pollutionType === "other" ? "Industrial / Waste Burning" : successData.report.pollutionType}
+                  <span className="font-semibold px-2 py-0.5 rounded text-[11px] bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200">
+                    {successData.report.pollutionType}
                   </span>
                   <span className="text-muted-foreground">({successData.report.aiConfidence}%)</span>
                 </div>

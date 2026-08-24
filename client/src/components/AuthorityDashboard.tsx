@@ -530,25 +530,65 @@ function IntelligencePanel({ wardId }: { wardId: number }) {
             <CardDescription className="text-xs">7-Day operational schedule tailored to {ward.name}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-            {weeklyPlan.map((item: any, i: number) => (
-              <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg border border-border/50 bg-muted/20 text-xs">
-                <div className="shrink-0 flex flex-col items-center">
-                  <span className="font-bold text-primary text-[11px] whitespace-nowrap">{item.day}</span>
-                  <Badge variant="outline" className={cn(
-                    "text-[9px] px-1 py-0 h-4 mt-1 font-semibold",
-                    item.priority === "Critical" && "border-red-300 text-red-700 bg-red-50",
-                    item.priority === "High" && "border-amber-300 text-amber-700 bg-amber-50",
-                    item.priority === "Medium" && "border-blue-300 text-blue-700 bg-blue-50"
+            {(() => {
+              // Anchor dates to plan_generated_at so Day 1 is always the generation date
+              const generatedAt = (intel as any).plan_generated_at
+                ? new Date((intel as any).plan_generated_at)
+                : new Date();
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+
+              return weeklyPlan.map((item: any, i: number) => {
+                const dayDate = new Date(generatedAt);
+                dayDate.setDate(generatedAt.getDate() + i);
+                dayDate.setHours(0, 0, 0, 0);
+                const isToday = dayDate.getTime() === today.getTime();
+                const isPast = dayDate < today;
+                const dateLabel = dayDate.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+
+                return (
+                  <div key={i} className={cn(
+                    "flex items-start gap-3 p-2.5 rounded-lg border text-xs transition-colors",
+                    isToday
+                      ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20"
+                      : isPast
+                      ? "border-border/30 bg-muted/10 opacity-60"
+                      : "border-border/50 bg-muted/20"
                   )}>
-                    {item.priority}
-                  </Badge>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="font-bold text-foreground block">{item.title}</span>
-                  <p className="text-muted-foreground text-[11px] leading-snug mt-0.5">{item.action}</p>
-                </div>
-              </div>
-            ))}
+                    <div className="shrink-0 flex flex-col items-center min-w-[52px]">
+                      <span className={cn(
+                        "font-bold text-[10px] whitespace-nowrap",
+                        isToday ? "text-primary" : isPast ? "text-muted-foreground" : "text-foreground"
+                      )}>
+                        {dateLabel}
+                      </span>
+                      {isToday && (
+                        <span className="text-[9px] font-extrabold text-primary bg-primary/10 px-1 rounded mt-0.5">TODAY</span>
+                      )}
+                      <Badge variant="outline" className={cn(
+                        "text-[9px] px-1 py-0 h-4 mt-1 font-semibold",
+                        item.priority === "Critical" && "border-red-300 text-red-700 bg-red-50",
+                        item.priority === "High" && "border-amber-300 text-amber-700 bg-amber-50",
+                        item.priority === "Medium" && "border-blue-300 text-blue-700 bg-blue-50"
+                      )}>
+                        {item.priority}
+                      </Badge>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-bold text-foreground block">{item.title}</span>
+                      <p className="text-muted-foreground text-[11px] leading-snug mt-0.5">{item.action}</p>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+            {/* Plan validity footer */}
+            {(intel as any).plan_generated_at && (
+              <p className="text-[10px] text-muted-foreground text-center pt-1 border-t border-border/40">
+                Plan generated: {new Date((intel as any).plan_generated_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                {" · "}Refreshes on GRAP stage change or after 7 days
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

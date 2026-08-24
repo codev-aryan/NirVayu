@@ -166,59 +166,113 @@ export function buildGrapInfo(aqi: number, primarySource: string) {
 }
 
 export function buildWeeklyPlan(aqi: number, dominantSource: string) {
-  const source = (dominantSource || "").toLowerCase();
-  return [
-    {
-      day: "Day 1 (Today)",
-      title: "Immediate Emergency Mitigation",
-      action: source.includes("traffic")
-        ? "Deploy anti-smog guns & traffic police at peak choke points; enforce heavy vehicle diversion."
-        : source.includes("construction")
-        ? "Halt un-covered earthwork; deploy continuous water sprinklers across all active sites."
-        : source.includes("industrial")
-        ? "Conduct surprise stack emission inspections & issue immediate halt notices to non-compliant units."
-        : "Deploy mobile anti-burning task forces for night-time waste patrol & instant fine imposition.",
-      priority: (aqi > 300 ? "Critical" : "High") as "Critical" | "High" | "Medium"
-    },
-    {
-      day: "Day 2",
-      title: "Targeted Emission Suppression",
-      action: "Mechanized road sweeping across arterial corridors combined with chemical dust suppressant application.",
-      priority: "High" as "Critical" | "High" | "Medium"
-    },
-    {
-      day: "Day 3",
-      title: "Source Inspection & Patrols",
-      action: "Zero-tolerance patrol against open trash/plastic burning and diesel generator non-compliance.",
-      priority: "High" as "Critical" | "High" | "Medium"
-    },
-    {
-      day: "Day 4",
-      title: "Mid-Week AQI & Hotspot Re-evaluation",
-      action: "Recalibrate sensor network data, audit high-AQI clusters, and adjust misting vehicle deployment routes.",
-      priority: "Medium" as "Critical" | "High" | "Medium"
-    },
-    {
-      day: "Day 5",
-      title: "Commercial & Site Compliance Audit",
-      action: "Verify C&D dust barrier height, green netting, and anti-smog gun operational logs across all projects.",
-      priority: "Medium" as "Critical" | "High" | "Medium"
-    },
-    {
-      day: "Day 6",
-      title: "Traffic Corridor & Idling Reduction",
-      action: "Optimize signal timing at major junctions to reduce vehicle idling time and emissions during evening rush hour.",
-      priority: "Medium" as "Critical" | "High" | "Medium"
-    },
-    {
-      day: "Day 7",
-      title: "Weekly Performance & GRAP Stage Audit",
-      action: "Evaluate 7-day AQI trend, compile ward compliance scores, and update GRAP enforcement stage for next week.",
-      priority: "Medium" as "Critical" | "High" | "Medium"
-    }
-  ];
-}
+  const src = (dominantSource || "").toLowerCase();
+  const isTraffic      = src.includes("traffic");
+  const isConstruction = src.includes("construction");
+  const isIndustrial   = src.includes("industrial");
+  const isWaste        = src.includes("waste") || src.includes("burning");
+  const isDust         = src.includes("dust");
 
+  type Priority = "Critical" | "High" | "Medium";
+  type PlanItem = { day: string; title: string; action: string; priority: Priority; sourceTag: string };
+
+  // ── STAGE IV (AQI > 450) — Emergency. Source order doesn't change mandatory actions
+  //    but the most source-relevant action is surfaced to Day 1.
+  if (aqi > 450) {
+    const pool: PlanItem[] = [
+      { day: "", title: "Emergency: Truck Entry Ban", action: "Enforce complete ban on non-essential truck entry. Deploy checkpoints at all arterial entry points. Only EVs, CNG, BS-VI diesel permitted.", priority: "Critical", sourceTag: "traffic" },
+      { day: "", title: "Emergency: All C&D Halt", action: "Halt ALL C&D including linear public projects (highways, flyovers, pipelines). Zero exceptions. Seal non-compliant sites immediately.", priority: "Critical", sourceTag: "construction" },
+      { day: "", title: "Emergency: Industrial Shutdown", action: "Suspend operations of highly polluting industries. Issue emergency notices. Coordinate with DPCC for rapid compliance inspection.", priority: "Critical", sourceTag: "industrial" },
+      { day: "", title: "Emergency: Education & WFH", action: "Enforce hybrid/online classes for Classes VI–XI. Issue WFH advisory to all non-essential offices in coordination with district administration.", priority: "Critical", sourceTag: "general" },
+      { day: "", title: "Odd-Even Vehicle Rationing", action: "Implement odd-even vehicle rationing on arterial roads. Traffic police deployed at all major junctions from 7 AM – 8 PM.", priority: "Critical", sourceTag: "traffic" },
+      { day: "", title: "AQI Compliance Audit", action: "Intensive 6-hour AQI monitoring cycle. Audit all emergency measures. Document violations for CAQM reporting.", priority: "High", sourceTag: "general" },
+      { day: "", title: "Stage IV Review & CAQM Report", action: "Compile 7-day AQI and compliance report. Submit to CAQM. Decide continuation or de-escalation of Stage IV measures.", priority: "High", sourceTag: "general" }
+    ];
+    // Sort: put dominant-source items first
+    const sorted = [
+      ...pool.filter(p => p.sourceTag === (isTraffic ? "traffic" : isConstruction ? "construction" : isIndustrial ? "industrial" : "general")),
+      ...pool.filter(p => p.sourceTag !== (isTraffic ? "traffic" : isConstruction ? "construction" : isIndustrial ? "industrial" : "general"))
+    ].slice(0, 7);
+    return sorted.map((item, i) => ({ ...item, day: `Day ${i + 1}` }));
+  }
+
+  // ── STAGE III (AQI 401–450) — Source-ordered within mandatory pool
+  if (aqi >= 401) {
+    const pool: PlanItem[] = [
+      { day: "", title: "BS-III/IV Vehicle Restrictions", action: "Enforce ban on BS-III petrol and BS-IV diesel LMVs (4-wheelers) in ward. Traffic personnel at all major junctions for vehicle checking.", priority: "Critical", sourceTag: "traffic" },
+      { day: "", title: "Heavy Vehicle Diversion", action: "Patrol and fine diesel MGVs (BS-IV & below). Check non-Delhi BS-IV LCVs. Enforce Peripheral Expressway diversion for non-destined trucks.", priority: "Critical", sourceTag: "traffic" },
+      { day: "", title: "C&D Activity Ban", action: "Enforce strict ban on all dust-generating C&D: earthwork, piling, demolition, trenching, brickwork, RMC batching, welding, tile grinding.", priority: "Critical", sourceTag: "construction" },
+      { day: "", title: "Stone Crushers & Mining Closure", action: "Close all stone crushers and mining operations. Issue closure notices. Coordinate with NCR district authorities for compliance.", priority: "Critical", sourceTag: "construction" },
+      { day: "", title: "Industrial Stack Emission Check", action: "Emergency inspections of high-polluting industrial stacks. Issue stop-work notices to non-compliant units. Report to DPCC.", priority: "High", sourceTag: "industrial" },
+      { day: "", title: "School Online Mode Enforcement", action: "Ensure all primary schools (up to Class V) are in hybrid/online mode as mandated under GRAP Stage III. Verify compliance with education dept.", priority: "High", sourceTag: "general" },
+      { day: "", title: "Stage III Compliance Review", action: "Audit all Stage III actions. Document compliance rate by category. Prepare weekly report for CAQM submission. Assess de-escalation feasibility.", priority: "High", sourceTag: "general" }
+    ];
+    const dominant = isTraffic ? "traffic" : isConstruction ? "construction" : isIndustrial ? "industrial" : "general";
+    const sorted = [
+      ...pool.filter(p => p.sourceTag === dominant),
+      ...pool.filter(p => p.sourceTag !== dominant)
+    ].slice(0, 7);
+    return sorted.map((item, i) => ({ ...item, day: `Day ${i + 1}` }));
+  }
+
+  // ── STAGE II (AQI 301–400) — Source-reordered mandatory pool
+  if (aqi >= 301) {
+    const pool: PlanItem[] = [
+      { day: "", title: "Traffic Signal Optimisation & Idling Reduction", action: "Synchronise traffic signals at congested bottlenecks. Deploy traffic police to reduce idling. Enhance parking fees to discourage personal vehicles.", priority: "High", sourceTag: "traffic" },
+      { day: "", title: "Inter-State Bus Restriction", action: "Do not permit inter-state buses from NCR states to enter Delhi via this ward (except EVs / CNG / BS-VI diesel). Set up entry point checks.", priority: "High", sourceTag: "traffic" },
+      { day: "", title: "C&D Site Intensive Inspection", action: "Intensify inspections at all active C&D sites: green netting height, anti-smog gun operation logs, covered material storage, vehicle wheel wash.", priority: "High", sourceTag: "construction" },
+      { day: "", title: "Mechanized Road Sweeping & Dust Suppression", action: "Daily vacuum sweeping and chemical dust suppressant application on all major roads before 7 AM. Cover all arterial and high-traffic corridors.", priority: "High", sourceTag: "construction" },
+      { day: "", title: "DG Set Operation Audit", action: "Strictly enforce regulated DG set operation schedules across industrial, commercial, and residential sectors. Issue show-cause notices to violators.", priority: "High", sourceTag: "industrial" },
+      { day: "", title: "Night Burning Patrol", action: "Zero-tolerance night-time patrol (9 PM – 5 AM) against open garbage, biomass, and plastic burning. Coordinate with local police for enforcement.", priority: "High", sourceTag: "waste" },
+      { day: "", title: "Stage II Compliance Review", action: "Evaluate AQI trend and compliance scores. If AQI crosses 400, activate Stage III escalation protocol immediately. Submit weekly report to CAQM.", priority: "Medium", sourceTag: "general" }
+    ];
+    const dominant = isTraffic ? "traffic" : isConstruction ? "construction" : isIndustrial ? "industrial" : (isWaste || isDust) ? "waste" : "construction";
+    const sorted = [
+      ...pool.filter(p => p.sourceTag === dominant),
+      ...pool.filter(p => p.sourceTag !== dominant && p.sourceTag !== "general"),
+      ...pool.filter(p => p.sourceTag === "general")
+    ].slice(0, 7);
+    return sorted.map((item, i) => ({ ...item, day: `Day ${i + 1}` }));
+  }
+
+  // ── STAGE I (AQI 201–300) — Source-reordered mandatory pool
+  if (aqi >= 201) {
+    const pool: PlanItem[] = [
+      { day: "", title: "Traffic Emission Enforcement", action: "Deploy traffic police at heavy corridors & congestion-prone intersections. Impound visibly polluting vehicles. Enforce PUC certificate checks on all vehicles.", priority: "High", sourceTag: "traffic" },
+      { day: "", title: "Peripheral Expressway Truck Diversion", action: "Enforce non-destined truck diversion via Peripheral Expressways. Checkpoints at ward entry points for commercial vehicle routing compliance.", priority: "High", sourceTag: "traffic" },
+      { day: "", title: "C&D Site Anti-Smog Gun Check", action: "Ensure anti-smog gun operation at all C&D sites >500 sqm. Verify web portal registration. Check green netting compliance and covered material transport.", priority: "High", sourceTag: "construction" },
+      { day: "", title: "Road Sweeping & Water Sprinkling", action: "Periodic mechanized sweeping & water sprinkling on arterial roads. Intensify anti-smog guns at construction & road repair sites.", priority: "High", sourceTag: "construction" },
+      { day: "", title: "Industrial Fuel & Stack Inspection", action: "Conduct stack emission checks. Enforce strict ban on coal/firewood in tandoors at hotels, restaurants & open eateries across the ward.", priority: "High", sourceTag: "industrial" },
+      { day: "", title: "Biomass & Waste Burning Vigil", action: "Stringently enforce prohibition on open biomass & solid waste burning. Strict vigil at landfill sites. Deploy anti-burning teams. Issue on-spot challans.", priority: "High", sourceTag: "waste" },
+      { day: "", title: "Stage I Weekly Review", action: "Evaluate 7-day AQI trend. If consistently improving → maintain Stage I. If deteriorating toward AQI 300 → activate Stage II readiness protocol.", priority: "Medium", sourceTag: "general" }
+    ];
+    const dominant = isTraffic ? "traffic" : isConstruction ? "construction" : isIndustrial ? "industrial" : (isWaste || isDust) ? "waste" : "traffic";
+    const sorted = [
+      ...pool.filter(p => p.sourceTag === dominant),
+      ...pool.filter(p => p.sourceTag !== dominant && p.sourceTag !== "general"),
+      ...pool.filter(p => p.sourceTag === "general")
+    ].slice(0, 7);
+    return sorted.map((item, i) => ({ ...item, day: `Day ${i + 1}` }));
+  }
+
+  // ── No GRAP (AQI ≤ 200) — Routine baseline, source-aware
+  const pool: PlanItem[] = [
+    { day: "", title: "Traffic & PUC Spot Check", action: "Routine PUC certificate checks at major intersections. Note visibly polluting vehicles. No emergency action — standard monitoring only.", priority: "Medium", sourceTag: "traffic" },
+    { day: "", title: "Road Dust & Sweeping Check", action: "Standard water sprinkling on dust corridors and unpaved roads. Check for construction sites generating excess fugitive dust.", priority: "Medium", sourceTag: "construction" },
+    { day: "", title: "C&D Green Netting Compliance", action: "Inspect ongoing C&D sites for green netting and material covering compliance. No emergency action — routine verification only.", priority: "Medium", sourceTag: "construction" },
+    { day: "", title: "Industrial Stack Compliance Round", action: "Routine stack emission inspection at registered industrial units. Verify compliance with ambient air quality standards.", priority: "Medium", sourceTag: "industrial" },
+    { day: "", title: "Waste Management Coordination", action: "Coordinate with sanitation dept for timely waste collection to prevent open burning. Check landfill fire prevention measures.", priority: "Medium", sourceTag: "waste" },
+    { day: "", title: "Citizen Complaint Resolution", action: "Review and act on all pending citizen pollution reports. Close resolved cases. Assign field teams to unresolved complaints.", priority: "Medium", sourceTag: "general" },
+    { day: "", title: "Weekly AQI Health Check", action: "Review 7-day AQI data. Air quality is satisfactory — maintain current baseline monitoring. No GRAP escalation warranted this week.", priority: "Medium", sourceTag: "general" }
+  ];
+  const dominant = isTraffic ? "traffic" : isConstruction ? "construction" : isIndustrial ? "industrial" : (isWaste || isDust) ? "waste" : "general";
+  const sorted = [
+    ...pool.filter(p => p.sourceTag === dominant),
+    ...pool.filter(p => p.sourceTag !== dominant && p.sourceTag !== "general"),
+    ...pool.filter(p => p.sourceTag === "general")
+  ].slice(0, 7);
+  return sorted.map((item, i) => ({ ...item, day: `Day ${i + 1}` }));
+}
 
 // ─── Known active AQICN Delhi monitoring stations (hardcoded fallback) ───────
 // These are fetched once to bootstrap the station-map; they rarely change.
@@ -450,10 +504,10 @@ export class MemStorage implements IStorage {
       const center = turf.centroid(feature);
       const [lng, lat] = center.geometry.coordinates;
  
-      // Deterministic realistic pollution values based on ward ID
-      const aqi = 150 + ((id * 31) % 200); // 150 to 350
-      const pm25 = Math.round(aqi * 0.6);
-      const pm10 = Math.round(aqi * 0.8);
+      // Calibrated initial seed pollution values (145 to 165) until live API fetch completes
+      const aqi = 145 + ((id * 7) % 20); // 145 to 165 baseline
+      const pm25 = Math.round(aqi * 0.55);
+      const pm10 = Math.round(aqi * 0.75);
       const no2 = Math.round(aqi * 0.1);
       const so2 = Math.round(aqi * 0.05);
       const co = Math.round(aqi * 0.02 * 10) / 10;
@@ -626,7 +680,37 @@ export class MemStorage implements IStorage {
       if (aqi > 200) allowedControls.push("traffic_odd_even", "construction_halt");
 
       const grapInfo = buildGrapInfo(aqi, primarySource);
-      const weeklyPlan = buildWeeklyPlan(aqi, primarySource);
+
+      // ── Plan Stability: Only regenerate if no plan exists, 7 days elapsed,
+      //    or AQI has crossed a GRAP stage boundary (prevents hyper-volatility) ──
+      const grapStageOf = (q: number) =>
+        q > 450 ? 4 : q >= 401 ? 3 : q >= 301 ? 2 : q >= 201 ? 1 : 0;
+
+      const existingPlan = (ward.intelligence_data as any)?.weekly_plan;
+      const existingGeneratedAt = (ward.intelligence_data as any)?.plan_generated_at;
+      const existingAqiAtGeneration = (ward.intelligence_data as any)?.aqi_at_generation ?? 0;
+
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      const planAge = existingGeneratedAt
+        ? Date.now() - new Date(existingGeneratedAt).getTime()
+        : Infinity;
+      const stageChanged =
+        grapStageOf(aqi) !== grapStageOf(existingAqiAtGeneration);
+
+      const shouldRebuildPlan =
+        !existingPlan ||
+        planAge > sevenDaysMs ||
+        stageChanged;
+
+      const weeklyPlan = shouldRebuildPlan
+        ? buildWeeklyPlan(aqi, primarySource)
+        : existingPlan;
+
+      const planGeneratedAt = shouldRebuildPlan
+        ? new Date().toISOString()
+        : (existingGeneratedAt ?? new Date().toISOString());
+
+      const aqiAtGeneration = shouldRebuildPlan ? aqi : existingAqiAtGeneration;
 
       const intelligence_data: NonNullable<Ward["intelligence_data"]> = {
         ward: ward.name,
@@ -634,6 +718,8 @@ export class MemStorage implements IStorage {
         severity,
         analysis_summary: `ML engine detected ${primaryPollutant} as dominant factor. Current AQI ${aqi} indicates ${severity} conditions (${grapInfo.stage}).`,
         weekly_plan: weeklyPlan,
+        plan_generated_at: planGeneratedAt,
+        aqi_at_generation: aqiAtGeneration,
         grap_info: grapInfo,
         execution_plan_90_days: {
           days_0_30: allowedControls.slice(0, 3).map(c => `Immediate enforcement of ${c.replace(/_/g, ' ')}`),
@@ -651,7 +737,7 @@ export class MemStorage implements IStorage {
         predicted_aqi: undefined,
         prediction_horizon: undefined,
         prediction_confidence: undefined
-      };
+      } as any;
 
       return {
         ...ward,

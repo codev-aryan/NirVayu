@@ -13,6 +13,17 @@ import * as turf from "@turf/turf";
 import fs from "fs";
 import path from "path";
 import express from "express";
+import { execFile } from "child_process";
+import { promisify } from "util";
+
+const execFileAsync = promisify(execFile);
+
+// Platform-aware Python executable: 'py' on Windows (Python Launcher),
+// 'python3' on Linux/macOS. Resolved once at module load.
+const PYTHON_EXE = process.platform === "win32" ? "py" : "python3";
+
+// Path to the ML inference script — resolved from project root.
+const AQI_PREDICTOR_SCRIPT = path.join(process.cwd(), "server", "aqi_predictor.py");
 
 export async function registerRoutes(
   httpServer: Server,
@@ -743,6 +754,99 @@ Return ONLY a JSON object (no markdown, no extra text):
       res.json({ predictions, generatedAt: new Date().toISOString() });
     } catch (e) {
       res.status(500).json({ message: "Failed to generate predictions" });
+    }
+  });
+
+  // === ML-Powered 24-Hour AQI Prediction ===
+
+  /**
+   * Generates a plausible 24-hour AQI cycle using a sine wave.
+   * Used as the fallback when the Python ML script is unavailable or too slow.
+   * Returns exactly 24 non-negative integers.
+   *
+   * Diurnal pattern: peaks in early morning (~8am) and evening (~7pm),
+   * dip in mid-afternoon — matches typical Delhi traffic/inversion behaviour.
+   */
+  function generateFallbackAqi(baseAqi: number = 150): number[] {
+    return Array.from({ length: 24 }, (_, h) => {
+      // Two-peak pattern: morning rush (peak h=8) + evening rush (peak h=19)
+      const morning = Math.cos((2 * Math.PI * (h - 8)) / 24);
+      const evening = Math.cos((2 * Math.PI * (h - 19)) / 24);
+      const wave = ((morning + evening) / 2) * baseAqi * 0.18;
+      return Math.max(0, Math.round(baseAqi + wave));
+    });
+  }
+
+  /**
+   * POST /api/aqi/predict
+   *
+   * Accepts current sensor readings and returns a 24-hour AQI forecast
+   * computed by the trained RandomForest model (server/models/aqi_model.pkl).
+   *
+   * Request body:
+   *   { pm10, o3, no2, so2, co, timestamp, current_aqi? }
+   *
+   * Response (always 200):
+   *   { hourly: number[] }  — 24 integers (one per upcoming hour)
+   *
+   * Falls back to a sine-wave-generated array if Python is unavailable,
+   * times out (>1.5s), or returns invalid output — so the frontend always
+   * gets a valid response regardless of the Python environment.
+   */
+  app.post("/api/aqi/predict", async (req, res) => {
+    const body = req.body || {};
+    const baseAqi = typeof body.current_aqi === "number" ? body.current_aqi : 150;
+
+    // Build the JSON payload for the Python script
+    const inputPayload = JSON.stringify({
+      pm10:      body.pm10      ?? 80,
+      o3:        body.o3        ?? 25,
+      no2:       body.no2       ?? 20,
+      so2:       body.so2       ?? 10,
+      co:        body.co        ?? 8,
+      timestamp: body.timestamp ?? new Date().toISOString(),
+    });
+
+    try {
+      // Spawn the Python inference script with a 1.5-second hard timeout.
+      // execFile (not exec) avoids shell-injection risk.
+      const { stdout } = await execFileAsync(
+        PYTHON_EXE,
+        [AQI_PREDICTOR_SCRIPT, inputPayload],
+        { timeout: 1500 }
+      );
+
+      // Parse stdout — must be a JSON array of exactly 24 integers.
+      const parsed: unknown = JSON.parse(stdout.trim());
+
+      if (
+        !Array.isArray(parsed) ||
+        parsed.length !== 24 ||
+        !parsed.every((v) => typeof v === "number")
+      ) {
+        throw new Error(
+          `Python script returned unexpected shape: ${JSON.stringify(parsed).slice(0, 120)}`
+        );
+      }
+
+      // Clamp all values to non-negative integers (defensive)
+      const hourly = (parsed as number[]).map((v) => Math.max(0, Math.round(v)));
+      return res.json({ hourly });
+
+    } catch (err: any) {
+      // -----------------------------------------------------------------------
+      // Fallback path — triggers on: spawn failure (Python not on PATH),
+      // 1.5s timeout, non-zero exit, or stdout not being valid 24-element JSON.
+      // The frontend receives the same response shape as the success path.
+      // -----------------------------------------------------------------------
+      const isTimeout = err?.killed === true || err?.code === "ETIMEDOUT" || (err?.message || "").includes("TIMEDOUT");
+      const reason = isTimeout
+        ? "Python ML script timed out (>1500ms)"
+        : `Python ML script failed — ${(err?.message || String(err)).slice(0, 200)}`;
+
+      console.warn(`[AQI Predict] FALLBACK — ${reason}. Returning sine-wave array.`);
+
+      return res.json({ hourly: generateFallbackAqi(baseAqi) });
     }
   });
 

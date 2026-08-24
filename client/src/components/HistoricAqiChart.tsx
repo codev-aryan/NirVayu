@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Minus, Calendar, Database } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Calendar } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 
 export function HistoricAqiChart({ ward }: { ward: any }) {
@@ -48,9 +48,8 @@ export function HistoricAqiChart({ ward }: { ward: any }) {
   const maxAqi = Math.max(...chartData.map((d: { aqi: number }) => d.aqi));
   const minAqi = Math.min(...chartData.map((d: { aqi: number }) => d.aqi));
 
-  const firstDayAqi = chartData[0]?.aqi || currentAqi;
-  const lastDayAqi = chartData[chartData.length - 1]?.aqi || currentAqi;
-  const trendDiff = lastDayAqi - firstDayAqi;
+  const yesterdayAqi = chartData[chartData.length - 2]?.aqi || currentAqi;
+  const vsYesterday = currentAqi - yesterdayAqi;
 
   // AQI Risk Color Helper
   const getAqiColor = (val: number) => {
@@ -67,16 +66,10 @@ export function HistoricAqiChart({ ward }: { ward: any }) {
     <Card className="border-border shadow-sm overflow-hidden">
       <CardHeader className="bg-muted/30 pb-3 pt-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-primary" />
-              {language === "hi" ? `${wardName} — 7-दिवसीय ऐतिहासिक AQI ट्रेंड` : `7-Day Historic AQI Trend — ${wardName}`}
-            </CardTitle>
-            <CardDescription className="text-xs mt-0.5 flex items-center gap-1.5 text-muted-foreground">
-              <Database className="w-3 h-3 text-primary/70 inline" />
-              {language === "hi" ? "AQICN व CPCB दिल्ली स्टेशन लाइव ऐतिहासिक डेटा" : "AQICN & CPCB Delhi Station Historical Feed"}
-            </CardDescription>
-          </div>
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-primary" />
+            {language === "hi" ? `${wardName} — 7-दिवसीय ऐतिहासिक AQI ट्रेंड` : `7-Day Historic AQI Trend — ${wardName}`}
+          </CardTitle>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-[10px] font-bold uppercase border-primary/30 text-primary">
               {language === "hi" ? "7-दिन औसत:" : "7-Day Avg:"} {avgAqi} AQI
@@ -110,20 +103,20 @@ export function HistoricAqiChart({ ward }: { ward: any }) {
 
           <div className="p-2.5 rounded-xl bg-muted/40 border border-border/50 text-center">
             <span className="text-[10px] font-extrabold text-muted-foreground uppercase block tracking-wider mb-0.5">
-              {language === "hi" ? "साप्ताहिक झुकाव" : "Trend Change"}
+              {language === "hi" ? "कल की तुलना में" : "vs Yesterday"}
             </span>
-            <div className="text-sm font-extrabold flex items-center justify-center gap-1">
-              {trendDiff > 0 ? (
+            <div className="text-xs font-extrabold flex items-center justify-center gap-1">
+              {vsYesterday > 0 ? (
                 <span className="text-rose-600 dark:text-rose-400 flex items-center gap-0.5">
-                  <TrendingUp className="w-3.5 h-3.5 inline" /> +{trendDiff}
+                  <TrendingUp className="w-3.5 h-3.5 inline" /> +{vsYesterday} AQI ({language === "hi" ? "खराब हुई" : "Worsened"})
                 </span>
-              ) : trendDiff < 0 ? (
+              ) : vsYesterday < 0 ? (
                 <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-                  <TrendingDown className="w-3.5 h-3.5 inline" /> {trendDiff}
+                  <TrendingDown className="w-3.5 h-3.5 inline" /> {vsYesterday} AQI ({language === "hi" ? "सुधार हुआ" : "Improved"})
                 </span>
               ) : (
                 <span className="text-muted-foreground flex items-center gap-0.5">
-                  <Minus className="w-3.5 h-3.5 inline" /> Stable
+                  <Minus className="w-3.5 h-3.5 inline" /> {language === "hi" ? "समान" : "No Change"}
                 </span>
               )}
             </div>

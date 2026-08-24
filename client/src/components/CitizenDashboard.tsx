@@ -252,6 +252,7 @@ export function CitizenDashboard() {
             wardName={selectedWard?.name}
             aqi={selectedWard ? selectedWard.aqi : avgAqi}
             pm25={selectedWard ? selectedWard.pm25 : avgPm25}
+            dominantSource={selectedWard ? selectedWard.dominant_source : "Traffic"}
           />
         </div>
       </div>

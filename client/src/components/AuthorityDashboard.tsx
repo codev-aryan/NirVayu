@@ -115,7 +115,7 @@ export function AuthorityDashboard() {
             className="space-y-6"
           >
             {/* Header Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card className="bg-gradient-to-br from-card to-muted/20 border-border/50">
                 <CardContent className="p-6">
                   <div className="text-sm text-muted-foreground mb-1">
@@ -136,19 +136,6 @@ export function AuthorityDashboard() {
                   <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
                     <TrendingDown className="w-3 h-3" /> {language === "hi" ? "शीर्ष योगदानकर्ता" : "Top Contributor"}
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card className={cn(
-                "border-2 transition-colors",
-                selectedWard.emergency_mode ? "border-red-500/50 bg-red-500/10" : "border-border/50"
-              )}>
-                <CardContent className="p-6 flex flex-col justify-between h-full">
-                  <div className="text-sm font-bold flex items-center gap-2">
-                    <ShieldAlert className={cn("w-4 h-4", selectedWard.emergency_mode && "text-red-500")} />
-                    {t("authority.emergencyProtocol")}
-                  </div>
-                  <EmergencyToggle wardId={selectedWard.id} isEnabled={selectedWard.emergency_mode} />
                 </CardContent>
               </Card>
             </div>

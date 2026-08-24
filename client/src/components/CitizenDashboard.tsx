@@ -228,12 +228,8 @@ export function CitizenDashboard() {
                 </motion.div>
               )}
 
-              <div className="space-y-4 pt-4 border-t">
-                <div className="flex items-center gap-2">
-                  <HeartPulse className="w-5 h-5 text-primary" />
-                  <h3 className="text-lg font-bold">{t("planner.title")}</h3>
-                </div>
-                <SafeLifePlanner wardId={selectedWard.id} />
+              <div className="pt-4 border-t">
+                <SafeLifePlanner ward={selectedWard} />
               </div>
             </div>
           ) : (
@@ -273,116 +269,148 @@ function MetricCard({ label, value, unit, color = "text-foreground" }: { label: 
   );
 }
 
-function SafeLifePlanner({ wardId }: { wardId: number }) {
+function SafeLifePlanner({ ward }: { ward: any }) {
   const { t, language } = useLanguage();
-  const [formData, setFormData] = useState({
-    ageGroup: "adult" as "child" | "adult" | "elderly",
-    condition: "healthy" as "healthy" | "asthma" | "sensitive",
-    outdoorHours: "2"
-  });
+  const [ageGroup, setAgeGroup] = useState<"child" | "adult" | "elderly">("adult");
+  const [condition, setCondition] = useState<"healthy" | "asthma" | "sensitive">("healthy");
 
-  const { mutate, data: plan, isPending } = useGeneratePlan();
+  const aqi = ward?.aqi || 150;
+  const isVulnerable = ageGroup === "child" || ageGroup === "elderly" || condition !== "healthy";
 
-  const handleSubmit = () => {
-    mutate({
-      id: wardId,
-      params: {
-        ...formData,
-        outdoorHours: Number(formData.outdoorHours)
-      }
-    });
-  };
+  // Real-time calculated health windows & mask guidance
+  let safeWindow = "12:00 PM – 04:00 PM";
+  let avoidWindow = "06:00 AM – 09:00 AM & 06:00 PM – 09:00 PM";
+  let maskLevel = "None";
+  let adviceText = "";
+
+  if (aqi <= 100) {
+    maskLevel = isVulnerable ? "Cloth Mask" : "None";
+    safeWindow = "All Day";
+    avoidWindow = "None";
+    adviceText = language === "hi"
+      ? "हवा की गुणवत्ता संतोषजनक है। सभी आउटडोर गतिविधियों के लिए समय सुरक्षित है।"
+      : "Air quality is acceptable. Outdoor activities are safe throughout the day.";
+  } else if (aqi <= 200) {
+    maskLevel = isVulnerable ? "Surgical / N95" : "Cloth Mask";
+    safeWindow = "11:00 AM – 04:00 PM";
+    avoidWindow = "06:00 AM – 09:00 AM";
+    adviceText = language === "hi"
+      ? `${ward?.name || "इलाके"} में मध्यम प्रदूषण है। ${isVulnerable ? "संवेदनशील समूहों को सुबह के समय बाहर जाने से बचना चाहिए।" : "भारी कसरत के दौरान मास्क का प्रयोग करें।"}`
+      : `Moderate pollution in ${ward?.name || "area"}. ${isVulnerable ? "Sensitive individuals should limit morning outdoor exposure." : "Consider wearing a mask during peak traffic hours."}`;
+  } else if (aqi <= 300) {
+    maskLevel = "N95 Mask";
+    safeWindow = "12:00 PM – 03:00 PM (Short trips)";
+    avoidWindow = "All Peak Rush Hours";
+    adviceText = language === "hi"
+      ? "हवा की गुणवत्ता खराब है। बाहर निकलते समय N95 मास्क अनिवार्य है। बाहरी खेल व कसरत बंद रखें।"
+      : "Poor air quality. Mandatory N95 mask outdoors. Avoid strenuous outdoor workouts and jogging.";
+  } else {
+    maskLevel = "Avoid Outdoors / Double N95";
+    safeWindow = "None — Stay Indoors";
+    avoidWindow = "All Day";
+    adviceText = language === "hi"
+      ? "गंभीर आपातकालीन प्रदूषण! बाहर निकलना पूरी तरह से वर्जित है। घर के अंदर एयर प्यूरीफायर चलाएं।"
+      : "Severe emergency pollution levels! Avoid stepping outdoors. Keep windows sealed and use air purifiers.";
+  }
 
   return (
-    <Card className="border-primary/10 shadow-lg">
-      <CardHeader className="bg-primary/5 pb-4">
-        <CardTitle className="flex items-center gap-2 text-primary">
+    <Card className="border-primary/20 shadow-md">
+      <CardHeader className="bg-primary/5 pb-3 pt-4">
+        <CardTitle className="flex items-center gap-2 text-base text-primary font-bold">
           <HeartPulse className="w-5 h-5" /> {t("planner.title")}
         </CardTitle>
-        <CardDescription>{t("planner.subtitle")}</CardDescription>
+        <CardDescription className="text-xs">{t("planner.subtitle")}</CardDescription>
       </CardHeader>
-      <CardContent className="p-6">
-        {!plan ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>{t("planner.age")}</Label>
-                <Select value={formData.ageGroup} onValueChange={(v: any) => setFormData(p => ({ ...p, ageGroup: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="child">{language === "hi" ? "बच्चे (0-12)" : "Child (0-12)"}</SelectItem>
-                    <SelectItem value="adult">{language === "hi" ? "वयस्क (13-60)" : "Adult (13-60)"}</SelectItem>
-                    <SelectItem value="elderly">{language === "hi" ? "वरिष्ठ नागरिक (60+)" : "Elderly (60+)"}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t("planner.healthCondition")}</Label>
-                <Select value={formData.condition} onValueChange={(v: any) => setFormData(p => ({ ...p, condition: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="healthy">{t("planner.condition.none")}</SelectItem>
-                    <SelectItem value="asthma">{t("planner.condition.asthma")}</SelectItem>
-                    <SelectItem value="sensitive">{t("planner.condition.heart")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+      <CardContent className="p-4 space-y-4">
+        {/* Interactive Profile Selector Chips */}
+        <div className="space-y-3">
+          <div>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
+              {t("planner.age")}
+            </label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { id: "child", label: language === "hi" ? "बच्चे (0-12)" : "Child (0-12)" },
+                { id: "adult", label: language === "hi" ? "वयस्क (13-60)" : "Adult (13-60)" },
+                { id: "elderly", label: language === "hi" ? "वरिष्ठ (60+)" : "Senior (60+)" }
+              ].map(item => (
+                <Button
+                  key={item.id}
+                  type="button"
+                  size="sm"
+                  variant={ageGroup === item.id ? "default" : "outline"}
+                  className="text-xs h-8 font-semibold px-1"
+                  onClick={() => setAgeGroup(item.id as any)}
+                >
+                  {item.label}
+                </Button>
+              ))}
             </div>
-            <div className="space-y-2">
-              <Label>{t("planner.outdoorHours")}</Label>
-              <Input
-                type="number"
-                value={formData.outdoorHours}
-                onChange={(e) => setFormData(p => ({ ...p, outdoorHours: e.target.value }))}
-                min={0} max={24}
-              />
-            </div>
-            <Button onClick={handleSubmit} disabled={isPending} className="w-full font-bold">
-              {isPending ? t("planner.generating") : t("planner.generateBtn")}
-            </Button>
           </div>
-        ) : (
-          <div className="space-y-6 animate-in zoom-in-95 duration-300">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-                <div className="text-xs text-green-700 font-bold uppercase mb-1">
-                  {language === "hi" ? "सुरक्षित समय" : "Safe Window"}
-                </div>
-                <div className="text-lg font-bold text-green-800 flex items-center justify-center gap-2">
-                  <Clock className="w-4 h-4" /> {plan.safeTimeWindow}
-                </div>
-              </div>
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center">
-                <div className="text-xs text-red-700 font-bold uppercase mb-1">
-                  {language === "hi" ? "बाहर जाने से बचें" : "Avoid Outdoors"}
-                </div>
-                <div className="text-lg font-bold text-red-800 flex items-center justify-center gap-2">
-                  <AlertTriangle className="w-4 h-4" /> {plan.avoidTimeWindow}
-                </div>
-              </div>
-            </div>
 
-            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-              <span className="font-semibold text-sm">
-                {language === "hi" ? "अनुशंसित मास्क" : "Recommended Mask"}
-              </span>
-              <Badge variant={plan.maskLevel === "None" ? "secondary" : "destructive"} className="text-sm px-3 py-1">
-                {plan.maskLevel}
-              </Badge>
+          <div>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
+              {t("planner.healthCondition")}
+            </label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { id: "healthy", label: language === "hi" ? "स्वस्थ" : "Healthy" },
+                { id: "asthma", label: language === "hi" ? "अस्थमा" : "Asthma" },
+                { id: "sensitive", label: language === "hi" ? "संवेदनशील" : "Sensitive" }
+              ].map(item => (
+                <Button
+                  key={item.id}
+                  type="button"
+                  size="sm"
+                  variant={condition === item.id ? "default" : "outline"}
+                  className="text-xs h-8 font-semibold px-1"
+                  onClick={() => setCondition(item.id as any)}
+                >
+                  {item.label}
+                </Button>
+              ))}
             </div>
-
-            <div className="bg-primary/5 p-4 rounded-lg text-sm text-black leading-relaxed border border-primary/10">
-              <span className="font-bold text-primary block mb-1">
-                {language === "hi" ? "विशेषज्ञ सलाह:" : "Expert Advice:"}
-              </span>
-              {plan.advice}
-            </div>
-
-            <Button variant="ghost" onClick={() => mutate(undefined as any)} className="w-full text-xs text-muted-foreground">
-              {language === "hi" ? "योजना रीसेट करें" : "Reset Planner"}
-            </Button>
           </div>
-        )}
+        </div>
+
+        {/* Live Instant Health Windows */}
+        <div className="grid grid-cols-2 gap-3 pt-1">
+          <div className="p-3 bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800 rounded-xl text-center">
+            <div className="text-[10px] text-emerald-700 dark:text-emerald-300 font-extrabold uppercase tracking-wider mb-1">
+              {language === "hi" ? "सुरक्षित समय" : "Safe Window"}
+            </div>
+            <div className="text-xs font-bold text-emerald-900 dark:text-emerald-100 flex items-center justify-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" /> {safeWindow}
+            </div>
+          </div>
+
+          <div className="p-3 bg-rose-50 border border-rose-200 dark:bg-rose-950/40 dark:border-rose-800 rounded-xl text-center">
+            <div className="text-[10px] text-rose-700 dark:text-rose-300 font-extrabold uppercase tracking-wider mb-1">
+              {language === "hi" ? "बाहर जाने से बचें" : "Avoid Outdoors"}
+            </div>
+            <div className="text-xs font-bold text-rose-900 dark:text-rose-100 flex items-center justify-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5" /> {avoidWindow}
+            </div>
+          </div>
+        </div>
+
+        {/* Recommended Mask */}
+        <div className="flex items-center justify-between p-3 bg-muted/60 rounded-xl border border-border/50 text-xs">
+          <span className="font-semibold text-muted-foreground">
+            {language === "hi" ? "अनुशंसित सुरक्षा:" : "Recommended Protection:"}
+          </span>
+          <Badge variant={maskLevel.includes("None") ? "secondary" : "destructive"} className="text-xs px-2.5 py-0.5 font-bold">
+            {maskLevel}
+          </Badge>
+        </div>
+
+        {/* Advice Note */}
+        <div className="bg-primary/5 p-3 rounded-xl text-xs text-foreground leading-relaxed border border-primary/10">
+          <span className="font-bold text-primary block mb-0.5">
+            {language === "hi" ? "चिकित्सा सलाह:" : "Health Advisory:"}
+          </span>
+          {adviceText}
+        </div>
       </CardContent>
     </Card>
   );

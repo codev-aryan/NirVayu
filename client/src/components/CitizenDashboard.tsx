@@ -206,6 +206,13 @@ export function CitizenDashboard() {
                     <span className="text-sm font-medium">{t("intel.dominantSource")}: {getLocalizedSource(selectedWard.dominant_source)}</span>
                   </div>
                 </div>
+              <div className="pt-2">
+                <CigaretteHealthRiskCard
+                  wardName={selectedWard.name}
+                  aqi={selectedWard.aqi}
+                  pm25={selectedWard.pm25}
+                  dominantSource={selectedWard.dominant_source}
+                />
               </div>
 
               {selectedWard.emergency_mode && (
@@ -227,11 +234,8 @@ export function CitizenDashboard() {
                   </ul>
                 </motion.div>
               )}
-
-              <div className="pt-4 border-t">
-                <SafeLifePlanner ward={selectedWard} />
-              </div>
             </div>
+          </div>
           ) : (
             <div className="h-[300px] flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-border rounded-3xl bg-muted/20">
               <MapPin className="w-8 h-8 text-muted-foreground mb-4" />
@@ -243,14 +247,9 @@ export function CitizenDashboard() {
           )}
         </div>
 
-        {/* Dynamic Cigarette Equivalent & Health Risk Assessments */}
+        {/* Dynamic Ward Health Command Center */}
         <div className="lg:col-span-7">
-          <CigaretteHealthRiskCard
-            wardName={selectedWard?.name}
-            aqi={selectedWard ? selectedWard.aqi : overallAqi}
-            pm25={selectedWard ? selectedWard.pm25 : overallPm25}
-            dominantSource={selectedWard ? selectedWard.dominant_source : "Traffic"}
-          />
+          <SafeLifePlanner ward={selectedWard} />
         </div>
       </div>
     </div>

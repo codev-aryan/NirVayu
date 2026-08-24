@@ -164,8 +164,8 @@ export function AuthorityDashboard() {
                   <div className="space-y-3">
                     <div className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-widest flex items-center justify-between">
                       <span>{t("intel.dominantSource")}</span>
-                      <Badge variant="outline" className="text-[10px] uppercase font-bold border-primary/30 text-primary">
-                        {selectedWard.aqi > 300 ? "GRAP STAGE III/IV" : selectedWard.aqi > 200 ? "GRAP STAGE II" : "GRAP STAGE I"}
+                      <Badge variant="outline" className={cn("text-[10px] uppercase font-extrabold border-primary/30", selectedWard.aqi <= 200 ? "text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40" : "text-primary")}>
+                        {getOfficialGrapStage(selectedWard.aqi).stage.toUpperCase()}
                       </Badge>
                     </div>
 
@@ -427,7 +427,10 @@ function IntelligencePanel({ wardId }: { wardId: number }) {
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <CardTitle className="text-base font-bold flex items-center gap-2">
-                <AlertOctagon className="w-5 h-5 text-red-500" /> GRAP Enforcement Actions (CAQM Revision: 21.11.2025)
+                {officialGrap.stage === "No GRAP Required"
+                  ? <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                  : <AlertOctagon className="w-5 h-5 text-red-500" />}
+                GRAP Enforcement Actions (CAQM Revision: 21.11.2025)
               </CardTitle>
               <CardDescription className="text-xs mt-1">
                 Official CAQM Graded Response Action Plan for {ward.name} (AQI: {ward.aqi})
@@ -442,19 +445,48 @@ function IntelligencePanel({ wardId }: { wardId: number }) {
           <p className="text-xs text-muted-foreground font-medium leading-relaxed bg-muted/20 p-2.5 rounded-lg border border-border/40">
             {officialGrap.description}
           </p>
-          <div className="space-y-2">
-            <span className="text-[11px] font-extrabold text-foreground uppercase tracking-wider block">
-              Mandatory CAQM Statutory Enforcement Actions:
-            </span>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-              {officialGrap.enforcementActions.map((act: string, i: number) => (
-                <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-card border border-border/70 text-xs shadow-2xs">
-                  <ShieldAlert className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                  <span className="text-foreground font-semibold leading-snug">{act}</span>
+          {officialGrap.stage === "No GRAP Required" ? (
+            <div className="space-y-3">
+              {/* No-action banner */}
+              <div className="flex items-center gap-3 p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
+                <ShieldCheck className="w-6 h-6 text-emerald-600 shrink-0" />
+                <div>
+                  <p className="text-sm font-extrabold text-emerald-800 dark:text-emerald-300">
+                    No GRAP Action Required
+                  </p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
+                    Air quality is within safe limits. No emergency GRAP restrictions or bans are active.
+                  </p>
                 </div>
-              ))}
+              </div>
+              {/* Routine baseline actions */}
+              <span className="text-[11px] font-extrabold text-foreground uppercase tracking-wider block">
+                Routine Baseline Operations (No Emergency Measures):
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {officialGrap.enforcementActions.map((act: string, i: number) => (
+                  <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-card border border-border/70 text-xs shadow-2xs">
+                    <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <span className="text-foreground font-semibold leading-snug">{act}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-2">
+              <span className="text-[11px] font-extrabold text-foreground uppercase tracking-wider block">
+                Mandatory CAQM Statutory Enforcement Actions:
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {officialGrap.enforcementActions.map((act: string, i: number) => (
+                  <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-card border border-border/70 text-xs shadow-2xs">
+                    <ShieldAlert className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                    <span className="text-foreground font-semibold leading-snug">{act}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

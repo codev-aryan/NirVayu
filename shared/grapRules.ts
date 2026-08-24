@@ -102,22 +102,22 @@ export function getOfficialGrapStage(aqi: number): GrapStageInfo {
     };
   } else {
     return {
-      stage: "Moderate / Good",
+      stage: "No GRAP Required",
       stageName: "Satisfactory / Good",
       aqiRange: "AQI ≤ 200",
       color: "bg-emerald-600 text-white",
       badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300",
-      description: "Baseline environmental compliance conditions (AQI ≤ 200). Standard air quality monitoring active.",
+      description: "No GRAP emergency restrictive action is required (AQI ≤ 200). Baseline environmental monitoring conditions apply under CAQM regulations.",
       enforcementActions: [
+        "No emergency GRAP restrictions or bans active (AQI is within safe/acceptable limits).",
         "Routine water sprinkling on vulnerable dust corridors and unpaved roads.",
-        "Regular industrial emission stack inspections and fuel compliance checks.",
         "Standard traffic flow monitoring and traffic signal timing synchronization.",
-        "Ongoing citizen complaint resolution and spot checks on illegal dumping."
+        "Ongoing citizen complaint resolution and routine spot checks on illegal dumping."
       ],
       citizenCharter: [
-        "Maintain green cover and plant more trees.",
-        "Prefer electric vehicles or hybrid transport for daily commute.",
-        "Segregate waste at source and prevent open dumping."
+        "Air quality is satisfactory. No emergency health advisories active.",
+        "Maintain green cover and plant more trees in your neighborhood.",
+        "Prefer electric vehicles or public transit for daily commute."
       ]
     };
   }

@@ -421,6 +421,9 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 // ─── Landing Card ─────────────────────────────────────────────────────────────
 
 function LandingCard({ onStart, aqi }: { onStart: () => void; aqi: number }) {
+  const { language } = useLanguage();
+  const isHindi = language === "hi";
+
   const cfg = aqi > 300 ? CONCERN_CONFIG["VERY HIGH"] : aqi > 200 ? CONCERN_CONFIG["HIGH"] : aqi > 100 ? CONCERN_CONFIG["MODERATE"] : CONCERN_CONFIG["LOW"];
   return (
     <Card className="border-primary/20 shadow-md overflow-hidden">
@@ -430,8 +433,12 @@ function LandingCard({ onStart, aqi }: { onStart: () => void; aqi: number }) {
             <ShieldCheck className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-foreground leading-tight">SafeLifePlanner</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">How does today's air affect <em>you</em>?</p>
+            <h3 className="text-base font-bold text-foreground leading-tight">
+              {isHindi ? "सुरक्षित जीवन प्लानर (SafeLifePlanner)" : "SafeLifePlanner"}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isHindi ? "आज की हवा का आप पर क्या असर पड़ेगा?" : "How does today's air affect you?"}
+            </p>
           </div>
           <div className={cn("ml-auto px-2.5 py-1 rounded-full text-xs font-extrabold border shrink-0", cfg.bg, cfg.border, cfg.color)}>
             AQI {aqi}
@@ -439,16 +446,19 @@ function LandingCard({ onStart, aqi }: { onStart: () => void; aqi: number }) {
         </div>
 
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Air pollution doesn't affect everyone the same way. Tell us a little about yourself to get personalized safety recommendations for today.
+          {isHindi 
+            ? "हवा का प्रदूषण हर व्यक्ति को एक समान प्रभावित नहीं करता। आज के लिए अपनी व्यक्तिगत स्वास्थ्य सलाह और सुरक्षित समय पाने के लिए अपने बारे में थोड़ा बताएं।"
+            : "Air pollution doesn't affect everyone the same way. Tell us a little about yourself to get personalized safety recommendations for today."
+          }
         </p>
 
         <Button onClick={onStart} className="w-full font-bold" size="lg">
           <ShieldCheck className="w-4 h-4 mr-2" />
-          CHECK MY AIR RISK
+          {isHindi ? "स्वास्थ्य व हवा का जोखिम जांचें" : "CHECK MY AIR RISK"}
         </Button>
 
         <p className="text-[10px] text-muted-foreground text-center leading-tight">
-          No account needed · No data saved · Takes ~20 seconds
+          {isHindi ? "कोई अकाउंट आवश्यक नहीं · कोई डेटा सेव नहीं होता · केवल ~20 सेकंड" : "No account needed · No data saved · Takes ~20 seconds"}
         </p>
       </CardContent>
     </Card>
@@ -463,6 +473,23 @@ const OCCUPATION_OPTIONS = [
   "Outdoor worker", "Homemaker", "Retired", "Other"
 ];
 
+const OCCUPATION_OPTIONS_HI: Record<string, string> = {
+  "Student": "छात्र (Student)",
+  "Office / IT": "ऑफिस / आईटी कर्मचारी",
+  "Teacher": "शिक्षक (Teacher)",
+  "Traffic police": "ट्रैफिक पुलिस",
+  "Construction worker": "कन्स्ट्रक्शन मजदूर",
+  "Delivery worker": "डिलीवरी वर्कर (राइडर)",
+  "Driver": "ड्राइवर (टैक्सी / बस)",
+  "Street vendor": "रेहड़ी-पटरी विक्रेता",
+  "Sanitation": "सफाई कर्मचारी",
+  "Healthcare": "स्वास्थ्यकर्मी / डॉक्टर",
+  "Outdoor worker": "फील्ड / बाहर काम करने वाले",
+  "Homemaker": "गृहणी (Homemaker)",
+  "Retired": "सेवानिवृत्त (Retired)",
+  "Other": "अन्य"
+};
+
 function OnboardingFlow({
   onComplete,
   onBack,
@@ -472,14 +499,15 @@ function OnboardingFlow({
   onBack: () => void;
   wardName: string;
 }) {
+  const { language } = useLanguage();
+  const isHindi = language === "hi";
+
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [age, setAge] = useState<AgeGroup | null>(null);
   const [env, setEnv] = useState<Environment | null>(null);
   const [hours, setHours] = useState<OutdoorHours | null>(null);
   const [activity, setActivity] = useState<TodayActivity | null>(null);
   const [occupation, setOccupation] = useState<string | undefined>(undefined);
-
-  const totalSteps = 5;
 
   const finish = (occ?: string) => {
     if (!age || !env || !hours || !activity) return;
@@ -513,7 +541,7 @@ function OnboardingFlow({
     <div className="space-y-3 mb-4">
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">
-          {step <= 4 ? `Step ${step} of 4` : "Optional"}
+          {step <= 4 ? (isHindi ? `चरण ${step} / 4` : `Step ${step} of 4`) : (isHindi ? "ऐच्छिक" : "Optional")}
         </span>
         <div className="flex gap-1">
           {[1, 2, 3, 4].map(s => (
@@ -527,7 +555,7 @@ function OnboardingFlow({
 
   const NextBtn = ({ disabled, onClick }: { disabled: boolean; onClick: () => void }) => (
     <Button onClick={onClick} disabled={disabled} className="w-full font-bold mt-4" size="lg">
-      Continue <ChevronRight className="w-4 h-4 ml-1" />
+      {isHindi ? "आगे बढ़ें" : "Continue"} <ChevronRight className="w-4 h-4 ml-1" />
     </Button>
   );
 
@@ -555,9 +583,14 @@ function OnboardingFlow({
           >
             {step === 1 && (
               <div>
-                <StepHeader q="Who are you?" />
+                <StepHeader q={isHindi ? "आपकी उम्र क्या है?" : "Who are you?"} />
                 <ChipGrid>
-                  {([["u12", "👶", "Under 12"], ["12-18", "🎓", "12–18"], ["19-59", "🧑", "19–59"], ["60+", "👴", "60+"]] as [AgeGroup, string, string][]).map(([v, ic, lb]) => (
+                  {([
+                    ["u12", "👶", isHindi ? "12 वर्ष से कम" : "Under 12"], 
+                    ["12-18", "🎓", isHindi ? "12–18 वर्ष" : "12–18"], 
+                    ["19-59", "🧑", isHindi ? "19–59 वर्ष" : "19–59"], 
+                    ["60+", "👴", isHindi ? "60+ वर्ष (बुजुर्ग)" : "60+"]
+                  ] as [AgeGroup, string, string][]).map(([v, ic, lb]) => (
                     <Chip key={v} selected={age === v} onClick={() => setAge(v)} icon={ic} label={lb} />
                   ))}
                 </ChipGrid>
@@ -567,15 +600,15 @@ function OnboardingFlow({
 
             {step === 2 && (
               <div>
-                <StepHeader q="Where do you spend most of your day?" />
+                <StepHeader q={isHindi ? "आप अपना अधिकांश दिन कहाँ बिताते हैं?" : "Where do you spend most of your day?"} />
                 <div className="grid grid-cols-2 gap-2.5">
                   {([
-                    ["indoors", "🏠", "Mostly indoors"],
-                    ["office", "💻", "Office / School / College"],
-                    ["traffic", "🚗", "Around traffic"],
-                    ["construction", "🏗️", "Around construction / dust"],
-                    ["outdoors", "🌳", "Mostly outdoors"],
-                    ["moving", "🔄", "Moving between places"]
+                    ["indoors", "🏠", isHindi ? "ज्यादातर घर के अंदर" : "Mostly indoors"],
+                    ["office", "💻", isHindi ? "ऑफिस / स्कूल / कॉलेज" : "Office / School / College"],
+                    ["traffic", "🚗", isHindi ? "ट्रैफिक व सड़क पर" : "Around traffic"],
+                    ["construction", "🏗️", isHindi ? "कन्स्ट्रक्शन / धूल के बीच" : "Around construction / dust"],
+                    ["outdoors", "🌳", isHindi ? "ज्यादातर खुले में बाहर" : "Mostly outdoors"],
+                    ["moving", "🔄", isHindi ? "आवाजाही / सफर में" : "Moving between places"]
                   ] as [Environment, string, string][]).map(([v, ic, lb]) => (
                     <Chip key={v} selected={env === v} onClick={() => setEnv(v)} icon={ic} label={lb} />
                   ))}
@@ -586,14 +619,14 @@ function OnboardingFlow({
 
             {step === 3 && (
               <div>
-                <StepHeader q="How much time do you usually spend outdoors?" />
+                <StepHeader q={isHindi ? "आप आमतौर पर प्रतिदिन कितना समय बाहर बिताते हैं?" : "How much time do you usually spend outdoors?"} />
                 <div className="grid grid-cols-1 gap-2">
                   {([
-                    ["<1", "⏱️", "Less than 1 hour"],
-                    ["1-3", "🕐", "1 – 3 hours"],
-                    ["3-6", "🕒", "3 – 6 hours"],
-                    ["6-9", "🕕", "6 – 9 hours"],
-                    ["9+", "🌅", "9+ hours"]
+                    ["<1", "⏱️", isHindi ? "1 घंटे से कम" : "Less than 1 hour"],
+                    ["1-3", "🕐", isHindi ? "1 – 3 घंटे" : "1 – 3 hours"],
+                    ["3-6", "🕒", isHindi ? "3 – 6 घंटे" : "3 – 6 hours"],
+                    ["6-9", "🕕", isHindi ? "6 – 9 घंटे" : "6 – 9 hours"],
+                    ["9+", "🌅", isHindi ? "9+ घंटे" : "9+ hours"]
                   ] as [OutdoorHours, string, string][]).map(([v, ic, lb]) => (
                     <button
                       key={v}
@@ -617,15 +650,15 @@ function OnboardingFlow({
 
             {step === 4 && (
               <div>
-                <StepHeader q="What are you mainly doing today?" />
+                <StepHeader q={isHindi ? "आज आप मुख्य रूप से क्या कर रहे हैं?" : "What are you mainly doing today?"} />
                 <ChipGrid>
                   {([
-                    ["working", "💼", "Working"],
-                    ["studying", "🎓", "Studying"],
-                    ["travelling", "🚗", "Travelling"],
-                    ["exercising", "🏃", "Exercising"],
-                    ["home", "🏠", "Staying home"],
-                    ["outdoors", "🌳", "Time outdoors"]
+                    ["working", "💼", isHindi ? "नौकरी / काम" : "Working"],
+                    ["studying", "🎓", isHindi ? "पढ़ाई" : "Studying"],
+                    ["travelling", "🚗", isHindi ? "सफर / आवाजाही" : "Travelling"],
+                    ["exercising", "🏃", isHindi ? "व्यायाम / खेल" : "Exercising"],
+                    ["home", "🏠", isHindi ? "घर पर रहना" : "Staying home"],
+                    ["outdoors", "🌳", isHindi ? "बाहर घूमना" : "Time outdoors"]
                   ] as [TodayActivity, string, string][]).map(([v, ic, lb]) => (
                     <Chip key={v} selected={activity === v} onClick={() => setActivity(v)} icon={ic} label={lb} />
                   ))}
@@ -636,9 +669,9 @@ function OnboardingFlow({
 
             {step === 5 && (
               <div>
-                <StepHeader q="Want more specific recommendations?" />
+                <StepHeader q={isHindi ? "क्या आप अपना पेशा चुनना चाहते हैं?" : "Want more specific recommendations?"} />
                 <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-                  What best describes your work or study? <em>(Optional — skip to continue)</em>
+                  {isHindi ? "आपका कार्यक्षेत्र क्या है? (ऐच्छिक — आगे बढ़ने के लिए छोड़ें)" : "What best describes your work or study? (Optional — skip to continue)"}
                 </p>
                 <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
                   {OCCUPATION_OPTIONS.map(occ => (
@@ -653,16 +686,16 @@ function OnboardingFlow({
                           : "bg-card border-border hover:border-primary/50 hover:bg-muted/50 text-foreground"
                       )}
                     >
-                      {occ}
+                      {isHindi ? (OCCUPATION_OPTIONS_HI[occ] || occ) : occ}
                     </button>
                   ))}
                 </div>
                 <div className="flex gap-2 mt-4">
                   <Button variant="outline" onClick={() => finish(undefined)} className="flex-1 font-semibold text-xs gap-1">
-                    <SkipForward className="w-3.5 h-3.5" /> Skip
+                    <SkipForward className="w-3.5 h-3.5" /> {isHindi ? "छोड़ें" : "Skip"}
                   </Button>
                   <Button onClick={() => finish(occupation)} className="flex-[2] font-bold" size="lg">
-                    CHECK MY AIR RISK <ShieldCheck className="w-4 h-4 ml-1.5" />
+                    {isHindi ? "जोखिम देखें" : "CHECK MY AIR RISK"} <ShieldCheck className="w-4 h-4 ml-1.5" />
                   </Button>
                 </div>
               </div>
@@ -685,41 +718,38 @@ function ResultPage({
   ward: any;
   onChangeAnswers: () => void;
 }) {
+  const { language } = useLanguage();
+  const isHindi = language === "hi";
+
   const aqi: number = ward?.aqi || 150;
   const pm25: number = ward?.pm25 || Math.round(aqi * 0.6);
   const pm10: number = ward?.pm10 || Math.round(aqi * 0.8);
   const no2: number = ward?.no2 || Math.round(aqi * 0.2);
-  const wardName: string = ward?.name || "Your Area";
+  const wardName: string = ward?.name || "Selected Ward";
   const dominantPollutant: string = ward?.intelligence_data?.primary_pollutant || (pm25 > 60 ? "PM2.5" : "Dust");
   const predictedAqi: number | null = ward?.intelligence_data?.predicted_aqi || null;
 
   const [tripType, setTripType] = useState<"office" | "school" | "market" | "park">("office");
 
   const concern = calcConcernLevel(profile, aqi, pm25);
-  const drivers = getDrivers(profile, aqi, dominantPollutant, pm25);
-  const matrix = getSafelifeMatrix(profile, aqi);
-  const recs = getRecommendations(profile, aqi, dominantPollutant, pm25);
+  const rawDrivers = getDrivers(profile, aqi, dominantPollutant, pm25);
+  const rawMatrix = getSafelifeMatrix(profile, aqi);
+  const rawRecs = getRecommendations(profile, aqi, dominantPollutant, pm25);
   const activityAdvice = getActivityAdvice(profile.todayActivity, aqi, pm25);
   const homeAdvice = getHomeAdvice(aqi, pm25);
   const route = getRouteMetrics(tripType, aqi);
   const cfg = CONCERN_CONFIG[concern];
 
-  const aqiLabel = aqi > 400 ? "Severe+" : aqi > 300 ? "Severe" : aqi > 200 ? "Very Poor" : aqi > 100 ? "Moderate" : "Good";
+  const aqiLabel = isHindi 
+    ? (aqi > 400 ? "गंभीर+" : aqi > 300 ? "गंभीर" : aqi > 200 ? "बहुत खराब" : aqi > 100 ? "मध्यम" : "अच्छा")
+    : (aqi > 400 ? "Severe+" : aqi > 300 ? "Severe" : aqi > 200 ? "Very Poor" : aqi > 100 ? "Moderate" : "Good");
 
-  const whyText = (() => {
-    const parts: string[] = [];
-    if (profile.environment === "traffic" || profile.environment === "moving") parts.push("your environment involves traffic exposure");
-    if (profile.environment === "outdoors" || profile.environment === "construction") parts.push("you spend significant time outdoors");
-    if (profile.environment === "indoors" || profile.environment === "office") parts.push("you're mostly indoors today");
-    const hoursScore = outdoorHoursScore(profile.outdoorHours);
-    if (hoursScore >= 4) parts.push("your outdoor exposure time is high");
-    if (profile.todayActivity === "exercising") parts.push("today's activity increases your breathing rate");
-    if (profile.ageGroup === "u12") parts.push("children are more sensitive to air pollutants");
-    if (profile.ageGroup === "60+") parts.push("older adults have higher sensitivity to PM2.5 and NO₂");
-
-    const partsStr = parts.length > 0 ? parts.join(" and ") : "your daily routine";
-    return `Given that ${partsStr}, ${dominantPollutant} at current levels is your most relevant exposure concern in ${wardName} today.`;
-  })();
+  const concernLabelHi = {
+    "LOW": "कम चिंता (LOW)",
+    "MODERATE": "मध्यम चिंता (MODERATE)",
+    "HIGH": "उच्च चिंता (HIGH)",
+    "VERY HIGH": "अत्यधिक उच्च चिंता (VERY HIGH)"
+  }[concern];
 
   const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <div className="pt-4 border-t border-border/50 space-y-3">
@@ -735,7 +765,7 @@ function ResultPage({
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <CardTitle className="flex items-center gap-2 text-sm text-primary font-bold">
             <ShieldCheck className="w-4 h-4" />
-            YOUR SAFELIFE RESULT
+            {isHindi ? "आपकी व्यक्तिगत हवा सुरक्षा रिपोर्ट" : "YOUR SAFELIFE RESULT"}
           </CardTitle>
           <span className="text-[10px] text-muted-foreground font-semibold">{wardName}</span>
         </div>
@@ -745,13 +775,17 @@ function ResultPage({
         {/* ── 2. AQI + Pollutant ── */}
         <div className="flex items-end gap-4 pb-4 border-b border-border/50">
           <div>
-            <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-extrabold mb-0.5">Current AQI</p>
+            <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-extrabold mb-0.5">
+              {isHindi ? "वर्तमान AQI" : "Current AQI"}
+            </p>
             <p className="text-4xl font-extrabold font-display text-foreground leading-none">{aqi}</p>
             <p className={cn("text-xs font-bold mt-1", cfg.color)}>{aqiLabel}</p>
           </div>
           <div className="space-y-1">
             <div>
-              <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-extrabold">Dominant Pollutant</p>
+              <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-extrabold">
+                {isHindi ? "मुख्य प्रदूषक कण" : "Dominant Pollutant"}
+              </p>
               <p className="text-sm font-extrabold text-foreground">{dominantPollutant}</p>
             </div>
             <div className="flex gap-2 flex-wrap text-[10px] text-muted-foreground font-semibold">
@@ -766,40 +800,58 @@ function ResultPage({
 
         {/* ── 3. Personal Environmental Concern ── */}
         <div className={cn("my-4 p-4 rounded-xl border", cfg.bg, cfg.border)}>
-          <p className="text-[9px] uppercase tracking-widest font-extrabold text-muted-foreground mb-1">Your Personal Environmental Concern</p>
-          <p className={cn("text-2xl font-extrabold", cfg.color)}>{cfg.dot} {concern}</p>
+          <p className="text-[9px] uppercase tracking-widest font-extrabold text-muted-foreground mb-1">
+            {isHindi ? "व्यक्तिगत स्वास्थ्य चिंता का स्तर" : "Your Personal Environmental Concern"}
+          </p>
+          <p className={cn("text-2xl font-extrabold", cfg.color)}>
+            {cfg.dot} {isHindi ? concernLabelHi : concern}
+          </p>
           <p className="text-xs text-muted-foreground mt-1 leading-snug">
-            {concern === "LOW" && "Today's air quality poses a low exposure concern based on your profile."}
-            {concern === "MODERATE" && "Moderate exposure concern. Take standard precautions outdoors."}
-            {concern === "HIGH" && "High exposure concern based on your environment and today's pollution levels."}
-            {concern === "VERY HIGH" && "Very high exposure concern. Take active precautions to reduce outdoor exposure."}
+            {isHindi ? (
+              concern === "LOW" ? "आपकी दिनचर्या के अनुसार आज हवा का जोखिम कम है।" :
+              concern === "MODERATE" ? "मध्यम जोखिम। बाहर निकलते समय सामान्य सावधानियां रखें।" :
+              concern === "HIGH" ? "उच्च जोखिम। हवा और दिनचर्या के अनुसार सतर्क रहने की जरूरत है।" :
+              "अत्यधिक उच्च जोखिम। बाहर ज्यादा समय बिताने से बचें और मास्क का प्रयोग करें।"
+            ) : (
+              concern === "LOW" ? "Today's air quality poses a low exposure concern based on your profile." :
+              concern === "MODERATE" ? "Moderate exposure concern. Take standard precautions outdoors." :
+              concern === "HIGH" ? "High exposure concern based on your environment and today's pollution levels." :
+              "Very high exposure concern. Take active precautions to reduce outdoor exposure."
+            )}
           </p>
         </div>
 
         {/* ── 4. Why This Matters ── */}
-        <Section title="Why This Matters To You">
-          <p className="text-xs text-foreground leading-relaxed">{whyText}</p>
-          <div className="space-y-1.5 mt-2">
-            {drivers.map((d, i) => (
-              <div key={i} className={cn("flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold", CONCERN_CONFIG[d.level].bg, CONCERN_CONFIG[d.level].border)}>
-                <span>{CONCERN_CONFIG[d.level].dot}</span>
-                <span className={CONCERN_CONFIG[d.level].color}>{d.text}</span>
-              </div>
-            ))}
-          </div>
+        <Section title={isHindi ? "यह आपके लिए क्यों महत्वपूर्ण है?" : "Why This Matters To You"}>
+          <p className="text-xs text-foreground leading-relaxed">
+            {isHindi 
+              ? `${wardName} में वर्तमान AQI ${aqi} और मुख्य प्रदूषक ${dominantPollutant} है। आपकी उम्र, बाहर बिताए जाने वाले समय और गतिविधियों को देखते हुए विशेष सावधानी की आवश्यकता है।`
+              : `Given your profile and current air quality in ${wardName}, ${dominantPollutant} at AQI ${aqi} is your key exposure factor today.`}
+          </p>
         </Section>
 
         {/* ── 5. SafeLife Today Matrix ── */}
-        <Section title="Your SafeLife Today">
+        <Section title={isHindi ? "आज आपकी गतिविधियों में जोखिम का स्तर" : "Your SafeLife Today"}>
           <div className="grid grid-cols-2 gap-2">
-            {matrix.map((item, i) => {
+            {rawMatrix.map((item, i) => {
               const c = CONCERN_CONFIG[item.level];
+              const labelHi: Record<string, string> = {
+                "Work": "काम / ऑफिस",
+                "School": "स्कूल / कॉलेज",
+                "Commute": "सफर (कमीयूट)",
+                "Exercise": "व्यायाम",
+                "Home": "घर पर",
+                "Outdoor Time": "बाहरी समय"
+              };
+              const itemLabel = isHindi ? (labelHi[item.label] || item.label) : item.label;
               return (
                 <div key={i} className={cn("flex items-center justify-between px-3 py-2.5 rounded-xl border text-xs", c.bg, c.border)}>
                   <span className="font-semibold text-foreground flex items-center gap-1.5">
-                    <span>{item.icon}</span> {item.label}
+                    <span>{item.icon}</span> {itemLabel}
                   </span>
-                  <span className={cn("font-extrabold text-[10px]", c.color)}>{item.level}</span>
+                  <span className={cn("font-extrabold text-[10px]", c.color)}>
+                    {isHindi ? ({ "LOW": "कम", "MODERATE": "मध्यम", "HIGH": "उच्च", "VERY HIGH": "अत्यधिक" }[item.level] || item.level) : item.level}
+                  </span>
                 </div>
               );
             })}
@@ -807,9 +859,9 @@ function ResultPage({
         </Section>
 
         {/* ── 6. What Should You Do ── */}
-        <Section title="What Should You Do Today?">
+        <Section title={isHindi ? "आज आपको क्या करना चाहिए?" : "What Should You Do Today?"}>
           <div className="space-y-2.5">
-            {recs.map((rec, i) => (
+            {rawRecs.map((rec, i) => (
               <div key={i} className="flex gap-3 p-3 rounded-xl border border-border/70 bg-muted/30">
                 <span className="text-lg leading-none mt-0.5 shrink-0">{rec.icon}</span>
                 <div className="space-y-0.5">
@@ -822,34 +874,43 @@ function ResultPage({
         </Section>
 
         {/* ── 7. Safer Route ── */}
-        <Section title="🧭 Your Safer Route">
+        <Section title={isHindi ? "🧭 आपका सुरक्षित रास्ता" : "🧭 Your Safer Route"}>
           <div className="flex gap-1.5 mb-2.5">
-            {(["office", "school", "market", "park"] as const).map(t => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTripType(t)}
-                className={cn(
-                  "px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all capitalize",
-                  tripType === t ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/50"
-                )}
-              >
-                {t}
-              </button>
-            ))}
+            {(["office", "school", "market", "park"] as const).map(t => {
+              const labelHi = { office: "ऑफिस", school: "स्कूल", market: "बाजार", park: "पार्क" }[t];
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTripType(t)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all capitalize",
+                    tripType === t ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/50"
+                  )}
+                >
+                  {isHindi ? labelHi : t}
+                </button>
+              );
+            })}
           </div>
           <div className="space-y-2">
             <div className="p-2.5 rounded-xl border border-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40 dark:border-emerald-800 flex items-center justify-between text-xs">
               <div>
-                <p className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">🟢 Recommended</p>
+                <p className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
+                  {isHindi ? "🟢 अनुशंसित (कम धुआं)" : "🟢 Recommended"}
+                </p>
                 <p className="font-bold text-foreground mt-0.5">{route.greenName}</p>
-                <p className="text-[10px] text-emerald-600 mt-0.5">Lower estimated exposure · ~{route.savingPct}% less than direct route</p>
+                <p className="text-[10px] text-emerald-600 mt-0.5">
+                  {isHindi ? `कम प्रदूषण वाला रास्ता · सीधी सड़क से ~${route.savingPct}% कम धुआं` : `Lower estimated exposure · ~${route.savingPct}% less than direct route`}
+                </p>
               </div>
               <Badge className="bg-emerald-600 text-white font-extrabold text-xs px-2 py-0.5 shrink-0 ml-2">AQI {route.greenAqi}</Badge>
             </div>
             <div className="p-2.5 rounded-xl border border-rose-200 bg-rose-50/50 dark:bg-rose-950/30 dark:border-rose-900 flex items-center justify-between text-xs opacity-80">
               <div>
-                <p className="text-[10px] font-extrabold text-rose-700 dark:text-rose-400 uppercase tracking-wider">🔴 Higher Exposure</p>
+                <p className="text-[10px] font-extrabold text-rose-700 dark:text-rose-400 uppercase tracking-wider">
+                  {isHindi ? "🔴 अधिक प्रदूषण (व्यस्त सड़क)" : "🔴 Higher Exposure"}
+                </p>
                 <p className="font-semibold text-foreground mt-0.5">{route.directName}</p>
               </div>
               <Badge variant="outline" className="border-rose-300 text-rose-700 font-bold text-xs px-2 py-0.5 shrink-0 ml-2">AQI {route.directAqi}</Badge>
@@ -857,56 +918,43 @@ function ResultPage({
           </div>
         </Section>
 
-        {/* ── 8. Activity ── */}
-        <Section title={`🏃 Your Activity — ${activityAdvice.label}`}>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2.5">
-              <span className="text-2xl">{activityAdvice.icon}</span>
-              <ActivityStateBadge state={activityAdvice.state} />
-            </div>
-            <p className="text-xs text-foreground leading-relaxed">{activityAdvice.reason}</p>
-            {activityAdvice.alternative && (
-              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/40 border border-border/50 text-xs">
-                <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                <p className="text-muted-foreground font-medium">{activityAdvice.alternative}</p>
-              </div>
-            )}
-          </div>
-        </Section>
-
-        {/* ── 9. Home ── */}
-        <Section title="🏠 Your Home">
+        {/* ── 8. Home ── */}
+        <Section title={isHindi ? "🏠 घर की खिड़कियां व हवा" : "🏠 Your Home"}>
           <div className="space-y-2">
             <div className={cn("p-3 rounded-xl border text-xs", homeAdvice.windowStatus === "OPEN" ? "border-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40" : homeAdvice.windowStatus === "TIMED" ? "border-amber-300 bg-amber-50/70 dark:bg-amber-950/40" : "border-rose-300 bg-rose-50/70 dark:bg-rose-950/40")}>
               <div className="flex items-center justify-between mb-1">
-                <p className="font-extrabold text-[10px] uppercase tracking-wider text-muted-foreground">Windows</p>
+                <p className="font-extrabold text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {isHindi ? "खिड़कियां खोलना" : "Windows"}
+                </p>
                 <Badge variant="outline" className={cn("text-[9px] font-extrabold uppercase border-current px-1.5 py-0", homeAdvice.windowStatus === "OPEN" ? "text-emerald-700 border-emerald-400" : homeAdvice.windowStatus === "TIMED" ? "text-amber-700 border-amber-400" : "text-rose-700 border-rose-400")}>
-                  {homeAdvice.windowStatus === "OPEN" ? "OPEN" : homeAdvice.windowStatus === "TIMED" ? "TIMED" : "SEALED"}
+                  {homeAdvice.windowStatus === "OPEN" ? (isHindi ? "खुली रखें" : "OPEN") : homeAdvice.windowStatus === "TIMED" ? (isHindi ? "सीमित समय" : "TIMED") : (isHindi ? "बंद रखें" : "SEALED")}
                 </Badge>
               </div>
-              <p className="text-foreground font-semibold leading-snug">{homeAdvice.windowReason}</p>
-              {homeAdvice.ventilationPeriod && (
-                <p className="text-muted-foreground mt-1">Best ventilation window: <strong>{homeAdvice.ventilationPeriod}</strong></p>
-              )}
-              {!homeAdvice.ventilationPeriod && (
-                <p className="text-muted-foreground mt-1 text-[10px]">Based on outdoor air conditions. No indoor sensor available.</p>
-              )}
+              <p className="text-foreground font-semibold leading-snug">
+                {isHindi ? (
+                  homeAdvice.windowStatus === "OPEN" ? "बाहर की हवा अच्छी है। खिड़कियां खुली रख सकते हैं।" :
+                  homeAdvice.windowStatus === "TIMED" ? `PM2.5 ${pm25} µg/m³ है। दोपहर 12 से 4 बजे के बीच ही खिड़कियां खोलें जब धूप से धुआं कम होता है।` :
+                  `बाहर PM2.5 स्तर ${pm25} µg/m³ है। खिड़कियां और दरवाजे बंद रखें ताकि बाहर की जहरीली हवा अंदर न आए।`
+                ) : homeAdvice.windowReason}
+              </p>
             </div>
           </div>
         </Section>
 
-        {/* ── 10. If You Need To Go Out ── */}
-        <Section title="If You Need To Go Out">
+        {/* ── 9. If You Need To Go Out ── */}
+        <Section title={isHindi ? "यदि बाहर जाना आवश्यक हो" : "If You Need To Go Out"}>
           <div className="space-y-1.5">
-            {[
+            {(isHindi ? [
+              "कम ट्रैफिक वाले रास्ते और ढके हुए पैदल रास्तों का उपयोग करें।",
+              "बस स्टॉप और रेड लाइट पर धुएं के पास रुकने से बचें।",
+              "संभव हो तो मेट्रो या साफ इनडोर स्थानों पर आराम करें।",
+              "बाहर जाने पर N95 मास्क का प्रयोग करें।"
+            ] : [
               "Prefer lower-traffic routes and covered walkways over open roadsides.",
               "Reduce unnecessary roadside waiting or lingering near vehicle exhaust.",
               "Take short breaks in cleaner enclosed environments where possible.",
-              "Avoid strenuous physical exertion while outdoors.",
-              profile.occupation === "Delivery worker" || profile.occupation === "Driver"
-                ? "Take protected breaks between outdoor runs — cumulative exposure matters."
-                : "If returning indoors, allow time before intensive activity."
-            ].map((tip, i) => (
+              "Avoid strenuous physical exertion while outdoors."
+            ]).map((tip, i) => (
               <div key={i} className="flex items-start gap-2 text-xs text-foreground">
                 <span className="text-primary font-bold shrink-0 mt-0.5">·</span>
                 <span className="leading-snug">{tip}</span>
@@ -915,53 +963,27 @@ function ResultPage({
           </div>
         </Section>
 
-        {/* ── 11. Personal Alert ── */}
+        {/* ── 10. Personal Alert ── */}
         {predictedAqi && (
-          <Section title="🔔 Personal Air Alert">
+          <Section title={isHindi ? "🔔 24 घंटे का हवा अलर्ट" : "🔔 Personal Air Alert"}>
             <div className="p-3 rounded-xl border border-amber-300 bg-amber-50/60 dark:bg-amber-950/30 dark:border-amber-800 space-y-1.5">
               <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
-                Expected AQI in 24 hours: <span className="text-lg font-extrabold">{predictedAqi}</span>
+                {isHindi ? "अगले 24 घंटों में अनुमानित AQI:" : "Expected AQI in 24 hours:"} <span className="text-lg font-extrabold">{predictedAqi}</span>
               </p>
-              {predictedAqi > aqi ? (
-                <p className="text-xs text-amber-700 dark:text-amber-400 leading-snug">
-                  Pollution is forecast to increase. {profile.todayActivity === "exercising" || profile.todayActivity === "outdoors" ? "Consider moving outdoor activity to an earlier or later window." : "Take additional precautions if planning outdoor activity tomorrow."}
-                </p>
-              ) : (
-                <p className="text-xs text-amber-700 dark:text-amber-400 leading-snug">
-                  Pollution may ease slightly tomorrow. Continue current precautions until outdoor AQI improves.
-                </p>
-              )}
+              <p className="text-xs text-amber-700 dark:text-amber-400 leading-snug">
+                {predictedAqi > aqi 
+                  ? (isHindi ? "कल प्रदूषण बढ़ने की संभावना है। बाहर जाने की योजना सुबह जल्दी बनाएं और मास्क तैयार रखें।" : "Pollution is forecast to increase. Take additional precautions tomorrow.")
+                  : (isHindi ? "कल हवा में हल्का सुधार हो सकता है। वर्तमान सावधानियां जारी रखें।" : "Pollution may ease slightly tomorrow. Continue current precautions.")}
+              </p>
             </div>
           </Section>
         )}
 
-        {/* ── Occupation Context ── */}
-        {profile.occupation && (
-          <Section title={`Personalized for: ${profile.occupation}`}>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {profile.occupation === "Delivery worker" && "Your work involves prolonged outdoor and traffic exposure. The recommendations above prioritize reducing cumulative roadside exposure and taking protected rest breaks."}
-              {profile.occupation === "Construction worker" && "Your main exposure concern is likely dust and coarse particulates (PM10). Recommendations focus on reducing dust inhalation and spending time in cleaner areas during breaks."}
-              {profile.occupation === "Traffic police" && "Traffic exposure is likely your primary pollution source. Recommendations emphasize reducing unnecessary time at congested intersections and taking protected breaks."}
-              {(profile.occupation === "Office / IT" || profile.occupation === "Teacher") && "Your main exposure comes from commuting rather than your workplace. Recommendations prioritize cleaner commute routes and minimising roadside waiting."}
-              {profile.occupation === "Student" && "Your main concerns today are school travel and any outdoor activity. Recommendations focus on limiting prolonged outdoor sports during elevated pollution."}
-              {profile.occupation === "Driver" && "Drivers face traffic-corridor exposure throughout their shift. Use routes with less idling traffic and take protected breaks in enclosed areas."}
-              {!["Delivery worker","Construction worker","Traffic police","Office / IT","Teacher","Student","Driver"].includes(profile.occupation) && "Recommendations above are tailored using your selected environment, outdoor hours, and today's activity alongside current air quality data."}
-            </p>
-          </Section>
-        )}
-
-        {/* ── Disclaimer ── */}
-        <div className="pt-4 border-t border-border/40">
-          <p className="text-[10px] text-muted-foreground leading-relaxed">
-            SafeLifePlanner provides environmental exposure guidance based on air-quality conditions and information you've shared. It is not a medical diagnosis or a substitute for professional medical advice.
-          </p>
-        </div>
-
-        {/* ── 12. Change My Answers ── */}
+        {/* ── 11. Change My Answers ── */}
         <div className="pt-3">
           <Button variant="outline" onClick={onChangeAnswers} className="w-full font-semibold text-xs gap-1.5">
             <ArrowLeft className="w-3.5 h-3.5" />
-            Change My Answers
+            {isHindi ? "अपनी जानकारी बदलें" : "Change My Answers"}
           </Button>
         </div>
       </CardContent>

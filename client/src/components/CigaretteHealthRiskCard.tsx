@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, Cigarette, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n";
 
 interface CigaretteHealthRiskCardProps {
   wardName?: string;
@@ -181,6 +182,9 @@ export function CigaretteHealthRiskCard({
   dominantSource = "Traffic",
   className
 }: CigaretteHealthRiskCardProps) {
+  const { language } = useLanguage();
+  const isHindi = language === "hi";
+
   // Cigarette Equivalent Math (1 cigarette ≈ 22 µg/m³ PM2.5 per day)
   const dailyCigarettes = Math.max(0.2, Math.round((pm25 / 22) * 10) / 10);
   const weeklyCigarettes = Math.round(dailyCigarettes * 7 * 10) / 10;
@@ -193,22 +197,72 @@ export function CigaretteHealthRiskCard({
     activeConditions[0]?.id || "headaches"
   );
 
-  // Fallback to first available condition if selected is filtered out
   const currentMeta =
     activeConditions.find(c => c.id === selectedConditionId) || activeConditions[0] || CONDITION_METAS[0];
 
+  const conditionHindiNames: Record<string, string> = {
+    "headaches": "सिरदर्द",
+    "eye-irritation": "आंखों में जलन",
+    "asthma": "अस्थमा / दमा",
+    "allergies-sinus": "एलर्जी व साइनस",
+    "pregnancy": "गर्भावस्था",
+    "heart-issues": "हृदय समस्या",
+    "cold-flu": "सर्दी / जुकाम",
+    "copd": "सीओपीडी (COPD)"
+  };
+
   const risk = getRiskLevel(aqi, currentMeta.id);
-  const symptomsText = getDynamicSymptoms(aqi, currentMeta.id);
-  const dosList = getDynamicDos(aqi, dominantSource, wardName, currentMeta.id);
-  const dontsList = getDynamicDonts(aqi, dominantSource, wardName, currentMeta.id);
+
+  const getRiskLabelHi = (lbl: string) => {
+    switch(lbl) {
+      case "LOW": return "कम जोखिम (LOW)";
+      case "MODERATE": return "मध्यम जोखिम (MODERATE)";
+      case "HIGH": return "उच्च जोखिम (HIGH)";
+      default: return "गंभीर जोखिम (CRITICAL)";
+    }
+  };
+
+  const symptomsTextHi: Record<string, string> = {
+    "headaches": "माथे और कनपटी पर भारीपन, सिरदर्द, धुएं और गंध से संवेदनशीलता व ध्यान लगाने में कठिनाई।",
+    "eye-irritation": "आंखों में लालपन, जलन, पानी आना और हवा में मौजूद धूल कणों से आंखों की परेशानी।",
+    "asthma": "सांस फूलना, सीने में जकड़न, सूखी खांसी और तेज-तेज सांस चलना।",
+    "allergies-sinus": "बार-बार छींकें, नाक बंद होना, गले में खराश और साइनस का दबाव।",
+    "pregnancy": "थकान, सांस लेने में हल्की तकलीफ और रक्तचाप में उतार-चढ़ाव।",
+    "heart-issues": "दिल की धड़कन तेज होना, सीने में भारीपन और थकान।",
+    "cold-flu": "गले में खराश, सूखी खांसी और सांस की नली में सूजन।",
+    "copd": "सांस लेने में अत्यधिक कठिनाई, बलगम वाली खांसी और थकान।"
+  };
+
+  const symptomsText = isHindi 
+    ? (symptomsTextHi[currentMeta.id] || "सांस की नली में जलन और थकान।")
+    : getDynamicSymptoms(aqi, currentMeta.id);
+
+  const rawDos = getDynamicDos(aqi, dominantSource, wardName, currentMeta.id);
+  const rawDonts = getDynamicDonts(aqi, dominantSource, wardName, currentMeta.id);
+
+  const dosList = isHindi ? [
+    `जब भी ${wardName || 'आपके इलाके'} में प्रदूषण बढ़े, घर के अंदर साफ हवा में रहें।`,
+    dominantSource === "Traffic" ? `${wardName || 'क्षेत्र'} के मुख्य व्यस्त रास्तों से व्यस्त घंटों (सुबह 8-10 और शाम 6-9) में बचें।` :
+    dominantSource === "Construction" ? `${wardName || 'क्षेत्र'} में निर्माण की धूल से बचने के लिए खिड़कियां व दरवाजे बंद रखें।` :
+    `प्रदूषित हवा से बचने के लिए HEPA एयर प्यूरीफायर या इनडोर पौधों का इस्तेमाल करें।`,
+    currentMeta.id === "asthma" ? "अपना आपातकालीन इनहेलर हमेशा अपने पास रखें।" :
+    currentMeta.id === "eye-irritation" ? "बाहर से आने के बाद आंखों को साफ पानी से धोएं।" :
+    "गले की सूजन कम करने के लिए गुनगुना पानी या तुलसी की चाय पीएं।"
+  ] : rawDos;
+
+  const dontsList = isHindi ? [
+    `AQI ${Math.round(aqi)} होने पर ${wardName || 'दिल्ली'} में बाहर भारी व्यायाम या दौड़ने से बचें।`,
+    dominantSource === "Traffic" ? "बिना N95 मास्क के गाड़ियों के धुएं वाले ट्रैफिक में बाहर न घूमें।" :
+    "घर के अंदर अगरबत्ती, मोमबत्ती या कछुआ छाप न जलाएं जिससे PM2.5 बढ़ता है।"
+  ] : rawDonts;
 
   const getAqiStageText = (val: number) => {
-    if (val <= 50) return "Good";
-    if (val <= 100) return "Moderate";
-    if (val <= 150) return "Poor";
-    if (val <= 200) return "Unhealthy";
-    if (val <= 300) return "Severe";
-    return "Hazardous";
+    if (val <= 50) return isHindi ? "अच्छा" : "Good";
+    if (val <= 100) return isHindi ? "मध्यम" : "Moderate";
+    if (val <= 150) return isHindi ? "खराब" : "Poor";
+    if (val <= 200) return isHindi ? "अस्वास्थ्यकर" : "Unhealthy";
+    if (val <= 300) return isHindi ? "गंभीर" : "Severe";
+    return isHindi ? "अत्यधिक गंभीर" : "Hazardous";
   };
 
   return (
@@ -219,7 +273,7 @@ export function CigaretteHealthRiskCard({
           <div className="flex items-center gap-2">
             <Cigarette className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             <h3 className="text-xs font-extrabold text-muted-foreground uppercase tracking-widest">
-              CIGARETTE EQUIVALENT
+              {isHindi ? "सिगरेट धुआं समानता (स्वास्थ्य जोखिम)" : "CIGARETTE EQUIVALENT"}
             </h3>
           </div>
           <Badge variant="outline" className="text-[10px] font-mono border-amber-500/40 text-amber-600 dark:text-amber-400">
@@ -231,23 +285,23 @@ export function CigaretteHealthRiskCard({
           {/* Daily Equivalent */}
           <div className="p-4 rounded-xl border border-amber-200/80 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20 space-y-1">
             <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">
-              CIGARETTE EQUIVALENT
+              {isHindi ? "दैनिक सिगरेट समानता" : "DAILY EQUIVALENT"}
             </div>
             <div className="text-3xl font-black text-amber-700 dark:text-amber-400">
-              {dailyCigarettes} <span className="text-sm font-semibold text-muted-foreground">per day</span>
+              {dailyCigarettes} <span className="text-sm font-semibold text-muted-foreground">{isHindi ? "सिगरेट/दिन" : "per day"}</span>
             </div>
             <p className="text-xs text-muted-foreground font-medium pt-1">
-              Equates to breathing local air {wardName ? `in ${wardName}` : "across Delhi"}
+              {isHindi ? `${wardName || "दिल्ली"} की हवा में 24 घंटे सांस लेने का फेफड़ों पर असर` : `Equates to breathing local air ${wardName ? `in ${wardName}` : "across Delhi"}`}
             </p>
           </div>
 
           {/* Weekly Exposure */}
           <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-1">
             <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">
-              WEEKLY EXPOSURE
+              {isHindi ? "साप्ताहिक जोखिम" : "WEEKLY EXPOSURE"}
             </div>
             <div className="text-3xl font-bold text-foreground">
-              {weeklyCigarettes} <span className="text-sm font-normal text-muted-foreground">cigarettes</span>
+              {weeklyCigarettes} <span className="text-sm font-normal text-muted-foreground">{isHindi ? "सिगरेट" : "cigarettes"}</span>
             </div>
             <p className="text-xs text-muted-foreground font-medium pt-1 flex items-center gap-1">
               <a
@@ -256,7 +310,7 @@ export function CigaretteHealthRiskCard({
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-amber-600 dark:text-amber-400 hover:underline hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
               >
-                <span>Source Formula</span>
+                <span>{isHindi ? "गणना का सूत्र" : "Source Formula"}</span>
                 <Info className="w-3 h-3 inline" />
               </a>
             </p>
@@ -265,13 +319,13 @@ export function CigaretteHealthRiskCard({
           {/* Monthly Exposure */}
           <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-1">
             <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">
-              MONTHLY EXPOSURE
+              {isHindi ? "मासिक कुल जोखिम" : "MONTHLY EXPOSURE"}
             </div>
             <div className="text-3xl font-bold text-foreground">
-              {monthlyCigarettes} <span className="text-sm font-normal text-muted-foreground">cigarettes</span>
+              {monthlyCigarettes} <span className="text-sm font-normal text-muted-foreground">{isHindi ? "सिगरेट" : "cigarettes"}</span>
             </div>
             <p className="text-xs text-muted-foreground font-medium pt-1">
-              Cumulative 30-day toxicity load
+              {isHindi ? "30 दिनों में विषैले कणों का कुल प्रभाव" : "Cumulative 30-day toxicity load"}
             </p>
           </div>
         </div>
@@ -281,10 +335,10 @@ export function CigaretteHealthRiskCard({
       <div className="space-y-4">
         <div>
           <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">
-            RISK ASSESSMENTS
+            {isHindi ? "स्वास्थ्य जोखिम मूल्यांकन" : "RISK ASSESSMENTS"}
           </div>
           <h2 className="text-xl font-bold font-display text-foreground mt-0.5">
-            Prevent Health Problems {wardName ? `— ${wardName}` : ""}
+            {isHindi ? `बीमारियों से बचाव की सलाह ${wardName ? `— ${wardName}` : ""}` : `Prevent Health Problems ${wardName ? `— ${wardName}` : ""}`}
           </h2>
         </div>
 
@@ -292,6 +346,7 @@ export function CigaretteHealthRiskCard({
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
           {activeConditions.map((condition) => {
             const isSelected = condition.id === currentMeta.id;
+            const displayName = isHindi ? (conditionHindiNames[condition.id] || condition.name) : condition.name;
             return (
               <button
                 key={condition.id}
@@ -303,7 +358,7 @@ export function CigaretteHealthRiskCard({
                     : "border-border/60 bg-background text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
                 )}
               >
-                {condition.name}
+                {displayName}
               </button>
             );
           })}
@@ -315,22 +370,28 @@ export function CigaretteHealthRiskCard({
           <div className="space-y-1">
             <div className="flex items-center gap-3">
               <Badge className={cn("px-2.5 py-0.5 font-extrabold text-[10px] tracking-wider uppercase rounded-md", risk.badgeClass)}>
-                {risk.label} RISK
+                {isHindi ? getRiskLabelHi(risk.label) : `${risk.label} RISK`}
               </Badge>
-              <h3 className="text-lg font-bold text-foreground">{currentMeta.name}</h3>
+              <h3 className="text-lg font-bold text-foreground">
+                {isHindi ? (conditionHindiNames[currentMeta.id] || currentMeta.name) : currentMeta.name}
+              </h3>
             </div>
             <p className="text-xs text-muted-foreground font-medium pt-1">
-              Risk is <strong>{risk.label}</strong> for {getAqiStageText(aqi)} conditions (AQI {Math.round(aqi)} {wardName ? `in ${wardName}` : ""}). Primary pollution driver: <strong>{dominantSource}</strong>.
+              {isHindi ? (
+                <>जोखिम स्तर <strong>{getRiskLabelHi(risk.label)}</strong> है ({getAqiStageText(aqi)} हवा, AQI {Math.round(aqi)} {wardName ? `${wardName} में` : ""})। मुख्य कारण: <strong>{dominantSource}</strong></>
+              ) : (
+                <>Risk is <strong>{risk.label}</strong> for {getAqiStageText(aqi)} conditions (AQI {Math.round(aqi)} {wardName ? `in ${wardName}` : ""}). Primary pollution driver: <strong>{dominantSource}</strong>.</>
+              )}
             </p>
           </div>
 
           {/* Common Symptoms */}
           <div className="space-y-1">
             <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">
-              COMMON SYMPTOMS
+              {isHindi ? "सामान्य लक्षण" : "COMMON SYMPTOMS"}
             </div>
             <p className="text-xs text-foreground/80 leading-relaxed font-normal">
-              Some people experience: {symptomsText}
+              {isHindi ? "संभावित लक्षण: " : "Some people experience: "}{symptomsText}
             </p>
           </div>
 
@@ -339,7 +400,7 @@ export function CigaretteHealthRiskCard({
             {/* DO'S Column */}
             <div className="space-y-3">
               <div className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                <span>DO'S</span>
+                <span>{isHindi ? "क्या करें (DO'S)" : "DO'S"}</span>
               </div>
               <ul className="space-y-2.5">
                 {dosList.map((item, idx) => (
@@ -354,7 +415,7 @@ export function CigaretteHealthRiskCard({
             {/* DON'TS Column */}
             <div className="space-y-3">
               <div className="text-[11px] font-extrabold text-rose-600 dark:text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
-                <span>DON'TS</span>
+                <span>{isHindi ? "क्या न करें (DON'TS)" : "DON'TS"}</span>
               </div>
               <ul className="space-y-2.5">
                 {dontsList.map((item, idx) => (
